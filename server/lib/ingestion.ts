@@ -2,13 +2,13 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
 import AdmZip from 'adm-zip';
+import * as pdfParse from 'pdf-parse';
 import { pool } from '../db';
 import { generateEmbedding } from './openai';
 
-// Dynamic import for pdf-parse due to ESM compatibility
+// Parse PDF buffer to extract text
 async function parsePdf(buffer: Buffer): Promise<{ text: string }> {
-  const pdfParse = await import('pdf-parse') as any;
-  const parse = pdfParse.default || pdfParse;
+  const parse = (pdfParse as any).default || pdfParse;
   return parse(buffer);
 }
 

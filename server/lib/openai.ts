@@ -9,9 +9,13 @@ export const openai = new OpenAI({
   baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
 });
 
-// Generate text embedding using OpenAI
+const embeddingsClient = new OpenAI({
+  apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
+});
+
+// Generate text embedding using OpenAI (direct API, not proxy)
 export async function generateEmbedding(text: string): Promise<number[]> {
-  const response = await openai.embeddings.create({
+  const response = await embeddingsClient.embeddings.create({
     model: 'text-embedding-3-small',
     input: text,
   });
