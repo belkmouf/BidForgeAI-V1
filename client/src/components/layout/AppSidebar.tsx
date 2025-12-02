@@ -6,7 +6,8 @@ import {
   Building2,
   FileText,
   LogOut,
-  Home
+  Home,
+  MessageSquare
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -17,6 +18,7 @@ export function AppSidebar() {
     { href: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
     { href: "/projects", icon: FolderKanban, label: "Projects" },
     { href: "/templates", icon: FileText, label: "Templates" },
+    { href: "/whatsapp", icon: MessageSquare, label: "WhatsApp" },
     { href: "/settings", icon: Settings, label: "Settings" },
   ];
 

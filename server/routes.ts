@@ -7,6 +7,17 @@ import { generateBidWithAnthropic, refineBidWithAnthropic } from "./lib/anthropi
 import { generateBidWithGemini, refineBidWithGemini } from "./lib/gemini";
 import { generateBidWithDeepSeek, refineBidWithDeepSeek } from "./lib/deepseek";
 import { ingestionService } from "./lib/ingestion";
+import { 
+  initWhatsApp, 
+  sendTextMessage, 
+  sendDocument,
+  sendTemplateMessage,
+  parseWebhookPayload, 
+  getWebhookVerifyToken,
+  isWhatsAppConfigured,
+  verifyWebhookSignature,
+  type WhatsAppWebhookPayload 
+} from "./lib/whatsapp";
 import multer from "multer";
 import { z } from "zod";
 
@@ -243,6 +254,141 @@ export async function registerRoutes(
       res.json(stats);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
+    }
+  });
+
+  // ==================== WHATSAPP ====================
+
+  // Initialize WhatsApp client on startup
+  initWhatsApp();
+
+  // Get WhatsApp configuration status
+  app.get("/api/whatsapp/status", async (req, res) => {
+    res.json({ 
+      configured: isWhatsAppConfigured(),
+      message: isWhatsAppConfigured() 
+        ? 'WhatsApp is configured and ready' 
+        : 'WhatsApp requires WA_PHONE_NUMBER_ID and CLOUD_API_ACCESS_TOKEN environment variables'
+    });
+  });
+
+  // Webhook verification (GET) - Meta uses this to verify webhook
+  app.get("/api/whatsapp/webhook", (req, res) => {
+    const mode = req.query['hub.mode'];
+    const token = req.query['hub.verify_token'];
+    const challenge = req.query['hub.challenge'];
+
+    if (mode === 'subscribe' && token === getWebhookVerifyToken()) {
+      console.log('WhatsApp webhook verified');
+      res.status(200).send(challenge);
+    } else {
+      console.log('WhatsApp webhook verification failed');
+      res.sendStatus(403);
+    }
+  });
+
+  // Webhook handler (POST) - Receives messages from WhatsApp
+  app.post("/api/whatsapp/webhook", (req, res) => {
+    try {
+      const signature = req.headers['x-hub-signature-256'] as string | undefined;
+      const rawBody = JSON.stringify(req.body);
+      
+      if (!verifyWebhookSignature(rawBody, signature)) {
+        console.error('WhatsApp webhook signature verification failed');
+        return res.sendStatus(401);
+      }
+
+      const payload = req.body as WhatsAppWebhookPayload;
+      const { messages, statuses } = parseWebhookPayload(payload);
+
+      for (const message of messages) {
+        console.log(`WhatsApp message from ${message.contactName || message.from}:`, 
+          message.text?.body || `[${message.type}]`);
+        
+        if (message.type === 'text' && message.text?.body) {
+          sendTextMessage(
+            message.from, 
+            `Thank you for your message. A team member will respond shortly.\n\n` +
+            `BidForge AI - Intelligent Construction Bidding`
+          ).catch(console.error);
+        }
+      }
+
+      for (const status of statuses) {
+        console.log(`WhatsApp message ${status.id}: ${status.status}`);
+      }
+
+      res.sendStatus(200);
+    } catch (error) {
+      console.error('WhatsApp webhook error:', error);
+      res.sendStatus(200);
+    }
+  });
+
+  // Send a text message
+  const sendMessageSchema = z.object({
+    to: z.string().min(10),
+    message: z.string().min(1),
+  });
+
+  app.post("/api/whatsapp/send", async (req, res) => {
+    try {
+      const { to, message } = sendMessageSchema.parse(req.body);
+      const result = await sendTextMessage(to, message);
+      
+      if (result.success) {
+        res.json({ success: true, messageId: result.messageId });
+      } else {
+        res.status(400).json({ success: false, error: result.error });
+      }
+    } catch (error: any) {
+      res.status(400).json({ success: false, error: error.message });
+    }
+  });
+
+  // Send a document
+  const sendDocumentSchema = z.object({
+    to: z.string().min(10),
+    documentUrl: z.string().url(),
+    filename: z.string().min(1),
+    caption: z.string().optional(),
+  });
+
+  app.post("/api/whatsapp/send-document", async (req, res) => {
+    try {
+      const { to, documentUrl, filename, caption } = sendDocumentSchema.parse(req.body);
+      const result = await sendDocument(to, documentUrl, filename, caption);
+      
+      if (result.success) {
+        res.json({ success: true, messageId: result.messageId });
+      } else {
+        res.status(400).json({ success: false, error: result.error });
+      }
+    } catch (error: any) {
+      res.status(400).json({ success: false, error: error.message });
+    }
+  });
+
+  // Send a template message
+  const sendTemplateSchema = z.object({
+    to: z.string().min(10),
+    templateName: z.string().min(1),
+    languageCode: z.string().optional().default('en_US'),
+    components: z.array(z.any()).optional(),
+  });
+
+  app.post("/api/whatsapp/send-template", async (req, res) => {
+    try {
+      const { to, templateName, languageCode, components } = sendTemplateSchema.parse(req.body);
+      const result = await sendTemplateMessage(to, templateName, languageCode, components);
+      
+      if (result.success) {
+        res.json({ success: true, messageId: result.messageId });
+      } else {
+        res.status(400).json({ success: false, error: result.error });
+      }
+    } catch (error: any) {
+      res.status(400).json({ success: false, error: error.message });
     }
   });
 

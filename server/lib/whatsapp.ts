@@ -1,8 +1,10 @@
 import WhatsApp from 'whatsapp';
+import crypto from 'crypto';
 
 const phoneNumberId = process.env.WA_PHONE_NUMBER_ID;
 const accessToken = process.env.CLOUD_API_ACCESS_TOKEN;
-const webhookVerifyToken = process.env.WEBHOOK_VERIFY_TOKEN;
+const webhookVerifyToken = process.env.WEBHOOK_VERIFY_TOKEN || 'bidforge_webhook_token';
+const appSecret = process.env.WA_APP_SECRET;
 const apiVersion = process.env.CLOUD_API_VERSION || 'v18.0';
 
 let waClient: any = null;
@@ -14,13 +16,35 @@ export function initWhatsApp() {
   }
 
   try {
-    waClient = new WhatsApp(Number(phoneNumberId));
+    waClient = new WhatsApp(phoneNumberId as any);
     console.log('WhatsApp client initialized');
     return waClient;
   } catch (error) {
     console.error('Failed to initialize WhatsApp client:', error);
     return null;
   }
+}
+
+export function verifyWebhookSignature(rawBody: string | Buffer, signature: string | undefined): boolean {
+  if (!appSecret) {
+    console.warn('WA_APP_SECRET not configured - webhook signature verification disabled');
+    return true;
+  }
+  
+  if (!signature) {
+    console.error('Missing X-Hub-Signature-256 header');
+    return false;
+  }
+
+  const expectedSignature = 'sha256=' + crypto
+    .createHmac('sha256', appSecret)
+    .update(rawBody)
+    .digest('hex');
+
+  return crypto.timingSafeEqual(
+    Buffer.from(signature),
+    Buffer.from(expectedSignature)
+  );
 }
 
 export function getWhatsAppClient() {

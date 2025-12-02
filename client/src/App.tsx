@@ -11,6 +11,7 @@ import ProjectsList from "@/pages/ProjectsList";
 import NewProject from "@/pages/NewProject";
 import Settings from "@/pages/Settings";
 import Templates from "@/pages/Templates";
+import WhatsAppPage from "@/pages/WhatsApp";
 
 function Router() {
   return (
@@ -22,6 +23,7 @@ function Router() {
       <Route path="/projects/:id" component={ProjectWorkspace} />
       <Route path="/settings" component={Settings} />
       <Route path="/templates" component={Templates} />
+      <Route path="/whatsapp" component={WhatsAppPage} />
       <Route component={NotFound} />
     </Switch>
   );
