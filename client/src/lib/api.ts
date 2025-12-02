@@ -3,7 +3,7 @@ import type { Project, Document } from '@shared/schema';
 const API_BASE = '/api';
 
 // Projects API
-export async function createProject(data: { name: string; clientName: string; status?: string }) {
+export async function createProject(data: { name: string; clientName: string; status?: string; metadata?: any }) {
   const res = await fetch(`${API_BASE}/projects`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
