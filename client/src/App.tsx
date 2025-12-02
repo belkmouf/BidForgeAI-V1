@@ -8,6 +8,8 @@ import Dashboard from "@/pages/Dashboard";
 import ProjectWorkspace from "@/pages/ProjectWorkspace";
 import ProjectsList from "@/pages/ProjectsList";
 import NewProject from "@/pages/NewProject";
+import Settings from "@/pages/Settings";
+import Templates from "@/pages/Templates";
 
 function Router() {
   return (
@@ -17,6 +19,8 @@ function Router() {
       <Route path="/projects" component={ProjectsList} />
       <Route path="/projects/new" component={NewProject} />
       <Route path="/projects/:id" component={ProjectWorkspace} />
+      <Route path="/settings" component={Settings} />
+      <Route path="/templates" component={Templates} />
       <Route component={NotFound} />
     </Switch>
   );

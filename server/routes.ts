@@ -5,6 +5,7 @@ import { insertProjectSchema, insertDocumentSchema } from "@shared/schema";
 import { generateEmbedding, generateBidContent, refineBidContent } from "./lib/openai";
 import { generateBidWithAnthropic, refineBidWithAnthropic } from "./lib/anthropic";
 import { generateBidWithGemini, refineBidWithGemini } from "./lib/gemini";
+import { generateBidWithDeepSeek, refineBidWithDeepSeek } from "./lib/deepseek";
 import multer from "multer";
 import { z } from "zod";
 
@@ -20,13 +21,13 @@ const upload = multer({
 const generateBidSchema = z.object({
   instructions: z.string().min(1),
   tone: z.string().optional().default('professional'),
-  model: z.enum(['openai', 'anthropic', 'gemini']).optional().default('openai'),
+  model: z.enum(['openai', 'anthropic', 'gemini', 'deepseek']).optional().default('openai'),
 });
 
 const refineBidSchema = z.object({
   currentHtml: z.string().min(1),
   feedback: z.string().min(1),
-  model: z.enum(['openai', 'anthropic', 'gemini']).optional().default('openai'),
+  model: z.enum(['openai', 'anthropic', 'gemini', 'deepseek']).optional().default('openai'),
 });
 
 const updateStatusSchema = z.object({
@@ -185,6 +186,9 @@ export async function registerRoutes(
         case 'gemini':
           html = await generateBidWithGemini({ instructions, context: contextOrDefault, tone });
           break;
+        case 'deepseek':
+          html = await generateBidWithDeepSeek({ instructions, context: contextOrDefault, tone });
+          break;
         case 'openai':
         default:
           html = await generateBidContent({ instructions, context: contextOrDefault, tone });
@@ -215,6 +219,9 @@ export async function registerRoutes(
           break;
         case 'gemini':
           html = await refineBidWithGemini({ currentHtml, feedback });
+          break;
+        case 'deepseek':
+          html = await refineBidWithDeepSeek({ currentHtml, feedback });
           break;
         case 'openai':
         default:

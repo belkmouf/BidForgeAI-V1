@@ -55,7 +55,7 @@ export async function listDocuments(projectId: string) {
 }
 
 // AI Model type
-export type AIModel = 'openai' | 'anthropic' | 'gemini';
+export type AIModel = 'openai' | 'anthropic' | 'gemini' | 'deepseek';
 
 // Bid Generation API
 export async function generateBid(projectId: string, instructions: string, tone?: string, model?: AIModel) {

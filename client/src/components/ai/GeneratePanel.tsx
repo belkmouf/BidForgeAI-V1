@@ -41,6 +41,7 @@ export function GeneratePanel({ onGenerate, isGenerating }: GeneratePanelProps) 
                 <SelectItem value="openai">OpenAI GPT-4o</SelectItem>
                 <SelectItem value="anthropic">Anthropic Claude</SelectItem>
                 <SelectItem value="gemini">Google Gemini</SelectItem>
+                <SelectItem value="deepseek">DeepSeek (Chinese)</SelectItem>
               </SelectContent>
             </Select>
           </div>
