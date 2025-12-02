@@ -1,0 +1,1795 @@
+# Build BidForge AI - Construction Bidding Automation System
+
+## What You're Building
+
+A construction bidding automation system that:
+1. Ingests RFQ documents (PDF, MSG emails, ZIP files)
+2. Uses RAG with pgvector to search current + past winning bids
+3. Generates professional HTML bid responses via OpenAI/Gemini
+4. Allows iterative refinement through AI chat interface
+
+## Tech Stack
+
+**Backend:** Python FastAPI + PostgreSQL (with pgvector)
+**Frontend:** Next.js 14 + Tiptap editor + Tailwind CSS
+**Database:** Connect to Neon/Supabase via Replit Secrets
+**Deployment:** Replit (monorepo structure)
+
+---
+
+## Step 1: Project Structure
+
+Create this exact folder structure:
+
+```
+/
+├── .replit
+├── replit.nix
+├── backend/
+│   ├── main.py
+│   ├── config.py
+│   ├── models.py
+│   ├── database.py
+│   ├── init_db.py
+│   ├── llm_service.py
+│   ├── ingestion_service.py
+│   ├── rag_service.py
+│   ├── routes.py
+│   └── requirements.txt
+├── frontend/
+│   ├── package.json
+│   ├── next.config.js
+│   ├── tailwind.config.js
+│   ├── tsconfig.json
+│   ├── app/
+│   │   ├── layout.tsx
+│   │   ├── page.tsx
+│   │   ├── dashboard/
+│   │   │   └── page.tsx
+│   │   ├── projects/
+│   │   │   ├── page.tsx
+│   │   │   └── [id]/
+│   │   │       └── page.tsx
+│   │   └── globals.css
+│   └── components/
+│       ├── Sidebar.tsx
+│       ├── DropZone.tsx
+│       ├── TiptapEditor.tsx
+│       └── RefineChat.tsx
+└── README.md
+```
+
+---
+
+## Step 2: Replit Configuration
+
+### `.replit` file:
+```toml
+modules = ["python-3.11", "nodejs-20"]
+
+[nix]
+channel = "stable-23_11"
+
+[[ports]]
+localPort = 8000
+externalPort = 80
+
+[[ports]]
+localPort = 3000
+externalPort = 3000
+
+[deployment]
+run = ["sh", "-c", "cd backend && uvicorn main:app --host 0.0.0.0 --port 8000 & cd frontend && npm run build && npm start"]
+deploymentTarget = "cloudrun"
+```
+
+### `replit.nix` file:
+```nix
+{ pkgs }: {
+  deps = [
+    pkgs.python311
+    pkgs.nodejs_20
+    pkgs.postgresql
+  ];
+}
+```
+
+---
+
+## Step 3: Backend Implementation
+
+### `backend/requirements.txt`:
+```txt
+fastapi==0.109.0
+uvicorn[standard]==0.27.0
+sqlalchemy==2.0.25
+psycopg2-binary==2.9.9
+pgvector==0.2.4
+python-multipart==0.0.6
+pydantic==2.5.3
+pydantic-settings==2.1.0
+openai==1.10.0
+google-generativeai==0.3.2
+extract-msg==0.45.0
+pypdf==3.17.4
+python-dotenv==1.0.0
+```
+
+### `backend/config.py`:
+```python
+import os
+from pydantic_settings import BaseSettings
+
+class Settings(BaseSettings):
+    DATABASE_URL: str
+    OPENAI_API_KEY: str = ""
+    GEMINI_API_KEY: str = ""
+    LLM_PROVIDER: str = "openai"  # "openai" or "gemini"
+    
+    class Config:
+        env_file = ".env"
+
+settings = Settings()
+
+# Default CSS Template for A4-printable bids
+DEFAULT_CSS_TEMPLATE = """<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+@page { size: A4; margin: 2cm; }
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { 
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    line-height: 1.6;
+    color: #333;
+    background: white;
+}
+.container { max-width: 800px; margin: 0 auto; padding: 20px; }
+h1 { 
+    color: #d97706;
+    border-bottom: 3px solid #d97706;
+    padding-bottom: 10px;
+    margin-bottom: 20px;
+    font-size: 28px;
+}
+h2 { 
+    color: #92400e;
+    margin-top: 24px;
+    margin-bottom: 12px;
+    font-size: 20px;
+}
+h3 { 
+    color: #78350f;
+    margin-top: 16px;
+    margin-bottom: 8px;
+    font-size: 16px;
+}
+p { margin-bottom: 12px; }
+table { 
+    width: 100%;
+    border-collapse: collapse;
+    margin: 20px 0;
+}
+th, td { 
+    border: 1px solid #d1d5db;
+    padding: 12px;
+    text-align: left;
+}
+th { 
+    background: #f3f4f6;
+    font-weight: 600;
+    color: #1f2937;
+}
+tr:nth-child(even) { background: #f9fafb; }
+ul, ol { margin-left: 20px; margin-bottom: 12px; }
+li { margin-bottom: 6px; }
+.highlight { background: #fef3c7; padding: 2px 4px; }
+.signature { 
+    margin-top: 40px;
+    padding-top: 20px;
+    border-top: 1px solid #e5e7eb;
+}
+</style>
+</head>
+<body>
+<div class="container">
+{CONTENT}
+</div>
+</body>
+</html>
+"""
+```
+
+### `backend/models.py`:
+```python
+from sqlalchemy import Column, Integer, String, Text, Boolean, ForeignKey, DateTime, JSON, Enum as SQLEnum
+from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import relationship
+from pgvector.sqlalchemy import Vector
+import uuid
+from datetime import datetime
+import enum
+
+Base = declarative_base()
+
+class ProjectStatus(str, enum.Enum):
+    ACTIVE = "Active"
+    SUBMITTED = "Submitted"
+    CLOSED_WON = "Closed-Won"
+    CLOSED_LOST = "Closed-Lost"
+
+class Project(Base):
+    __tablename__ = "projects"
+    
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    name = Column(String(255), nullable=False)
+    client_name = Column(String(255), nullable=False)
+    status = Column(SQLEnum(ProjectStatus), default=ProjectStatus.ACTIVE, nullable=False)
+    metadata = Column(JSON, default={})
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    documents = relationship("Document", back_populates="project", cascade="all, delete-orphan")
+
+class Document(Base):
+    __tablename__ = "documents"
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    project_id = Column(UUID(as_uuid=True), ForeignKey("projects.id"), nullable=False)
+    filename = Column(String(500), nullable=False)
+    content = Column(Text)
+    is_processed = Column(Boolean, default=False)
+    
+    project = relationship("Project", back_populates="documents")
+    chunks = relationship("DocumentChunk", back_populates="document", cascade="all, delete-orphan")
+
+class DocumentChunk(Base):
+    __tablename__ = "document_chunks"
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    document_id = Column(Integer, ForeignKey("documents.id"), nullable=False)
+    content = Column(Text, nullable=False)
+    embedding = Column(Vector(1536))  # OpenAI embedding size
+    
+    document = relationship("Document", back_populates="chunks")
+```
+
+### `backend/database.py`:
+```python
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+from config import settings
+
+engine = create_engine(settings.DATABASE_URL)
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+```
+
+### `backend/init_db.py`:
+```python
+from sqlalchemy import text
+from database import engine
+from models import Base
+
+def init_database():
+    """Initialize database with pgvector extension and create tables"""
+    with engine.connect() as conn:
+        # Enable pgvector extension
+        conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector;"))
+        conn.commit()
+    
+    # Create all tables
+    Base.metadata.create_all(bind=engine)
+    
+    # Create index for cosine similarity search
+    with engine.connect() as conn:
+        conn.execute(text("""
+            CREATE INDEX IF NOT EXISTS document_chunk_embedding_idx 
+            ON document_chunks 
+            USING ivfflat (embedding vector_cosine_ops)
+            WITH (lists = 100);
+        """))
+        conn.commit()
+    
+    print("✅ Database initialized successfully!")
+
+if __name__ == "__main__":
+    init_database()
+```
+
+### `backend/llm_service.py`:
+```python
+from abc import ABC, abstractmethod
+from typing import List
+import openai
+import google.generativeai as genai
+from config import settings, DEFAULT_CSS_TEMPLATE
+
+class LLMService(ABC):
+    @abstractmethod
+    async def generate_response(self, system_prompt: str, user_context: str, css_template: str = None) -> str:
+        pass
+    
+    @abstractmethod
+    async def get_embedding(self, text: str) -> List[float]:
+        pass
+
+class OpenAIService(LLMService):
+    def __init__(self):
+        self.client = openai.OpenAI(api_key=settings.OPENAI_API_KEY)
+    
+    async def generate_response(self, system_prompt: str, user_context: str, css_template: str = None) -> str:
+        try:
+            template = css_template or DEFAULT_CSS_TEMPLATE
+            
+            response = self.client.chat.completions.create(
+                model="gpt-4-turbo-preview",
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": f"{user_context}\n\nGenerate HTML content that will be wrapped in this template:\n{template}"}
+                ],
+                temperature=0.7,
+                max_tokens=4000
+            )
+            
+            html_content = response.choices[0].message.content
+            
+            # Wrap content in CSS template
+            if "{CONTENT}" in template:
+                return template.replace("{CONTENT}", html_content)
+            return html_content
+            
+        except Exception as e:
+            raise Exception(f"OpenAI API error: {str(e)}")
+    
+    async def get_embedding(self, text: str) -> List[float]:
+        try:
+            response = self.client.embeddings.create(
+                model="text-embedding-3-small",
+                input=text
+            )
+            return response.data[0].embedding
+        except Exception as e:
+            raise Exception(f"OpenAI Embedding error: {str(e)}")
+
+class GeminiService(LLMService):
+    def __init__(self):
+        genai.configure(api_key=settings.GEMINI_API_KEY)
+        self.model = genai.GenerativeModel('gemini-1.5-pro')
+    
+    async def generate_response(self, system_prompt: str, user_context: str, css_template: str = None) -> str:
+        try:
+            template = css_template or DEFAULT_CSS_TEMPLATE
+            
+            prompt = f"{system_prompt}\n\n{user_context}\n\nGenerate HTML content that will be wrapped in this template:\n{template}"
+            
+            response = self.model.generate_content(prompt)
+            html_content = response.text
+            
+            # Wrap content in CSS template
+            if "{CONTENT}" in template:
+                return template.replace("{CONTENT}", html_content)
+            return html_content
+            
+        except Exception as e:
+            raise Exception(f"Gemini API error: {str(e)}")
+    
+    async def get_embedding(self, text: str) -> List[float]:
+        try:
+            result = genai.embed_content(
+                model="models/embedding-001",
+                content=text,
+                task_type="retrieval_document"
+            )
+            # Gemini returns 768 dims, pad to 1536 for consistency
+            embedding = result['embedding']
+            return embedding + [0.0] * (1536 - len(embedding))
+        except Exception as e:
+            raise Exception(f"Gemini Embedding error: {str(e)}")
+
+def get_llm_service() -> LLMService:
+    """Factory function to get the configured LLM service"""
+    if settings.LLM_PROVIDER == "gemini":
+        return GeminiService()
+    return OpenAIService()
+```
+
+### `backend/ingestion_service.py`:
+```python
+import os
+import tempfile
+import zipfile
+from typing import List
+from pathlib import Path
+import extract_msg
+from pypdf import PdfReader
+from sqlalchemy.orm import Session
+from models import Document, DocumentChunk
+from llm_service import get_llm_service
+
+class IngestionService:
+    def __init__(self):
+        self.llm_service = get_llm_service()
+    
+    async def process_file(self, file_path: str, project_id: str, db: Session) -> Document:
+        """Main entry point - delegates to specific handlers"""
+        file_ext = Path(file_path).suffix.lower()
+        
+        # Create document record
+        doc = Document(
+            project_id=project_id,
+            filename=Path(file_path).name,
+            is_processed=False
+        )
+        db.add(doc)
+        db.commit()
+        db.refresh(doc)
+        
+        try:
+            if file_ext == ".pdf":
+                await self._process_pdf(file_path, doc.id, db)
+            elif file_ext == ".msg":
+                await self._process_msg(file_path, project_id, doc.id, db)
+            elif file_ext == ".zip":
+                await self._process_zip(file_path, project_id, doc.id, db)
+            else:
+                raise ValueError(f"Unsupported file type: {file_ext}")
+            
+            doc.is_processed = True
+            db.commit()
+            
+        except Exception as e:
+            db.rollback()
+            raise Exception(f"Processing failed for {Path(file_path).name}: {str(e)}")
+        
+        return doc
+    
+    async def _process_pdf(self, pdf_path: str, document_id: int, db: Session):
+        """Extract text from PDF and chunk"""
+        reader = PdfReader(pdf_path)
+        text = ""
+        for page in reader.pages:
+            text += page.extract_text() + "\n"
+        
+        if text.strip():
+            await self._chunk_and_embed(text, document_id, db)
+    
+    async def _process_msg(self, msg_path: str, project_id: str, document_id: int, db: Session):
+        """Extract email body and recursively process attachments"""
+        msg = extract_msg.Message(msg_path)
+        
+        # Extract email body
+        body = msg.body or ""
+        if body.strip():
+            await self._chunk_and_embed(body, document_id, db)
+        
+        # Process attachments recursively
+        with tempfile.TemporaryDirectory() as temp_dir:
+            for attachment in msg.attachments:
+                att_path = os.path.join(temp_dir, attachment.longFilename or "attachment")
+                with open(att_path, 'wb') as f:
+                    f.write(attachment.data)
+                
+                # Recursively process attachment
+                try:
+                    await self.process_file(att_path, project_id, db)
+                except Exception as e:
+                    print(f"Warning: Failed to process attachment {attachment.longFilename}: {e}")
+        
+        msg.close()
+    
+    async def _process_zip(self, zip_path: str, project_id: str, document_id: int, db: Session):
+        """Extract ZIP and recursively process all files"""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+                zip_ref.extractall(temp_dir)
+            
+            # Process all extracted files recursively
+            for root, dirs, files in os.walk(temp_dir):
+                for file in files:
+                    file_path = os.path.join(root, file)
+                    try:
+                        await self.process_file(file_path, project_id, db)
+                    except Exception as e:
+                        print(f"Warning: Failed to process {file}: {e}")
+    
+    async def _chunk_and_embed(self, text: str, document_id: int, db: Session):
+        """Split text into chunks and generate embeddings"""
+        # Simple chunking: 500 tokens (~2000 chars) with 50 token overlap
+        chunk_size = 2000
+        overlap = 200
+        
+        chunks = []
+        for i in range(0, len(text), chunk_size - overlap):
+            chunk_text = text[i:i + chunk_size]
+            if chunk_text.strip():
+                chunks.append(chunk_text)
+        
+        # Generate embeddings and store
+        for chunk_text in chunks:
+            try:
+                embedding = await self.llm_service.get_embedding(chunk_text)
+                
+                chunk = DocumentChunk(
+                    document_id=document_id,
+                    content=chunk_text,
+                    embedding=embedding
+                )
+                db.add(chunk)
+            except Exception as e:
+                print(f"Warning: Failed to embed chunk: {e}")
+        
+        db.commit()
+```
+
+### `backend/rag_service.py`:
+```python
+from typing import List, Tuple
+from sqlalchemy.orm import Session
+from sqlalchemy import text
+from models import DocumentChunk, Document, Project, ProjectStatus
+from llm_service import get_llm_service
+
+class RAGService:
+    def __init__(self):
+        self.llm_service = get_llm_service()
+    
+    async def retrieve_context(
+        self,
+        query: str,
+        current_project_id: str,
+        db: Session,
+        top_k: int = 10
+    ) -> List[Tuple[str, float]]:
+        """
+        CRITICAL: Retrieve from BOTH current project AND Closed-Won projects
+        This enables learning from past successful bids
+        """
+        # Get query embedding
+        query_embedding = await self.llm_service.get_embedding(query)
+        
+        # Format embedding for PostgreSQL
+        embedding_str = "[" + ",".join(map(str, query_embedding)) + "]"
+        
+        # Query chunks from current project + Closed-Won projects
+        sql = text("""
+            SELECT 
+                dc.content,
+                dc.embedding <=> :query_embedding AS distance,
+                p.name as project_name,
+                p.status
+            FROM document_chunks dc
+            JOIN documents d ON dc.document_id = d.id
+            JOIN projects p ON d.project_id = p.id
+            WHERE (
+                p.id = :current_project_id
+                OR
+                p.status = :closed_won_status
+            )
+            ORDER BY distance ASC
+            LIMIT :top_k
+        """)
+        
+        result = db.execute(sql, {
+            "query_embedding": embedding_str,
+            "current_project_id": str(current_project_id),
+            "closed_won_status": ProjectStatus.CLOSED_WON.value,
+            "top_k": top_k
+        })
+        
+        chunks = []
+        for row in result:
+            chunks.append((row.content, row.distance))
+        
+        return chunks
+```
+
+### `backend/routes.py`:
+```python
+from fastapi import APIRouter, Depends, UploadFile, File, HTTPException
+from sqlalchemy.orm import Session
+from sqlalchemy import func
+from typing import Optional
+import tempfile
+import os
+from pydantic import BaseModel
+
+from database import get_db
+from models import Project, ProjectStatus, Document
+from ingestion_service import IngestionService
+from rag_service import RAGService
+from llm_service import get_llm_service
+from config import DEFAULT_CSS_TEMPLATE
+
+router = APIRouter()
+
+# Pydantic models for request/response
+class ProjectCreate(BaseModel):
+    name: str
+    client_name: str
+
+class GenerateRequest(BaseModel):
+    user_instructions: str
+    tone: str = "professional"
+
+class RefineRequest(BaseModel):
+    current_html: str
+    feedback: str
+
+@router.post("/projects")
+async def create_project(project: ProjectCreate, db: Session = Depends(get_db)):
+    """Create a new project"""
+    new_project = Project(
+        name=project.name,
+        client_name=project.client_name,
+        status=ProjectStatus.ACTIVE
+    )
+    db.add(new_project)
+    db.commit()
+    db.refresh(new_project)
+    return new_project
+
+@router.get("/projects")
+async def list_projects(db: Session = Depends(get_db)):
+    """List all projects"""
+    projects = db.query(Project).order_by(Project.created_at.desc()).all()
+    return projects
+
+@router.get("/projects/{project_id}")
+async def get_project(project_id: str, db: Session = Depends(get_db)):
+    """Get project details"""
+    project = db.query(Project).filter(Project.id == project_id).first()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    return project
+
+@router.post("/projects/{project_id}/upload")
+async def upload_file(
+    project_id: str,
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db)
+):
+    """Upload and process a file (PDF, MSG, or ZIP)"""
+    # Validate file type
+    allowed_extensions = [".pdf", ".msg", ".zip"]
+    file_ext = os.path.splitext(file.filename)[1].lower()
+    
+    if file_ext not in allowed_extensions:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unsupported file type. Allowed: {', '.join(allowed_extensions)}"
+        )
+    
+    # Save file temporarily
+    with tempfile.NamedTemporaryFile(delete=False, suffix=file_ext) as temp_file:
+        content = await file.read()
+        temp_file.write(content)
+        temp_path = temp_file.name
+    
+    try:
+        # Process file
+        ingestion_service = IngestionService()
+        document = await ingestion_service.process_file(temp_path, project_id, db)
+        
+        return {
+            "message": "File uploaded and processed successfully",
+            "document_id": document.id,
+            "filename": document.filename,
+            "is_processed": document.is_processed
+        }
+    finally:
+        # Clean up temp file
+        if os.path.exists(temp_path):
+            os.unlink(temp_path)
+
+@router.post("/projects/{project_id}/generate")
+async def generate_bid(
+    project_id: str,
+    request: GenerateRequest,
+    db: Session = Depends(get_db)
+):
+    """Generate initial bid using RAG"""
+    project = db.query(Project).filter(Project.id == project_id).first()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    
+    try:
+        # Retrieve context using RAG
+        rag_service = RAGService()
+        chunks = await rag_service.retrieve_context(
+            query=request.user_instructions,
+            current_project_id=project_id,
+            db=db,
+            top_k=10
+        )
+        
+        # Build context from chunks
+        context_text = "\n\n".join([f"[Chunk {i+1}]: {chunk[0]}" for i, chunk in enumerate(chunks)])
+        
+        # System prompt
+        system_prompt = f"""You are an expert construction bid writer. 
+Create a professional, compelling bid response based on the provided context.
+Tone: {request.tone}
+Generate well-structured HTML content with headings, paragraphs, and tables as needed."""
+        
+        user_context = f"""User Instructions: {request.user_instructions}
+
+Relevant Context from Documents and Past Winning Bids:
+{context_text}
+
+Generate a complete bid response."""
+        
+        # Generate response
+        llm_service = get_llm_service()
+        html_response = await llm_service.generate_response(
+            system_prompt=system_prompt,
+            user_context=user_context,
+            css_template=DEFAULT_CSS_TEMPLATE
+        )
+        
+        return {
+            "html": html_response,
+            "chunks_used": len(chunks)
+        }
+    
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Generation failed: {str(e)}")
+
+@router.post("/projects/{project_id}/refine")
+async def refine_bid(
+    project_id: str,
+    request: RefineRequest,
+    db: Session = Depends(get_db)
+):
+    """Refine existing bid based on user feedback"""
+    try:
+        system_prompt = """You are an expert construction bid writer. 
+Apply the user's feedback to improve the bid response.
+Maintain the HTML structure and styling."""
+        
+        user_context = f"""Current Bid HTML:
+{request.current_html}
+
+User Feedback: {request.feedback}
+
+Apply the feedback and return the updated complete HTML."""
+        
+        llm_service = get_llm_service()
+        refined_html = await llm_service.generate_response(
+            system_prompt=system_prompt,
+            user_context=user_context
+        )
+        
+        return {"html": refined_html}
+    
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Refinement failed: {str(e)}")
+
+@router.get("/dashboard/stats")
+async def get_dashboard_stats(db: Session = Depends(get_db)):
+    """Get dashboard statistics"""
+    # Project pipeline counts
+    pipeline = db.query(
+        Project.status,
+        func.count(Project.id).label('count')
+    ).group_by(Project.status).all()
+    
+    pipeline_dict = {status.value: 0 for status in ProjectStatus}
+    for status, count in pipeline:
+        pipeline_dict[status.value] = count
+    
+    # Calculate win rate
+    closed_won = pipeline_dict.get(ProjectStatus.CLOSED_WON.value, 0)
+    closed_lost = pipeline_dict.get(ProjectStatus.CLOSED_LOST.value, 0)
+    total_closed = closed_won + closed_lost
+    
+    win_rate = (closed_won / total_closed * 100) if total_closed > 0 else 0
+    
+    return {
+        "pipeline": pipeline_dict,
+        "win_rate": round(win_rate, 1),
+        "total_projects": sum(pipeline_dict.values())
+    }
+```
+
+### `backend/main.py`:
+```python
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+import uvicorn
+
+from routes import router
+from database import engine
+from models import Base
+
+app = FastAPI(title="BidForge AI API")
+
+# CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Configure appropriately for production
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Include routes
+app.include_router(router, prefix="/api")
+
+@app.get("/")
+async def root():
+    return {"message": "BidForge AI API is running"}
+
+@app.get("/health")
+async def health_check():
+    return {"status": "healthy"}
+
+if __name__ == "__main__":
+    uvicorn.run(app, host="0.0.0.0", port=8000)
+```
+
+---
+
+## Step 4: Frontend Implementation
+
+### `frontend/package.json`:
+```json
+{
+  "name": "bidforge-frontend",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start -p 3000",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "next": "14.1.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "@tiptap/react": "^2.1.16",
+    "@tiptap/starter-kit": "^2.1.16",
+    "@tiptap/extension-table": "^2.1.16",
+    "@tiptap/extension-table-row": "^2.1.16",
+    "@tiptap/extension-table-cell": "^2.1.16",
+    "@tiptap/extension-table-header": "^2.1.16",
+    "recharts": "^2.10.3",
+    "lucide-react": "^0.309.0",
+    "axios": "^1.6.5"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "@types/react": "^18",
+    "@types/react-dom": "^18",
+    "autoprefixer": "^10.0.1",
+    "postcss": "^8",
+    "tailwindcss": "^3.4.1",
+    "typescript": "^5"
+  }
+}
+```
+
+### `frontend/next.config.js`:
+```javascript
+/** @type {import('next').NextConfig} */
+const nextConfig = {
+  async rewrites() {
+    return [
+      {
+        source: '/api/:path*',
+        destination: 'http://localhost:8000/api/:path*',
+      },
+    ]
+  },
+}
+
+module.exports = nextConfig
+```
+
+### `frontend/tailwind.config.js`:
+```javascript
+/** @type {import('tailwindcss').Config} */
+module.exports = {
+  content: [
+    './pages/**/*.{js,ts,jsx,tsx,mdx}',
+    './components/**/*.{js,ts,jsx,tsx,mdx}',
+    './app/**/*.{js,ts,jsx,tsx,mdx}',
+  ],
+  theme: {
+    extend: {
+      colors: {
+        primary: {
+          50: '#fffbeb',
+          100: '#fef3c7',
+          500: '#f59e0b',
+          600: '#d97706',
+          700: '#b45309',
+        },
+      },
+    },
+  },
+  plugins: [],
+}
+```
+
+### `frontend/tsconfig.json`:
+```json
+{
+  "compilerOptions": {
+    "target": "es5",
+    "lib": ["dom", "dom.iterable", "esnext"],
+    "allowJs": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "forceConsistentCasingInFileNames": true,
+    "noEmit": true,
+    "esModuleInterop": true,
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "jsx": "preserve",
+    "incremental": true,
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ],
+    "paths": {
+      "@/*": ["./*"]
+    }
+  },
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
+  "exclude": ["node_modules"]
+}
+```
+
+### `frontend/app/globals.css`:
+```css
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  @apply bg-gray-50;
+}
+
+/* Tiptap Editor Styles */
+.ProseMirror {
+  @apply min-h-[500px] p-4 focus:outline-none;
+}
+
+.ProseMirror h1 {
+  @apply text-3xl font-bold mb-4;
+}
+
+.ProseMirror h2 {
+  @apply text-2xl font-semibold mb-3;
+}
+
+.ProseMirror h3 {
+  @apply text-xl font-medium mb-2;
+}
+
+.ProseMirror p {
+  @apply mb-3;
+}
+
+.ProseMirror table {
+  @apply border-collapse w-full my-4;
+}
+
+.ProseMirror th,
+.ProseMirror td {
+  @apply border border-gray-300 px-3 py-2;
+}
+
+.ProseMirror th {
+  @apply bg-gray-100 font-semibold;
+}
+```
+
+### `frontend/app/layout.tsx`:
+```typescript
+import type { Metadata } from 'next'
+import './globals.css'
+import Sidebar from '@/components/Sidebar'
+
+export const metadata: Metadata = {
+  title: 'BidForge AI',
+  description: 'Construction Bidding Automation',
+}
+
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode
+}) {
+  return (
+    <html lang="en">
+      <body>
+        <div className="flex h-screen">
+          <Sidebar />
+          <main className="flex-1 overflow-auto">
+            {children}
+          </main>
+        </div>
+      </body>
+    </html>
+  )
+}
+```
+
+### `frontend/components/Sidebar.tsx`:
+```typescript
+'use client'
+
+import Link from 'next/link'
+import { usePathname } from 'next/navigation'
+import { LayoutDashboard, FolderKanban, Settings } from 'lucide-react'
+
+export default function Sidebar() {
+  const pathname = usePathname()
+  
+  const links = [
+    { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { href: '/projects', label: 'Projects', icon: FolderKanban },
+    { href: '/settings', label: 'Settings', icon: Settings },
+  ]
+  
+  return (
+    <div className="w-64 bg-gray-900 text-white flex flex-col">
+      <div className="p-6 border-b border-gray-800">
+        <h1 className="text-2xl font-bold text-amber-500">BidForge AI</h1>
+        <p className="text-sm text-gray-400 mt-1">Bidding Intelligence</p>
+      </div>
+      
+      <nav className="flex-1 p-4">
+        {links.map((link) => {
+          const Icon = link.icon
+          const isActive = pathname === link.href
+          
+          return (
+            <Link
+              key={link.href}
+              href={link.href}
+              className={`flex items-center gap-3 px-4 py-3 rounded-lg mb-2 transition-colors ${
+                isActive
+                  ? 'bg-amber-600 text-white'
+                  : 'text-gray-300 hover:bg-gray-800'
+              }`}
+            >
+              <Icon size={20} />
+              <span>{link.label}</span>
+            </Link>
+          )
+        })}
+      </nav>
+    </div>
+  )
+}
+```
+
+### `frontend/app/page.tsx`:
+```typescript
+import { redirect } from 'next/navigation'
+
+export default function Home() {
+  redirect('/dashboard')
+}
+```
+
+### `frontend/app/dashboard/page.tsx`:
+```typescript
+'use client'
+
+import { useEffect, useState } from 'react'
+import axios from 'axios'
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
+import { TrendingUp, FolderKanban } from 'lucide-react'
+
+export default function Dashboard() {
+  const [stats, setStats] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
+  
+  useEffect(() => {
+    fetchStats()
+  }, [])
+  
+  const fetchStats = async () => {
+    try {
+      const response = await axios.get('/api/dashboard/stats')
+      setStats(response.data)
+    } catch (error) {
+      console.error('Failed to fetch stats:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+  
+  if (loading) return <div className="p-8">Loading...</div>
+  
+  const chartData = Object.entries(stats?.pipeline || {}).map(([status, count]) => ({
+    status,
+    count
+  }))
+  
+  return (
+    <div className="p-8">
+      <h1 className="text-3xl font-bold mb-8">Dashboard</h1>
+      
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div className="bg-white p-6 rounded-lg shadow">
+          <div className="flex items-center gap-3 mb-2">
+            <TrendingUp className="text-green-600" size={24} />
+            <h3 className="text-lg font-semibold">Win Rate</h3>
+          </div>
+          <p className="text-4xl font-bold text-green-600">{stats?.win_rate}%</p>
+        </div>
+        
+        <div className="bg-white p-6 rounded-lg shadow">
+          <div className="flex items-center gap-3 mb-2">
+            <FolderKanban className="text-blue-600" size={24} />
+            <h3 className="text-lg font-semibold">Total Projects</h3>
+          </div>
+          <p className="text-4xl font-bold text-blue-600">{stats?.total_projects}</p>
+        </div>
+        
+        <div className="bg-white p-6 rounded-lg shadow">
+          <div className="flex items-center gap-3 mb-2">
+            <FolderKanban className="text-amber-600" size={24} />
+            <h3 className="text-lg font-semibold">Active Projects</h3>
+          </div>
+          <p className="text-4xl font-bold text-amber-600">{stats?.pipeline?.Active || 0}</p>
+        </div>
+      </div>
+      
+      <div className="bg-white p-6 rounded-lg shadow">
+        <h2 className="text-xl font-semibold mb-4">Project Pipeline</h2>
+        <ResponsiveContainer width="100%" height={300}>
+          <BarChart data={chartData}>
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis dataKey="status" />
+            <YAxis />
+            <Tooltip />
+            <Bar dataKey="count" fill="#d97706" />
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+    </div>
+  )
+}
+```
+
+### `frontend/app/projects/page.tsx`:
+```typescript
+'use client'
+
+import { useEffect, useState } from 'react'
+import axios from 'axios'
+import Link from 'next/link'
+import { Plus, FolderOpen } from 'lucide-react'
+
+export default function Projects() {
+  const [projects, setProjects] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [showCreate, setShowCreate] = useState(false)
+  const [newProject, setNewProject] = useState({ name: '', client_name: '' })
+  
+  useEffect(() => {
+    fetchProjects()
+  }, [])
+  
+  const fetchProjects = async () => {
+    try {
+      const response = await axios.get('/api/projects')
+      setProjects(response.data)
+    } catch (error) {
+      console.error('Failed to fetch projects:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+  
+  const createProject = async () => {
+    try {
+      await axios.post('/api/projects', newProject)
+      setShowCreate(false)
+      setNewProject({ name: '', client_name: '' })
+      fetchProjects()
+    } catch (error) {
+      console.error('Failed to create project:', error)
+    }
+  }
+  
+  const statusColors: any = {
+    'Active': 'bg-blue-100 text-blue-800',
+    'Submitted': 'bg-yellow-100 text-yellow-800',
+    'Closed-Won': 'bg-green-100 text-green-800',
+    'Closed-Lost': 'bg-red-100 text-red-800',
+  }
+  
+  if (loading) return <div className="p-8">Loading...</div>
+  
+  return (
+    <div className="p-8">
+      <div className="flex justify-between items-center mb-8">
+        <h1 className="text-3xl font-bold">Projects</h1>
+        <button
+          onClick={() => setShowCreate(true)}
+          className="flex items-center gap-2 bg-amber-600 text-white px-4 py-2 rounded-lg hover:bg-amber-700"
+        >
+          <Plus size={20} />
+          New Project
+        </button>
+      </div>
+      
+      {showCreate && (
+        <div className="bg-white p-6 rounded-lg shadow mb-6">
+          <h2 className="text-xl font-semibold mb-4">Create New Project</h2>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium mb-1">Project Name</label>
+              <input
+                type="text"
+                value={newProject.name}
+                onChange={(e) => setNewProject({ ...newProject, name: e.target.value })}
+                className="w-full border rounded-lg px-3 py-2"
+                placeholder="Downtown Office Renovation"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Client Name</label>
+              <input
+                type="text"
+                value={newProject.client_name}
+                onChange={(e) => setNewProject({ ...newProject, client_name: e.target.value })}
+                className="w-full border rounded-lg px-3 py-2"
+                placeholder="Acme Construction Corp"
+              />
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={createProject}
+                className="bg-amber-600 text-white px-4 py-2 rounded-lg hover:bg-amber-700"
+              >
+                Create
+              </button>
+              <button
+                onClick={() => setShowCreate(false)}
+                className="bg-gray-200 px-4 py-2 rounded-lg hover:bg-gray-300"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {projects.map((project) => (
+          <Link
+            key={project.id}
+            href={`/projects/${project.id}`}
+            className="bg-white p-6 rounded-lg shadow hover:shadow-lg transition-shadow"
+          >
+            <div className="flex items-start gap-3 mb-3">
+              <FolderOpen className="text-amber-600 flex-shrink-0" size={24} />
+              <div className="flex-1">
+                <h3 className="font-semibold text-lg">{project.name}</h3>
+                <p className="text-sm text-gray-600">{project.client_name}</p>
+              </div>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className={`px-3 py-1 rounded-full text-xs font-medium ${statusColors[project.status]}`}>
+                {project.status}
+              </span>
+              <span className="text-xs text-gray-500">
+                {new Date(project.created_at).toLocaleDateString()}
+              </span>
+            </div>
+          </Link>
+        ))}
+      </div>
+    </div>
+  )
+}
+```
+
+### `frontend/components/DropZone.tsx`:
+```typescript
+'use client'
+
+import { useCallback, useState } from 'react'
+import { Upload } from 'lucide-react'
+
+interface DropZoneProps {
+  projectId: string
+  onUploadComplete: () => void
+}
+
+export default function DropZone({ projectId, onUploadComplete }: DropZoneProps) {
+  const [isDragging, setIsDragging] = useState(false)
+  const [uploading, setUploading] = useState(false)
+  
+  const handleDrop = useCallback(async (e: React.DragEvent) => {
+    e.preventDefault()
+    setIsDragging(false)
+    
+    const files = Array.from(e.dataTransfer.files)
+    await uploadFiles(files)
+  }, [projectId])
+  
+  const handleFileInput = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || [])
+    await uploadFiles(files)
+  }
+  
+  const uploadFiles = async (files: File[]) => {
+    setUploading(true)
+    
+    for (const file of files) {
+      const formData = new FormData()
+      formData.append('file', file)
+      
+      try {
+        const response = await fetch(`/api/projects/${projectId}/upload`, {
+          method: 'POST',
+          body: formData,
+        })
+        
+        if (!response.ok) throw new Error('Upload failed')
+      } catch (error) {
+        console.error('Upload error:', error)
+        alert(`Failed to upload ${file.name}`)
+      }
+    }
+    
+    setUploading(false)
+    onUploadComplete()
+  }
+  
+  return (
+    <div
+      onDrop={handleDrop}
+      onDragOver={(e) => { e.preventDefault(); setIsDragging(true) }}
+      onDragLeave={() => setIsDragging(false)}
+      className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
+        isDragging ? 'border-amber-500 bg-amber-50' : 'border-gray-300 bg-gray-50'
+      }`}
+    >
+      <Upload className="mx-auto text-gray-400 mb-4" size={48} />
+      <p className="text-lg font-medium mb-2">Drop RFQs, Emails (.msg), or Zips here</p>
+      <p className="text-sm text-gray-500 mb-4">or click to browse</p>
+      <input
+        type="file"
+        multiple
+        accept=".pdf,.msg,.zip"
+        onChange={handleFileInput}
+        className="hidden"
+        id="file-upload"
+      />
+      <label
+        htmlFor="file-upload"
+        className="inline-block bg-amber-600 text-white px-6 py-2 rounded-lg cursor-pointer hover:bg-amber-700"
+      >
+        {uploading ? 'Uploading...' : 'Browse Files'}
+      </label>
+    </div>
+  )
+}
+```
+
+### `frontend/components/TiptapEditor.tsx`:
+```typescript
+'use client'
+
+import { useEditor, EditorContent } from '@tiptap/react'
+import StarterKit from '@tiptap/starter-kit'
+import Table from '@tiptap/extension-table'
+import TableRow from '@tiptap/extension-table-row'
+import TableCell from '@tiptap/extension-table-cell'
+import TableHeader from '@tiptap/extension-table-header'
+
+interface TiptapEditorProps {
+  content: string
+  onChange?: (html: string) => void
+}
+
+export default function TiptapEditor({ content, onChange }: TiptapEditorProps) {
+  const editor = useEditor({
+    extensions: [
+      StarterKit,
+      Table.configure({
+        resizable: true,
+      }),
+      TableRow,
+      TableHeader,
+      TableCell,
+    ],
+    content,
+    onUpdate: ({ editor }) => {
+      onChange?.(editor.getHTML())
+    },
+    editorProps: {
+      attributes: {
+        class: 'prose max-w-none focus:outline-none',
+      },
+    },
+  })
+  
+  if (!editor) return null
+  
+  return (
+    <div className="bg-white rounded-lg shadow">
+      <div className="border-b p-3 flex gap-2 flex-wrap">
+        <button
+          onClick={() => editor.chain().focus().toggleBold().run()}
+          className={`px-3 py-1 rounded ${editor.isActive('bold') ? 'bg-gray-200' : 'hover:bg-gray-100'}`}
+        >
+          Bold
+        </button>
+        <button
+          onClick={() => editor.chain().focus().toggleItalic().run()}
+          className={`px-3 py-1 rounded ${editor.isActive('italic') ? 'bg-gray-200' : 'hover:bg-gray-100'}`}
+        >
+          Italic
+        </button>
+        <button
+          onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
+          className={`px-3 py-1 rounded ${editor.isActive('heading', { level: 1 }) ? 'bg-gray-200' : 'hover:bg-gray-100'}`}
+        >
+          H1
+        </button>
+        <button
+          onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
+          className={`px-3 py-1 rounded ${editor.isActive('heading', { level: 2 }) ? 'bg-gray-200' : 'hover:bg-gray-100'}`}
+        >
+          H2
+        </button>
+        <button
+          onClick={() => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()}
+          className="px-3 py-1 rounded hover:bg-gray-100"
+        >
+          Table
+        </button>
+      </div>
+      <div className="p-6">
+        <EditorContent editor={editor} />
+      </div>
+    </div>
+  )
+}
+```
+
+### `frontend/components/RefineChat.tsx`:
+```typescript
+'use client'
+
+import { useState } from 'react'
+import { Send } from 'lucide-react'
+
+interface RefineChatProps {
+  projectId: string
+  currentHtml: string
+  onRefine: (newHtml: string) => void
+}
+
+export default function RefineChat({ projectId, currentHtml, onRefine }: RefineChatProps) {
+  const [feedback, setFeedback] = useState('')
+  const [loading, setLoading] = useState(false)
+  
+  const handleRefine = async () => {
+    if (!feedback.trim()) return
+    
+    setLoading(true)
+    try {
+      const response = await fetch(`/api/projects/${projectId}/refine`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          current_html: currentHtml,
+          feedback: feedback
+        })
+      })
+      
+      const data = await response.json()
+      onRefine(data.html)
+      setFeedback('')
+    } catch (error) {
+      console.error('Refine error:', error)
+      alert('Failed to refine bid')
+    } finally {
+      setLoading(false)
+    }
+  }
+  
+  return (
+    <div className="bg-white rounded-lg shadow p-4">
+      <h3 className="font-semibold mb-3">AI Refinement</h3>
+      <div className="space-y-3">
+        <textarea
+          value={feedback}
+          onChange={(e) => setFeedback(e.target.value)}
+          placeholder="e.g., Make the introduction more formal..."
+          className="w-full border rounded-lg px-3 py-2 min-h-[100px] resize-none"
+          disabled={loading}
+        />
+        <button
+          onClick={handleRefine}
+          disabled={loading || !feedback.trim()}
+          className="w-full flex items-center justify-center gap-2 bg-amber-600 text-white px-4 py-2 rounded-lg hover:bg-amber-700 disabled:bg-gray-300"
+        >
+          {loading ? 'Processing...' : (
+            <>
+              <Send size={16} />
+              Apply Changes
+            </>
+          )}
+        </button>
+      </div>
+    </div>
+  )
+}
+```
+
+### `frontend/app/projects/[id]/page.tsx`:
+```typescript
+'use client'
+
+import { useEffect, useState } from 'react'
+import { useParams } from 'next/navigation'
+import axios from 'axios'
+import DropZone from '@/components/DropZone'
+import TiptapEditor from '@/components/TiptapEditor'
+import RefineChat from '@/components/RefineChat'
+import { Sparkles, Download } from 'lucide-react'
+
+export default function ProjectWorkspace() {
+  const params = useParams()
+  const projectId = params.id as string
+  
+  const [project, setProject] = useState<any>(null)
+  const [documents, setDocuments] = useState<any[]>([])
+  const [bidHtml, setBidHtml] = useState('')
+  const [instructions, setInstructions] = useState('')
+  const [generating, setGenerating] = useState(false)
+  
+  useEffect(() => {
+    fetchProject()
+  }, [projectId])
+  
+  const fetchProject = async () => {
+    try {
+      const response = await axios.get(`/api/projects/${projectId}`)
+      setProject(response.data)
+    } catch (error) {
+      console.error('Failed to fetch project:', error)
+    }
+  }
+  
+  const handleGenerate = async () => {
+    setGenerating(true)
+    try {
+      const response = await axios.post(`/api/projects/${projectId}/generate`, {
+        user_instructions: instructions,
+        tone: 'professional'
+      })
+      setBidHtml(response.data.html)
+    } catch (error) {
+      console.error('Generation error:', error)
+      alert('Failed to generate bid')
+    } finally {
+      setGenerating(false)
+    }
+  }
+  
+  const handleDownload = () => {
+    const blob = new Blob([bidHtml], { type: 'text/html' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `${project?.name || 'bid'}.html`
+    a.click()
+  }
+  
+  if (!project) return <div className="p-8">Loading...</div>
+  
+  return (
+    <div className="h-screen flex flex-col">
+      <div className="bg-white border-b px-8 py-4">
+        <h1 className="text-2xl font-bold">{project.name}</h1>
+        <p className="text-gray-600">{project.client_name}</p>
+      </div>
+      
+      <div className="flex-1 grid grid-cols-12 gap-6 p-6 overflow-hidden">
+        {/* LEFT: Upload Zone */}
+        <div className="col-span-3 overflow-y-auto">
+          <DropZone projectId={projectId} onUploadComplete={fetchProject} />
+        </div>
+        
+        {/* CENTER: Editor */}
+        <div className="col-span-6 overflow-y-auto">
+          {bidHtml ? (
+            <div>
+              <div className="flex justify-end mb-3">
+                <button
+                  onClick={handleDownload}
+                  className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700"
+                >
+                  <Download size={16} />
+                  Download HTML
+                </button>
+              </div>
+              <TiptapEditor content={bidHtml} onChange={setBidHtml} />
+            </div>
+          ) : (
+            <div className="bg-white rounded-lg shadow p-8 text-center">
+              <p className="text-gray-500 mb-4">No bid generated yet. Upload documents and generate a bid to get started.</p>
+            </div>
+          )}
+        </div>
+        
+        {/* RIGHT: AI Controls */}
+        <div className="col-span-3 space-y-6 overflow-y-auto">
+          <div className="bg-white rounded-lg shadow p-4">
+            <h3 className="font-semibold mb-3">Generate Bid</h3>
+            <textarea
+              value={instructions}
+              onChange={(e) => setInstructions(e.target.value)}
+              placeholder="Describe what you want in the bid..."
+              className="w-full border rounded-lg px-3 py-2 min-h-[120px] resize-none mb-3"
+            />
+            <button
+              onClick={handleGenerate}
+              disabled={generating || !instructions.trim()}
+              className="w-full flex items-center justify-center gap-2 bg-amber-600 text-white px-4 py-2 rounded-lg hover:bg-amber-700 disabled:bg-gray-300"
+            >
+              {generating ? 'Generating...' : (
+                <>
+                  <Sparkles size={16} />
+                  Generate Bid
+                </>
+              )}
+            </button>
+          </div>
+          
+          {bidHtml && (
+            <RefineChat
+              projectId={projectId}
+              currentHtml={bidHtml}
+              onRefine={setBidHtml}
+            />
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+```
+
+---
+
+## Step 5: Setup Instructions for Replit
+
+### 1. **Create Replit Project**
+- Create new Repl
+- Choose "Python" template
+- Import this repository structure
+
+### 2. **Configure Replit Secrets**
+Go to Secrets (🔒 icon) and add:
+```
+DATABASE_URL=postgresql://user:pass@host:port/dbname
+OPENAI_API_KEY=sk-...
+LLM_PROVIDER=openai
+```
+
+### 3. **Setup Database** (Neon recommended)
+- Go to [neon.tech](https://neon.tech) and create a project
+- Copy connection string to `DATABASE_URL` secret
+- Run initialization:
+```bash
+cd backend
+python init_db.py
+```
+
+### 4. **Install Dependencies**
+```bash
+# Backend
+cd backend
+pip install -r requirements.txt
+
+# Frontend
+cd ../frontend
+npm install
+```
+
+### 5. **Run the Application**
+
+Open two terminals in Replit:
+
+**Terminal 1 (Backend):**
+```bash
+cd backend
+uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+```
+
+**Terminal 2 (Frontend):**
+```bash
+cd frontend
+npm run dev
+```
+
+### 6. **Access the Application**
+- Frontend: https://your-repl.replit.app:3000
+- Backend API: https://your-repl.replit.app:8000/docs
+
+---
+
+## Critical Features Checklist
+
+Before using in production, verify:
+
+- [ ] Database connection works (run `init_db.py`)
+- [ ] pgvector extension enabled
+- [ ] OpenAI/Gemini API keys configured
+- [ ] Can upload PDF and see it processed
+- [ ] Can upload MSG file with attachments
+- [ ] Can upload ZIP file
+- [ ] Generate button creates bid HTML
+- [ ] Refine chat modifies existing bid
+- [ ] Dashboard shows statistics
+- [ ] RAG retrieves from Closed-Won projects (test by marking a project as Closed-Won and verifying it's included in search)
+
+---
+
+## Troubleshooting
+
+**Database Issues:**
+```bash
+# Test connection
+psql $DATABASE_URL -c "SELECT version();"
+
+# Check pgvector
+psql $DATABASE_URL -c "SELECT * FROM pg_extension WHERE extname='vector';"
+```
+
+**Port Already in Use:**
+```bash
+# Kill process on port 8000
+lsof -ti:8000 | xargs kill -9
+
+# Kill process on port 3000
+lsof -ti:3000 | xargs kill -9
+```
+
+**Import Errors:**
+```bash
+# Reinstall dependencies
+cd backend && pip install -r requirements.txt --force-reinstall
+cd frontend && npm install
+```
+
+---
+
+## Next Steps After MVP
+
+1. Add user authentication (Clerk or NextAuth)
+2. Implement real-time upload progress
+3. Add PDF export functionality
+4. Enable multi-user collaboration
+5. Add analytics dashboard
+6. Implement email integration
+
+---
+
+**Ready to build? Start with Step 1 and work through sequentially. Each step builds on the previous one.**
