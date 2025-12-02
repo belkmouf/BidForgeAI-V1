@@ -2,13 +2,22 @@ import {
   projects, 
   documents, 
   documentChunks,
+  rfpAnalyses,
+  analysisAlerts,
+  vendorDatabase,
   type Project, 
   type InsertProject,
   type Document,
   type InsertDocument,
   type DocumentChunk,
   type InsertDocumentChunk,
-  type ProjectStatus
+  type ProjectStatus,
+  type RFPAnalysis,
+  type InsertRFPAnalysis,
+  type AnalysisAlert,
+  type InsertAnalysisAlert,
+  type Vendor,
+  type InsertVendor
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, sql } from "drizzle-orm";
@@ -37,6 +46,25 @@ export interface IStorage {
     winRate: number;
     totalProjects: number;
   }>;
+  
+  // RFP Analysis
+  getAnalysisByProject(projectId: string): Promise<RFPAnalysis | undefined>;
+  createOrUpdateAnalysis(projectId: string, data: Partial<InsertRFPAnalysis>): Promise<RFPAnalysis>;
+  
+  // Analysis Alerts
+  getAlertsByAnalysis(analysisId: number): Promise<AnalysisAlert[]>;
+  createAlert(alert: InsertAnalysisAlert): Promise<AnalysisAlert>;
+  resolveAlert(alertId: number): Promise<AnalysisAlert>;
+  deleteAlertsByAnalysis(analysisId: number): Promise<void>;
+  
+  // Vendor Database
+  getVendorByName(name: string): Promise<Vendor | undefined>;
+  listVendors(): Promise<Vendor[]>;
+  upsertVendor(data: Omit<InsertVendor, 'lastUpdated'>): Promise<Vendor>;
+  countVendors(): Promise<number>;
+  
+  // Analysis Helpers
+  getDocumentChunksForProject(projectId: string, limit?: number): Promise<Array<{ content: string; filename: string }>>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -273,6 +301,128 @@ export class DatabaseStorage implements IStorage {
       winRate: Math.round(winRate * 10) / 10,
       totalProjects,
     };
+  }
+
+  // RFP Analysis
+  async getAnalysisByProject(projectId: string): Promise<RFPAnalysis | undefined> {
+    const [analysis] = await db
+      .select()
+      .from(rfpAnalyses)
+      .where(eq(rfpAnalyses.projectId, projectId))
+      .orderBy(desc(rfpAnalyses.analyzedAt))
+      .limit(1);
+    return analysis || undefined;
+  }
+
+  async createOrUpdateAnalysis(projectId: string, data: Partial<InsertRFPAnalysis>): Promise<RFPAnalysis> {
+    const existing = await this.getAnalysisByProject(projectId);
+    
+    if (existing) {
+      const [updated] = await db
+        .update(rfpAnalyses)
+        .set({ ...data, analyzedAt: new Date() })
+        .where(eq(rfpAnalyses.id, existing.id))
+        .returning();
+      return updated;
+    } else {
+      const [inserted] = await db
+        .insert(rfpAnalyses)
+        .values({ ...data, projectId } as InsertRFPAnalysis)
+        .returning();
+      return inserted;
+    }
+  }
+
+  // Analysis Alerts
+  async getAlertsByAnalysis(analysisId: number): Promise<AnalysisAlert[]> {
+    return await db
+      .select()
+      .from(analysisAlerts)
+      .where(eq(analysisAlerts.analysisId, analysisId));
+  }
+
+  async createAlert(alert: InsertAnalysisAlert): Promise<AnalysisAlert> {
+    const [created] = await db
+      .insert(analysisAlerts)
+      .values(alert)
+      .returning();
+    return created;
+  }
+
+  async resolveAlert(alertId: number): Promise<AnalysisAlert> {
+    const [updated] = await db
+      .update(analysisAlerts)
+      .set({ isResolved: true })
+      .where(eq(analysisAlerts.id, alertId))
+      .returning();
+    return updated;
+  }
+
+  async deleteAlertsByAnalysis(analysisId: number): Promise<void> {
+    await db
+      .delete(analysisAlerts)
+      .where(eq(analysisAlerts.analysisId, analysisId));
+  }
+
+  // Vendor Database
+  async getVendorByName(name: string): Promise<Vendor | undefined> {
+    const cleanName = name.trim().toLowerCase();
+    const [vendor] = await db
+      .select()
+      .from(vendorDatabase)
+      .where(sql`LOWER(vendor_name) LIKE ${'%' + cleanName + '%'}`)
+      .limit(1);
+    return vendor || undefined;
+  }
+
+  async listVendors(): Promise<Vendor[]> {
+    return await db.select().from(vendorDatabase);
+  }
+
+  async upsertVendor(data: Omit<InsertVendor, 'lastUpdated'>): Promise<Vendor> {
+    const existing = await db
+      .select()
+      .from(vendorDatabase)
+      .where(eq(vendorDatabase.vendorName, data.vendorName))
+      .limit(1);
+    
+    if (existing.length > 0) {
+      const [updated] = await db
+        .update(vendorDatabase)
+        .set({ ...data, lastUpdated: new Date() })
+        .where(eq(vendorDatabase.id, existing[0].id))
+        .returning();
+      return updated;
+    } else {
+      const [inserted] = await db
+        .insert(vendorDatabase)
+        .values({ ...data, lastUpdated: new Date() } as InsertVendor)
+        .returning();
+      return inserted;
+    }
+  }
+
+  async countVendors(): Promise<number> {
+    const result = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(vendorDatabase);
+    return result[0]?.count || 0;
+  }
+
+  // Analysis Helpers
+  async getDocumentChunksForProject(projectId: string, limit: number = 50): Promise<Array<{ content: string; filename: string }>> {
+    const results = await db
+      .select({
+        content: documentChunks.content,
+        filename: documents.filename,
+      })
+      .from(documentChunks)
+      .innerJoin(documents, eq(documentChunks.documentId, documents.id))
+      .where(eq(documents.projectId, projectId))
+      .orderBy(documentChunks.documentId, documentChunks.chunkIndex)
+      .limit(limit);
+    
+    return results;
   }
 }
 

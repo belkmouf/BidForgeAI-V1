@@ -8,6 +8,15 @@ import { generateBidWithGemini, refineBidWithGemini } from "./lib/gemini";
 import { generateBidWithDeepSeek, refineBidWithDeepSeek } from "./lib/deepseek";
 import { ingestionService } from "./lib/ingestion";
 import { 
+  analyzeRFP, 
+  saveAnalysis, 
+  getAnalysisForProject, 
+  resolveAlert, 
+  getAllVendors, 
+  upsertVendor,
+  seedVendorDatabase 
+} from "./lib/analysis";
+import { 
   initWhatsApp, 
   sendTextMessage, 
   sendDocument,
@@ -251,6 +260,147 @@ export async function registerRoutes(
       res.json(stats);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
+    }
+  });
+
+  // ==================== RFP ANALYSIS ====================
+
+  // Seed vendor database on startup
+  seedVendorDatabase().catch(console.error);
+
+  // Run RFP analysis on a project
+  app.post("/api/projects/:id/analyze", async (req, res) => {
+    try {
+      const projectId = req.params.id;
+      
+      const project = await storage.getProject(projectId);
+      if (!project) {
+        return res.status(404).json({ error: "Project not found" });
+      }
+
+      const documents = await storage.listDocumentsByProject(projectId);
+      if (documents.length === 0) {
+        return res.status(400).json({ error: "No documents uploaded. Please upload RFP documents first." });
+      }
+
+      const analysisResult = await analyzeRFP(projectId);
+      const savedAnalysis = await saveAnalysis(projectId, analysisResult);
+
+      res.json({
+        success: true,
+        analysis: {
+          id: savedAnalysis.id,
+          qualityScore: savedAnalysis.qualityScore,
+          clarityScore: savedAnalysis.clarityScore,
+          doabilityScore: savedAnalysis.doabilityScore,
+          vendorRiskScore: savedAnalysis.vendorRiskScore,
+          overallRiskLevel: savedAnalysis.overallRiskLevel,
+          missingDocuments: savedAnalysis.missingDocuments,
+          unclearRequirements: savedAnalysis.unclearRequirements,
+          redFlags: savedAnalysis.redFlags,
+          opportunities: savedAnalysis.opportunities,
+          recommendations: savedAnalysis.recommendations,
+          vendorName: savedAnalysis.vendorName,
+          vendorPaymentRating: savedAnalysis.vendorPaymentRating,
+          paymentHistory: savedAnalysis.paymentHistory,
+          analyzedAt: savedAnalysis.analyzedAt,
+        },
+        alerts: analysisResult.alerts,
+      });
+    } catch (error: any) {
+      console.error('Analysis error:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get existing analysis for a project
+  app.get("/api/projects/:id/analysis", async (req, res) => {
+    try {
+      const { analysis, alerts } = await getAnalysisForProject(req.params.id);
+      
+      if (!analysis) {
+        return res.status(404).json({ error: "No analysis found. Run analysis first." });
+      }
+
+      res.json({
+        analysis: {
+          id: analysis.id,
+          qualityScore: analysis.qualityScore,
+          clarityScore: analysis.clarityScore,
+          doabilityScore: analysis.doabilityScore,
+          vendorRiskScore: analysis.vendorRiskScore,
+          overallRiskLevel: analysis.overallRiskLevel,
+          missingDocuments: analysis.missingDocuments,
+          unclearRequirements: analysis.unclearRequirements,
+          redFlags: analysis.redFlags,
+          opportunities: analysis.opportunities,
+          recommendations: analysis.recommendations,
+          vendorName: analysis.vendorName,
+          vendorPaymentRating: analysis.vendorPaymentRating,
+          paymentHistory: analysis.paymentHistory,
+          analyzedAt: analysis.analyzedAt,
+        },
+        alerts: alerts.map(a => ({
+          id: a.id,
+          type: a.alertType,
+          severity: a.severity,
+          title: a.title,
+          description: a.description,
+          action: a.recommendedAction,
+          isResolved: a.isResolved,
+        })),
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Resolve an alert
+  app.post("/api/alerts/:id/resolve", async (req, res) => {
+    try {
+      const alert = await resolveAlert(parseInt(req.params.id));
+      res.json({ success: true, alert });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // ==================== VENDOR DATABASE ====================
+
+  // Get all vendors
+  app.get("/api/vendors", async (req, res) => {
+    try {
+      const vendors = await getAllVendors();
+      res.json(vendors);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Add/update a vendor
+  const vendorSchema = z.object({
+    vendorName: z.string().min(1),
+    averagePaymentDays: z.number().optional(),
+    onTimePaymentRate: z.number().min(0).max(100).optional(),
+    totalProjects: z.number().optional(),
+    latePayments: z.number().optional(),
+    disputedPayments: z.number().optional(),
+    overallRating: z.string().optional(),
+    paymentRating: z.string().optional(),
+    communicationRating: z.string().optional(),
+    industrySectors: z.array(z.string()).optional(),
+    typicalProjectSize: z.string().optional(),
+    geographicRegions: z.array(z.string()).optional(),
+    notes: z.string().optional(),
+  });
+
+  app.post("/api/vendors", async (req, res) => {
+    try {
+      const data = vendorSchema.parse(req.body);
+      const vendor = await upsertVendor(data as any);
+      res.json(vendor);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
     }
   });
 

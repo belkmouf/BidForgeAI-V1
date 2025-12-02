@@ -7,6 +7,7 @@ import NotFound from "@/pages/not-found";
 import Landing from "@/pages/Landing";
 import Dashboard from "@/pages/Dashboard";
 import ProjectWorkspace from "@/pages/ProjectWorkspace";
+import ProjectAnalysis from "@/pages/ProjectAnalysis";
 import ProjectsList from "@/pages/ProjectsList";
 import NewProject from "@/pages/NewProject";
 import Settings from "@/pages/Settings";
@@ -21,6 +22,7 @@ function Router() {
       <Route path="/projects" component={ProjectsList} />
       <Route path="/projects/new" component={NewProject} />
       <Route path="/projects/:id" component={ProjectWorkspace} />
+      <Route path="/projects/:id/analysis" component={ProjectAnalysis} />
       <Route path="/settings" component={Settings} />
       <Route path="/templates" component={Templates} />
       <Route path="/whatsapp" component={WhatsAppPage} />
