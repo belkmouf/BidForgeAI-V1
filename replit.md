@@ -107,6 +107,20 @@ Preferred communication style: Simple, everyday language.
 - Similarity search using cosine distance with pgvector
 - Dashboard statistics aggregation (pipeline counts, win rate)
 
+### WhatsApp Integration
+
+**Meta WhatsApp Business API**
+- Official WhatsApp Node.js SDK for Cloud API
+- Send text messages, documents, and template messages
+- Receive messages via webhook with signature verification
+- Configuration page at `/whatsapp` route
+
+**Required Environment Variables:**
+- `WA_PHONE_NUMBER_ID` - Phone number ID from Meta Developer Console
+- `CLOUD_API_ACCESS_TOKEN` - API access token
+- `WEBHOOK_VERIFY_TOKEN` - Token for webhook verification (default: bidforge_webhook_token)
+- `WA_APP_SECRET` - App secret for webhook signature verification
+
 ### Authentication and Authorization
 
 Currently, the application does not implement authentication or authorization mechanisms. This is an area for future enhancement.
