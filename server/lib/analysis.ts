@@ -331,3 +331,59 @@ export async function seedVendorDatabase(): Promise<void> {
   
   console.log(`Seeded ${sampleVendors.length} vendors into database`);
 }
+
+export async function generateMissingDocumentsMessage(params: {
+  projectName: string;
+  clientName: string;
+  missingDocuments: string[];
+  format: 'whatsapp' | 'email';
+}): Promise<{ subject?: string; message: string }> {
+  const { projectName, clientName, missingDocuments, format } = params;
+  
+  const systemPrompt = format === 'email' 
+    ? `You are a professional construction project manager writing a formal email to request missing RFP documents. 
+       Write a polite, professional email that:
+       - Has a clear, concise subject line
+       - Opens with a professional greeting
+       - Explains the context (evaluating their RFP)
+       - Lists the specific missing documents clearly
+       - Explains why each document is needed
+       - Provides a reasonable deadline suggestion
+       - Closes professionally with contact information placeholder
+       
+       Return JSON with structure: { "subject": "string", "message": "string" }`
+    : `You are a professional construction project manager writing a WhatsApp message to request missing RFP documents.
+       Write a friendly but professional message that:
+       - Is concise and mobile-friendly
+       - Explains you're reviewing their RFP
+       - Lists the missing documents clearly with bullet points (use • character)
+       - Politely requests them to provide these documents
+       - Is warm but professional in tone
+       
+       Return JSON with structure: { "message": "string" }`;
+
+  const userPrompt = `Project: ${projectName}
+Client: ${clientName}
+Missing Documents:
+${missingDocuments.map((doc, i) => `${i + 1}. ${doc}`).join('\n')}
+
+Generate a ${format === 'email' ? 'professional email' : 'WhatsApp message'} requesting these documents.`;
+
+  const response = await openai.chat.completions.create({
+    model: 'gpt-4o',
+    messages: [
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: userPrompt }
+    ],
+    temperature: 0.7,
+    max_tokens: 1000,
+    response_format: { type: 'json_object' }
+  });
+
+  const result = JSON.parse(response.choices[0].message.content || '{}');
+  
+  return {
+    subject: result.subject,
+    message: result.message || 'Unable to generate message'
+  };
+}

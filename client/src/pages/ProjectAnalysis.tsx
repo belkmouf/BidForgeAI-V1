@@ -2,6 +2,17 @@ import { useState, useEffect } from 'react';
 import { useRoute, Link } from 'wouter';
 import { AppSidebar } from '@/components/layout/AppSidebar';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { 
   ChevronLeft, 
   AlertTriangle, 
@@ -14,7 +25,12 @@ import {
   Target,
   Users,
   Play,
-  RefreshCw
+  RefreshCw,
+  MessageCircle,
+  Mail,
+  Send,
+  Copy,
+  Loader2
 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { getProject, listDocuments } from '@/lib/api';
@@ -103,6 +119,15 @@ export default function ProjectAnalysis() {
   const [alerts, setAlerts] = useState<AlertData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  
+  // Missing docs request state
+  const [showWhatsAppDialog, setShowWhatsAppDialog] = useState(false);
+  const [showEmailDialog, setShowEmailDialog] = useState(false);
+  const [phoneNumber, setPhoneNumber] = useState('');
+  const [isSending, setIsSending] = useState(false);
+  const [generatedMessage, setGeneratedMessage] = useState('');
+  const [emailSubject, setEmailSubject] = useState('');
+  const [isGenerating, setIsGenerating] = useState(false);
 
   useEffect(() => {
     async function loadData() {
@@ -170,6 +195,109 @@ export default function ProjectAnalysis() {
     } catch (error) {
       toast({ title: "Failed to resolve alert", variant: "destructive" });
     }
+  };
+
+  const openWhatsAppDialog = async () => {
+    if (!analysis?.missingDocuments?.length) return;
+    
+    setIsGenerating(true);
+    setShowWhatsAppDialog(true);
+    
+    try {
+      const res = await fetch(`/api/projects/${projectId}/generate-missing-docs-message`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          missingDocuments: analysis.missingDocuments,
+          format: 'whatsapp'
+        })
+      });
+      
+      if (!res.ok) throw new Error('Failed to generate message');
+      
+      const data = await res.json();
+      setGeneratedMessage(data.message);
+    } catch (error) {
+      toast({ title: "Failed to generate message", variant: "destructive" });
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const openEmailDialog = async () => {
+    if (!analysis?.missingDocuments?.length) return;
+    
+    setIsGenerating(true);
+    setShowEmailDialog(true);
+    
+    try {
+      const res = await fetch(`/api/projects/${projectId}/generate-missing-docs-message`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          missingDocuments: analysis.missingDocuments,
+          format: 'email'
+        })
+      });
+      
+      if (!res.ok) throw new Error('Failed to generate message');
+      
+      const data = await res.json();
+      setEmailSubject(data.subject || '');
+      setGeneratedMessage(data.message);
+    } catch (error) {
+      toast({ title: "Failed to generate email", variant: "destructive" });
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const sendWhatsAppMessage = async () => {
+    if (!phoneNumber || !generatedMessage) return;
+    
+    setIsSending(true);
+    try {
+      const res = await fetch(`/api/projects/${projectId}/send-missing-docs-whatsapp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          to: phoneNumber,
+          message: generatedMessage
+        })
+      });
+      
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.error || 'Failed to send message');
+      }
+      
+      toast({ title: "WhatsApp message sent successfully!" });
+      setShowWhatsAppDialog(false);
+      setPhoneNumber('');
+      setGeneratedMessage('');
+    } catch (error: any) {
+      toast({ title: error.message || "Failed to send message", variant: "destructive" });
+    } finally {
+      setIsSending(false);
+    }
+  };
+
+  const copyToClipboard = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      toast({ title: "Copied to clipboard!" });
+    } catch (error) {
+      toast({ title: "Failed to copy", variant: "destructive" });
+    }
+  };
+
+  const openEmailClient = () => {
+    const subject = encodeURIComponent(emailSubject);
+    const body = encodeURIComponent(generatedMessage);
+    window.open(`mailto:?subject=${subject}&body=${body}`, '_blank');
+    setShowEmailDialog(false);
+    setGeneratedMessage('');
+    setEmailSubject('');
   };
 
   if (isLoading) {
@@ -386,10 +514,34 @@ export default function ProjectAnalysis() {
               <div className="grid md:grid-cols-2 gap-6">
                 {analysis.missingDocuments && analysis.missingDocuments.length > 0 && (
                   <div className="bg-white rounded-lg shadow-sm border p-6" data-testid="missing-documents">
-                    <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-                      <XCircle className="h-5 w-5 text-red-500" />
-                      Missing Documents ({analysis.missingDocuments.length})
-                    </h2>
+                    <div className="flex items-center justify-between mb-4">
+                      <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                        <XCircle className="h-5 w-5 text-red-500" />
+                        Missing Documents ({analysis.missingDocuments.length})
+                      </h2>
+                      <div className="flex gap-2">
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          onClick={openWhatsAppDialog}
+                          className="gap-1.5"
+                          data-testid="button-request-whatsapp"
+                        >
+                          <MessageCircle className="h-4 w-4" />
+                          WhatsApp
+                        </Button>
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          onClick={openEmailDialog}
+                          className="gap-1.5"
+                          data-testid="button-request-email"
+                        >
+                          <Mail className="h-4 w-4" />
+                          Email
+                        </Button>
+                      </div>
+                    </div>
                     <ul className="space-y-2">
                       {analysis.missingDocuments.map((doc: string, index: number) => (
                         <li key={index} className="flex items-center gap-2 text-gray-700">
@@ -497,6 +649,165 @@ export default function ProjectAnalysis() {
           )}
         </div>
       </div>
+
+      {/* WhatsApp Dialog */}
+      <Dialog open={showWhatsAppDialog} onOpenChange={setShowWhatsAppDialog}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <MessageCircle className="h-5 w-5 text-green-600" />
+              Request Missing Documents via WhatsApp
+            </DialogTitle>
+            <DialogDescription>
+              Send an AI-generated message to the vendor requesting the missing documents.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="phone">Phone Number (with country code)</Label>
+              <Input
+                id="phone"
+                placeholder="+971 50 123 4567"
+                value={phoneNumber}
+                onChange={(e) => setPhoneNumber(e.target.value)}
+                data-testid="input-phone-number"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label>Generated Message</Label>
+                <Button 
+                  size="sm" 
+                  variant="ghost" 
+                  onClick={() => copyToClipboard(generatedMessage)}
+                  disabled={!generatedMessage}
+                >
+                  <Copy className="h-4 w-4" />
+                </Button>
+              </div>
+              {isGenerating ? (
+                <div className="flex items-center justify-center p-8 border rounded-lg">
+                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                  <span className="ml-2 text-muted-foreground">Generating message...</span>
+                </div>
+              ) : (
+                <Textarea
+                  value={generatedMessage}
+                  onChange={(e) => setGeneratedMessage(e.target.value)}
+                  rows={8}
+                  className="resize-none"
+                  data-testid="textarea-whatsapp-message"
+                />
+              )}
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowWhatsAppDialog(false)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={sendWhatsAppMessage} 
+              disabled={isSending || !phoneNumber || !generatedMessage}
+              className="gap-2 bg-green-600 hover:bg-green-700"
+              data-testid="button-send-whatsapp"
+            >
+              {isSending ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Sending...
+                </>
+              ) : (
+                <>
+                  <Send className="h-4 w-4" />
+                  Send WhatsApp
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Email Dialog */}
+      <Dialog open={showEmailDialog} onOpenChange={setShowEmailDialog}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Mail className="h-5 w-5 text-blue-600" />
+              Request Missing Documents via Email
+            </DialogTitle>
+            <DialogDescription>
+              Review and edit the AI-generated email, then open it in your email client.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="subject">Subject</Label>
+              <Input
+                id="subject"
+                value={emailSubject}
+                onChange={(e) => setEmailSubject(e.target.value)}
+                data-testid="input-email-subject"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label>Email Body</Label>
+                <Button 
+                  size="sm" 
+                  variant="ghost" 
+                  onClick={() => copyToClipboard(generatedMessage)}
+                  disabled={!generatedMessage}
+                >
+                  <Copy className="h-4 w-4" />
+                </Button>
+              </div>
+              {isGenerating ? (
+                <div className="flex items-center justify-center p-8 border rounded-lg">
+                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                  <span className="ml-2 text-muted-foreground">Generating email...</span>
+                </div>
+              ) : (
+                <Textarea
+                  value={generatedMessage}
+                  onChange={(e) => setGeneratedMessage(e.target.value)}
+                  rows={12}
+                  className="resize-none font-mono text-sm"
+                  data-testid="textarea-email-body"
+                />
+              )}
+            </div>
+          </div>
+          
+          <DialogFooter className="flex gap-2">
+            <Button variant="outline" onClick={() => setShowEmailDialog(false)}>
+              Cancel
+            </Button>
+            <Button 
+              variant="outline"
+              onClick={() => copyToClipboard(`Subject: ${emailSubject}\n\n${generatedMessage}`)}
+              disabled={!generatedMessage}
+              className="gap-2"
+            >
+              <Copy className="h-4 w-4" />
+              Copy All
+            </Button>
+            <Button 
+              onClick={openEmailClient} 
+              disabled={!generatedMessage}
+              className="gap-2"
+              data-testid="button-open-email"
+            >
+              <Mail className="h-4 w-4" />
+              Open in Email Client
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -14,7 +14,8 @@ import {
   resolveAlert, 
   getAllVendors, 
   upsertVendor,
-  seedVendorDatabase 
+  seedVendorDatabase,
+  generateMissingDocumentsMessage
 } from "./lib/analysis";
 import { 
   initWhatsApp, 
@@ -533,6 +534,68 @@ export async function registerRoutes(
         res.json({ success: true, messageId: result.messageId });
       } else {
         res.status(400).json({ success: false, error: result.error });
+      }
+    } catch (error: any) {
+      res.status(400).json({ success: false, error: error.message });
+    }
+  });
+
+  // ==================== MISSING DOCUMENTS REQUEST ====================
+  
+  // Generate AI message for missing documents request
+  const generateMissingDocsMessageSchema = z.object({
+    missingDocuments: z.array(z.string()).min(1),
+    format: z.enum(['whatsapp', 'email']),
+  });
+
+  app.post("/api/projects/:id/generate-missing-docs-message", async (req, res) => {
+    try {
+      const { missingDocuments, format } = generateMissingDocsMessageSchema.parse(req.body);
+      
+      const project = await storage.getProject(req.params.id);
+      if (!project) {
+        return res.status(404).json({ error: "Project not found" });
+      }
+      
+      const result = await generateMissingDocumentsMessage({
+        projectName: project.name,
+        clientName: project.clientName || 'Valued Client',
+        missingDocuments,
+        format,
+      });
+      
+      res.json(result);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+  
+  // Send missing documents request via WhatsApp
+  const sendMissingDocsWhatsAppSchema = z.object({
+    to: z.string().min(10),
+    message: z.string().min(1),
+  });
+
+  app.post("/api/projects/:id/send-missing-docs-whatsapp", async (req, res) => {
+    try {
+      const { to, message } = sendMissingDocsWhatsAppSchema.parse(req.body);
+      
+      const project = await storage.getProject(req.params.id);
+      if (!project) {
+        return res.status(404).json({ error: "Project not found" });
+      }
+      
+      // Send the user-provided message via WhatsApp
+      const sendResult = await sendTextMessage(to, message);
+      
+      if (sendResult.success) {
+        res.json({ 
+          success: true, 
+          messageId: sendResult.messageId,
+          message: message 
+        });
+      } else {
+        res.status(400).json({ success: false, error: sendResult.error });
       }
     } catch (error: any) {
       res.status(400).json({ success: false, error: error.message });
