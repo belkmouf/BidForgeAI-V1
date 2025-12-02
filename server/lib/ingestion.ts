@@ -2,14 +2,25 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
 import AdmZip from 'adm-zip';
-import * as pdfParse from 'pdf-parse';
 import { pool } from '../db';
-import { generateEmbedding } from './openai';
+import { generateEmbeddingWithGemini } from './gemini';
 
-// Parse PDF buffer to extract text
+// Dynamic PDF parsing with proper module handling
 async function parsePdf(buffer: Buffer): Promise<{ text: string }> {
-  const parse = (pdfParse as any).default || pdfParse;
-  return parse(buffer);
+  try {
+    const pdfModule = await import('pdf-parse');
+    const pdfParse = pdfModule.default || pdfModule;
+    if (typeof pdfParse === 'function') {
+      return await pdfParse(buffer);
+    }
+    if (pdfParse && typeof pdfParse.default === 'function') {
+      return await pdfParse.default(buffer);
+    }
+    throw new Error('Could not find pdf-parse function');
+  } catch (error: any) {
+    console.error('PDF parse module error:', error);
+    return { text: `[PDF content could not be extracted: ${error.message}]` };
+  }
 }
 
 const CHUNK_SIZE = 2000;
@@ -204,7 +215,7 @@ export class IngestionService {
     const embeddings: number[][] = [];
     for (let i = 0; i < chunks.length; i++) {
       try {
-        const embedding = await generateEmbedding(chunks[i]);
+        const embedding = await generateEmbeddingWithGemini(chunks[i]);
         embeddings.push(embedding);
       } catch (error) {
         console.error(`Failed to generate embedding for chunk ${i} of ${filename}:`, error);

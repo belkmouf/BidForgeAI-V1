@@ -2,7 +2,8 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertProjectSchema, insertDocumentSchema } from "@shared/schema";
-import { generateEmbedding, generateBidContent, refineBidContent } from "./lib/openai";
+import { generateBidContent, refineBidContent } from "./lib/openai";
+import { generateEmbeddingWithGemini } from "./lib/gemini";
 import { generateBidWithAnthropic, refineBidWithAnthropic } from "./lib/anthropic";
 import { generateBidWithGemini, refineBidWithGemini } from "./lib/gemini";
 import { generateBidWithDeepSeek, refineBidWithDeepSeek } from "./lib/deepseek";
@@ -173,8 +174,8 @@ export async function registerRoutes(
         return res.status(404).json({ error: "Project not found" });
       }
 
-      // Generate embedding for the instructions (always use OpenAI for embeddings)
-      const queryEmbedding = await generateEmbedding(instructions);
+      // Generate embedding for the instructions using Gemini
+      const queryEmbedding = await generateEmbeddingWithGemini(instructions);
 
       // Retrieve similar chunks using RAG
       const similarChunks = await storage.searchSimilarChunks(queryEmbedding, projectId, 10);

@@ -11,6 +11,23 @@ export const gemini = new GoogleGenAI({
   },
 });
 
+export async function generateEmbeddingWithGemini(text: string): Promise<number[]> {
+  try {
+    const result = await gemini.models.embedContent({
+      model: 'gemini-embedding-exp-03-07',
+      contents: text,
+      config: {
+        outputDimensionality: 1536,
+      },
+    });
+    
+    return result.embeddings?.[0]?.values || [];
+  } catch (error: any) {
+    console.error('Gemini embedding error:', error);
+    throw new Error(`Gemini embedding failed: ${error.message}`);
+  }
+}
+
 export async function generateBidWithGemini(params: {
   instructions: string;
   context: string;
