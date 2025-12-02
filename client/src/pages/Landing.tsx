@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'wouter';
-import { Building2, FileText, Brain, Zap, Shield, Menu, X, ChevronRight, ArrowRight } from 'lucide-react';
+import { FileText, Brain, Zap, Shield, Menu, X, ChevronRight, ArrowRight } from 'lucide-react';
 import gsap from 'gsap';
 import constructionBg from '@assets/stock_images/construction_site_bu_f0afb754.jpg';
+import bidForgeLogo from '@assets/generated_images/bidforge_ai_premium_logo.png';
 
 const features = [
   {
@@ -78,9 +79,11 @@ export default function Landing() {
       >
         <div className="max-w-7xl mx-auto px-6 lg:px-8 flex justify-between items-center">
           <Link href="/" className="flex items-center gap-3 group" data-testid="link-home">
-            <div className={`transition-colors duration-300 ${scrolled ? 'text-teal-700' : 'text-white'}`}>
-              <Building2 size={32} strokeWidth={1.5} />
-            </div>
+            <img 
+              src={bidForgeLogo} 
+              alt="BidForge AI Logo" 
+              className="h-10 w-10 object-contain"
+            />
             <div>
               <div className={`font-display text-xl font-bold transition-colors duration-300 ${
                 scrolled ? 'text-charcoal-900' : 'text-white'
@@ -336,7 +339,11 @@ export default function Landing() {
           <div className="grid md:grid-cols-4 gap-12 mb-12">
             <div className="md:col-span-2">
               <div className="flex items-center gap-3 mb-4">
-                <Building2 className="text-teal-500" size={28} />
+                <img 
+                  src={bidForgeLogo} 
+                  alt="BidForge AI Logo" 
+                  className="h-8 w-8 object-contain"
+                />
                 <span className="font-display text-xl font-bold text-white">BidForge AI</span>
               </div>
               <p className="text-gray-400 max-w-md leading-relaxed">

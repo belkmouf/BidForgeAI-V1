@@ -3,13 +3,13 @@ import {
   LayoutDashboard, 
   FolderKanban, 
   Settings, 
-  Building2,
   FileText,
   LogOut,
   Home,
   MessageSquare
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import bidForgeLogo from "@assets/generated_images/bidforge_ai_premium_logo.png";
 
 export function AppSidebar() {
   const [location] = useLocation();
@@ -25,9 +25,11 @@ export function AppSidebar() {
   return (
     <aside className="w-64 bg-charcoal-900 flex flex-col h-screen text-white fixed left-0 top-0 bottom-0 z-10" data-testid="app-sidebar">
       <div className="p-6 flex items-center gap-3 border-b border-charcoal-700">
-        <div className="text-teal-500">
-          <Building2 className="h-7 w-7" strokeWidth={1.5} />
-        </div>
+        <img 
+          src={bidForgeLogo} 
+          alt="BidForge AI Logo" 
+          className="h-10 w-10 object-contain"
+        />
         <div>
           <h1 className="font-display font-bold text-xl tracking-tight text-white">BidForge AI</h1>
           <p className="text-[10px] text-gold-500 tracking-[0.15em] uppercase">Intelligent Bidding</p>
