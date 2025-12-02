@@ -24,7 +24,14 @@ Preferred communication style: Simple, everyday language.
 - Shadcn UI component library (New York style variant) with Radix UI primitives
 - Tailwind CSS v4 for styling with custom design tokens
 - Lucide React for iconography
-- Custom fonts: Inter, Space Grotesk, and JetBrains Mono
+- GSAP for scroll-based and entrance animations
+
+**Version 2 Design System (Somerstone-Inspired)**
+- Gulf Executive color palette: Charcoal (#1a1a1a), Deep Teal (#0d7377), Antique Gold (#b8995a)
+- Three-font hierarchy: Syne (display/headlines), Inter (body text), Fraunces (accents)
+- Premium styling with refined spacing, card hover effects, and sophisticated color usage
+- Landing page at "/" with Hero, Features, Testimonials, CTA sections
+- Dashboard moved to "/dashboard" route
 
 **Rich Text Editing**
 - Tiptap editor for WYSIWYG bid document editing
