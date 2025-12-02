@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { 
   BarChart, 
   Bar, 
@@ -31,10 +32,51 @@ import {
   TableHeader, 
   TableRow 
 } from '@/components/ui/table';
-import { mockProjects, mockStats, mockPipelineData } from '@/lib/mockData';
 import { Link } from 'wouter';
+import { listProjects, getDashboardStats } from '@/lib/api';
+import type { Project } from '@shared/schema';
 
 export default function Dashboard() {
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [stats, setStats] = useState<{
+    pipeline: Record<string, number>;
+    winRate: number;
+    totalProjects: number;
+  } | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadData() {
+      try {
+        const [projectsData, statsData] = await Promise.all([
+          listProjects(),
+          getDashboardStats()
+        ]);
+        setProjects(projectsData);
+        setStats(statsData);
+      } catch (error) {
+        console.error('Failed to load dashboard data:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    loadData();
+  }, []);
+
+  const pipelineData = stats ? [
+    { name: 'Active', value: stats.pipeline.Active || 0, color: '#0d7377' },
+    { name: 'Submitted', value: stats.pipeline.Submitted || 0, color: '#14b8a6' },
+    { name: 'Closed-Won', value: stats.pipeline['Closed-Won'] || 0, color: '#c8a962' },
+    { name: 'Closed-Lost', value: stats.pipeline['Closed-Lost'] || 0, color: '#ef4444' },
+  ] : [];
+
+  const displayStats = stats ? [
+    { label: 'Total Projects', value: stats.totalProjects.toString(), trend: 'neutral' as const, change: '' },
+    { label: 'Active Bids', value: (stats.pipeline.Active || 0).toString(), trend: 'up' as const, change: '+2 this week' },
+    { label: 'Win Rate', value: `${stats.winRate}%`, trend: (stats.winRate >= 50 ? 'up' : 'down') as 'up' | 'down', change: `${stats.pipeline['Closed-Won'] || 0} won` },
+    { label: 'Submitted', value: (stats.pipeline.Submitted || 0).toString(), trend: 'neutral' as const, change: 'Awaiting decisions' },
+  ] : [];
+
   return (
     <div className="flex min-h-screen bg-background">
       <AppSidebar />
@@ -64,7 +106,7 @@ export default function Dashboard() {
 
           {/* Stats Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {mockStats.map((stat, i) => (
+            {displayStats.map((stat, i) => (
               <Card key={i} className="hover:shadow-md transition-shadow border-border/60">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium text-muted-foreground">
@@ -118,12 +160,12 @@ export default function Dashboard() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {mockProjects.map((project) => (
+                      {projects.map((project) => (
                         <TableRow key={project.id} className="group cursor-pointer hover:bg-muted/40">
                           <TableCell className="font-medium">
                             <div className="flex flex-col">
                               <span className="font-semibold text-foreground group-hover:text-primary transition-colors">{project.name}</span>
-                              <span className="text-xs text-muted-foreground">{project.client}</span>
+                              <span className="text-xs text-muted-foreground">{project.clientName}</span>
                             </div>
                           </TableCell>
                           <TableCell>
@@ -140,17 +182,17 @@ export default function Dashboard() {
                             </Badge>
                           </TableCell>
                           <TableCell className="font-mono text-sm">
-                            ${(project.value / 1000000).toFixed(2)}M
+                            TBD
                           </TableCell>
                           <TableCell>
                             <div className="flex items-center gap-2 text-sm text-muted-foreground">
                               <Calendar className="h-3 w-3" />
-                              {new Date(project.dueDate).toLocaleDateString()}
+                              {new Date(project.createdAt).toLocaleDateString()}
                             </div>
                           </TableCell>
                           <TableCell className="text-right">
                             <Link href={`/projects/${project.id}`}>
-                              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                              <Button variant="ghost" size="sm" className="h-8 w-8 p-0" data-testid={`button-open-project-${project.id}`}>
                                 <ArrowUpRight className="h-4 w-4" />
                               </Button>
                             </Link>
@@ -173,7 +215,7 @@ export default function Dashboard() {
                 <CardContent>
                   <div className="h-[300px] w-full">
                     <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={mockPipelineData} layout="vertical" margin={{ left: 0, right: 20, top: 0, bottom: 0 }}>
+                      <BarChart data={pipelineData} layout="vertical" margin={{ left: 0, right: 20, top: 0, bottom: 0 }}>
                         <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#e5e7eb" />
                         <XAxis type="number" hide />
                         <YAxis dataKey="name" type="category" width={80} tick={{ fontSize: 12 }} axisLine={false} tickLine={false} />
@@ -182,8 +224,8 @@ export default function Dashboard() {
                           contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
                         />
                         <Bar dataKey="value" radius={[0, 4, 4, 0]} barSize={24}>
-                          {mockPipelineData.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={index === 4 ? '#22c55e' : '#d97706'} fillOpacity={0.8 + (index * 0.05)} />
+                          {pipelineData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.color} />
                           ))}
                         </Bar>
                       </BarChart>

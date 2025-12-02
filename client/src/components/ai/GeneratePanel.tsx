@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface GeneratePanelProps {
-  onGenerate: (instructions: string) => void;
+  onGenerate: (instructions: string, tone?: string) => void;
   isGenerating: boolean;
 }
 
@@ -17,7 +17,7 @@ export function GeneratePanel({ onGenerate, isGenerating }: GeneratePanelProps) 
 
   const handleGenerate = () => {
     if (!instructions) return;
-    onGenerate(instructions);
+    onGenerate(instructions, tone);
   };
 
   return (

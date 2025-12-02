@@ -7,42 +7,69 @@ import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface FileItem {
-  id: number;
+  id: string;
   name: string;
-  type: string;
-  size: string;
-  status?: 'uploading' | 'processing' | 'completed' | 'error';
-  progress?: number;
+  size: number;
+  uploadedAt: Date;
 }
 
-export function DropZone({ onUpload, files: initialFiles = [] }: { onUpload?: (files: File[]) => void, files?: FileItem[] }) {
-  const [files, setFiles] = useState<FileItem[]>(initialFiles.map(f => ({...f, status: 'completed', progress: 100})));
+interface DropZoneProps {
+  files?: FileItem[];
+  onUpload?: (file: File) => void;
+}
+
+export function DropZone({ onUpload, files: initialFiles = [] }: DropZoneProps) {
+  const [uploadingFiles, setUploadingFiles] = useState<Array<{
+    id: number;
+    name: string;
+    size: string;
+    type: string;
+    status: 'uploading' | 'processing' | 'completed' | 'error';
+    progress: number;
+  }>>([]);
+
+  const completedFiles = initialFiles.map(f => ({
+    id: parseInt(f.id),
+    name: f.name,
+    type: f.name.split('.').pop() || 'unknown',
+    size: f.size > 0 ? (f.size / 1024 / 1024).toFixed(2) + ' MB' : 'N/A',
+    status: 'completed' as const,
+    progress: 100
+  }));
+
+  const allFiles = [...completedFiles, ...uploadingFiles];
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
-    // Simulate upload process
-    const newFiles = acceptedFiles.map((file, index) => ({
-      id: Date.now() + index,
-      name: file.name,
-      type: file.name.split('.').pop() || 'unknown',
-      size: (file.size / 1024 / 1024).toFixed(2) + ' MB',
-      status: 'uploading' as const,
-      progress: 0
-    }));
+    acceptedFiles.forEach(file => {
+      const fileId = Date.now() + Math.random();
+      const newFile = {
+        id: fileId,
+        name: file.name,
+        type: file.name.split('.').pop() || 'unknown',
+        size: (file.size / 1024 / 1024).toFixed(2) + ' MB',
+        status: 'uploading' as const,
+        progress: 0
+      };
 
-    setFiles(prev => [...prev, ...newFiles]);
-    onUpload?.(acceptedFiles);
+      setUploadingFiles(prev => [...prev, newFile]);
+      
+      // Call upload handler
+      onUpload?.(file);
 
-    // Simulate progress
-    newFiles.forEach(file => {
+      // Simulate progress
       let progress = 0;
       const interval = setInterval(() => {
         progress += 10;
-        setFiles(prev => prev.map(f => f.id === file.id ? { ...f, progress: Math.min(progress, 100), status: progress >= 100 ? 'processing' : 'uploading' } : f));
+        setUploadingFiles(prev => prev.map(f => f.id === fileId ? { 
+          ...f, 
+          progress: Math.min(progress, 100), 
+          status: progress >= 100 ? 'processing' : 'uploading' 
+        } : f));
         
         if (progress >= 100) {
           clearInterval(interval);
           setTimeout(() => {
-             setFiles(prev => prev.map(f => f.id === file.id ? { ...f, status: 'completed' } : f));
+            setUploadingFiles(prev => prev.filter(f => f.id !== fileId));
           }, 1500);
         }
       }, 300);
@@ -87,12 +114,12 @@ export function DropZone({ onUpload, files: initialFiles = [] }: { onUpload?: (f
 
       <div className="flex items-center justify-between mb-2">
         <h3 className="font-medium text-sm">Project Files</h3>
-        <span className="text-xs text-muted-foreground">{files.length} files</span>
+        <span className="text-xs text-muted-foreground">{allFiles.length} files</span>
       </div>
 
       <ScrollArea className="flex-1 -mx-2 px-2">
         <div className="space-y-2">
-          {files.map((file) => (
+          {allFiles.map((file) => (
             <div key={file.id} className="group flex items-start gap-3 p-3 rounded-md border border-border bg-card hover:shadow-sm transition-all">
               <div className="mt-1">
                 {getFileIcon(file.type)}
@@ -116,7 +143,7 @@ export function DropZone({ onUpload, files: initialFiles = [] }: { onUpload?: (f
               </Button>
             </div>
           ))}
-          {files.length === 0 && (
+          {allFiles.length === 0 && (
             <div className="text-center py-8 text-muted-foreground text-sm">
               No files uploaded yet.
             </div>

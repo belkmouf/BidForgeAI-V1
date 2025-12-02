@@ -1,41 +1,106 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRoute } from 'wouter';
 import { AppSidebar } from '@/components/layout/AppSidebar';
 import { DropZone } from '@/components/upload/DropZone';
 import { TiptapEditor } from '@/components/editor/TiptapEditor';
 import { GeneratePanel } from '@/components/ai/GeneratePanel';
 import { RefineChat } from '@/components/ai/RefineChat';
-import { mockProjects, initialEditorContent, mockFiles } from '@/lib/mockData';
 import { Button } from '@/components/ui/button';
 import { ChevronLeft, Save, Share2, Eye } from 'lucide-react';
 import { Link } from 'wouter';
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { toast } from '@/hooks/use-toast';
+import { getProject, listDocuments, uploadDocument, generateBid, refineBid } from '@/lib/api';
+import type { Project, Document } from '@shared/schema';
+
+const initialEditorContent = '<h1>Welcome to BidForge AI</h1><p>Use the Generate panel to create your first bid draft, or start typing to manually build your proposal.</p>';
 
 export default function ProjectWorkspace() {
   const [, params] = useRoute('/projects/:id');
-  const project = mockProjects.find(p => p.id === params?.id) || mockProjects[0];
+  const projectId = params?.id || '';
+  
+  const [project, setProject] = useState<Project | null>(null);
+  const [documents, setDocuments] = useState<Document[]>([]);
   const [editorContent, setEditorContent] = useState(initialEditorContent);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const handleGenerate = (instructions: string) => {
+  useEffect(() => {
+    async function loadProject() {
+      if (!projectId) return;
+      try {
+        const [projectData, docsData] = await Promise.all([
+          getProject(projectId),
+          listDocuments(projectId)
+        ]);
+        setProject(projectData);
+        setDocuments(docsData);
+      } catch (error) {
+        console.error('Failed to load project:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load project data",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    loadProject();
+  }, [projectId]);
+
+  const handleGenerate = async (instructions: string, tone?: string) => {
     setIsGenerating(true);
-    // Simulate AI generation delay
-    setTimeout(() => {
-      setIsGenerating(false);
+    try {
+      const result = await generateBid(projectId, instructions, tone);
+      setEditorContent(result.html);
       toast({
         title: "Bid Generated",
-        description: "The proposal has been updated with new content based on your instructions.",
+        description: `Generated bid using ${result.chunksUsed} context chunks from your documents and past winning bids.`,
       });
-      // In a real app, we'd update the editor content here
-    }, 2000);
+    } catch (error: any) {
+      toast({
+        title: "Generation Failed",
+        description: error.message || "Failed to generate bid",
+        variant: "destructive",
+      });
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
-  const handleRefine = (feedback: string) => {
-    toast({
-      title: "Refining...",
-      description: "AI is adjusting the proposal based on your feedback.",
-    });
+  const handleRefine = async (feedback: string) => {
+    try {
+      const result = await refineBid(projectId, editorContent, feedback);
+      setEditorContent(result.html);
+      toast({
+        title: "Bid Refined",
+        description: "Your bid has been updated based on your feedback.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Refinement Failed",
+        description: error.message || "Failed to refine bid",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleFileUpload = async (file: File) => {
+    try {
+      const result = await uploadDocument(projectId, file);
+      setDocuments(prev => [...prev, result.document]);
+      toast({
+        title: "Upload Successful",
+        description: `${file.name} has been processed and is ready for use.`,
+      });
+    } catch (error: any) {
+      toast({
+        title: "Upload Failed",
+        description: error.message || "Failed to upload file",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleSave = () => {
@@ -44,6 +109,29 @@ export default function ProjectWorkspace() {
       description: "Project saved successfully.",
     });
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-background">
+        <div className="text-center">
+          <div className="text-lg font-semibold">Loading project...</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!project) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-background">
+        <div className="text-center">
+          <div className="text-lg font-semibold">Project not found</div>
+          <Link href="/">
+            <Button className="mt-4">Back to Dashboard</Button>
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-screen bg-background overflow-hidden">
@@ -65,7 +153,7 @@ export default function ProjectWorkspace() {
                   {project.status}
                 </span>
               </h1>
-              <p className="text-xs text-muted-foreground">{project.client}</p>
+              <p className="text-xs text-muted-foreground">{project.clientName}</p>
             </div>
           </div>
           
@@ -96,7 +184,15 @@ export default function ProjectWorkspace() {
                   Source Documents
                 </h2>
                 <div className="flex-1 overflow-hidden">
-                  <DropZone files={mockFiles} />
+                  <DropZone 
+                    files={documents.map(doc => ({
+                      name: doc.filename,
+                      size: 0,
+                      uploadedAt: new Date(doc.uploadedAt),
+                      id: doc.id.toString()
+                    }))}
+                    onUpload={handleFileUpload}
+                  />
                 </div>
               </div>
             </ResizablePanel>
