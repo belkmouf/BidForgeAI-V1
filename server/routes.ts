@@ -3,7 +3,6 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertProjectSchema, insertDocumentSchema } from "@shared/schema";
 import { generateBidContent, refineBidContent } from "./lib/openai";
-import { generateEmbeddingWithGemini } from "./lib/gemini";
 import { generateBidWithAnthropic, refineBidWithAnthropic } from "./lib/anthropic";
 import { generateBidWithGemini, refineBidWithGemini } from "./lib/gemini";
 import { generateBidWithDeepSeek, refineBidWithDeepSeek } from "./lib/deepseek";
@@ -174,14 +173,11 @@ export async function registerRoutes(
         return res.status(404).json({ error: "Project not found" });
       }
 
-      // Generate embedding for the instructions using Gemini
-      const queryEmbedding = await generateEmbeddingWithGemini(instructions);
-
-      // Retrieve similar chunks using RAG
-      const similarChunks = await storage.searchSimilarChunks(queryEmbedding, projectId, 10);
+      // Retrieve relevant chunks using text-based search
+      const relevantChunks = await storage.searchChunksByKeywords(instructions, projectId, 10);
 
       // Build context from retrieved chunks
-      const context = similarChunks
+      const context = relevantChunks
         .map((chunk, i) => `[Chunk ${i + 1}]: ${chunk.content}`)
         .join('\n\n');
 

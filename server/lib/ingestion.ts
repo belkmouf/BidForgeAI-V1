@@ -3,7 +3,6 @@ import * as path from 'path';
 import * as os from 'os';
 import AdmZip from 'adm-zip';
 import { pool } from '../db';
-import { generateEmbeddingWithGemini } from './gemini';
 
 // Dynamic PDF parsing with proper module handling
 async function parsePdf(buffer: Buffer): Promise<{ text: string }> {
@@ -210,19 +209,6 @@ export class IngestionService {
   ): Promise<ProcessedFile> {
     const chunks = this.chunkText(content);
     
-    // Pre-generate all embeddings before starting transaction
-    // This allows us to fail fast before any DB operations
-    const embeddings: number[][] = [];
-    for (let i = 0; i < chunks.length; i++) {
-      try {
-        const embedding = await generateEmbeddingWithGemini(chunks[i]);
-        embeddings.push(embedding);
-      } catch (error) {
-        console.error(`Failed to generate embedding for chunk ${i} of ${filename}:`, error);
-        throw new Error(`Embedding generation failed for ${filename}: ${error}`);
-      }
-    }
-
     // Use a transaction to ensure atomic document + chunk creation
     const client = await pool.connect();
     let documentId: number;
@@ -239,13 +225,12 @@ export class IngestionService {
       );
       documentId = docResult.rows[0].id;
 
-      // Create all chunks within the same transaction
+      // Create all chunks within the same transaction (without embeddings)
       for (let i = 0; i < chunks.length; i++) {
-        const embeddingStr = `[${embeddings[i].join(',')}]`;
         await client.query(
-          `INSERT INTO document_chunks (document_id, content, chunk_index, embedding) 
-           VALUES ($1, $2, $3, $4::vector)`,
-          [documentId, chunks[i], i, embeddingStr]
+          `INSERT INTO document_chunks (document_id, content, chunk_index) 
+           VALUES ($1, $2, $3)`,
+          [documentId, chunks[i], i]
         );
       }
 

@@ -29,6 +29,7 @@ export interface IStorage {
   // Document Chunks
   createDocumentChunk(chunk: InsertDocumentChunk): Promise<DocumentChunk>;
   searchSimilarChunks(embedding: number[], projectId: string, limit: number): Promise<Array<DocumentChunk & { distance: number }>>;
+  searchChunksByKeywords(query: string, projectId: string, limit: number): Promise<Array<DocumentChunk & { rank: number }>>;
   
   // Dashboard Stats
   getDashboardStats(): Promise<{
@@ -149,6 +150,87 @@ export class DatabaseStorage implements IStorage {
       embedding: row.embedding,
       chunkIndex: row.chunk_index,
       distance: parseFloat(row.distance),
+    }));
+  }
+
+  async searchChunksByKeywords(
+    query: string, 
+    projectId: string, 
+    limit: number = 10
+  ): Promise<Array<DocumentChunk & { rank: number }>> {
+    // Extract keywords from query (simple word extraction)
+    const keywords = query
+      .toLowerCase()
+      .replace(/[^\w\s]/g, ' ')
+      .split(/\s+/)
+      .filter(word => word.length > 2);
+
+    if (keywords.length === 0) {
+      // If no valid keywords, return recent chunks from the project
+      const results = await db.execute(sql`
+        SELECT 
+          dc.id,
+          dc.document_id,
+          dc.content,
+          dc.chunk_index,
+          0 as rank
+        FROM document_chunks dc
+        JOIN documents d ON dc.document_id = d.id
+        JOIN projects p ON d.project_id = p.id
+        WHERE (
+          p.id = ${projectId}
+          OR
+          p.status = 'Closed-Won'
+        )
+        ORDER BY dc.id DESC
+        LIMIT ${limit}
+      `);
+
+      return results.rows.map((row: any) => ({
+        id: row.id,
+        documentId: row.document_id,
+        content: row.content,
+        embedding: null,
+        chunkIndex: row.chunk_index,
+        rank: 0,
+      }));
+    }
+
+    // Build a pattern for case-insensitive keyword matching
+    const keywordPattern = keywords.join('|');
+    
+    // Search chunks using ILIKE for keyword matching
+    const results = await db.execute(sql`
+      SELECT 
+        dc.id,
+        dc.document_id,
+        dc.content,
+        dc.chunk_index,
+        (
+          SELECT COUNT(*) 
+          FROM unnest(string_to_array(lower(dc.content), ' ')) word
+          WHERE word ~ ${keywordPattern}
+        ) as rank
+      FROM document_chunks dc
+      JOIN documents d ON dc.document_id = d.id
+      JOIN projects p ON d.project_id = p.id
+      WHERE (
+        p.id = ${projectId}
+        OR
+        p.status = 'Closed-Won'
+      )
+      AND lower(dc.content) ~ ${keywordPattern}
+      ORDER BY rank DESC, dc.id DESC
+      LIMIT ${limit}
+    `);
+
+    return results.rows.map((row: any) => ({
+      id: row.id,
+      documentId: row.document_id,
+      content: row.content,
+      embedding: null,
+      chunkIndex: row.chunk_index,
+      rank: parseInt(row.rank) || 0,
     }));
   }
 
