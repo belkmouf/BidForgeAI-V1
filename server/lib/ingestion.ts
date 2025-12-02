@@ -2,7 +2,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
 import AdmZip from 'adm-zip';
-import { storage } from '../storage';
+import { pool } from '../db';
 import { generateEmbedding } from './openai';
 
 // Dynamic import for pdf-parse due to ESM compatibility
@@ -197,41 +197,66 @@ export class IngestionService {
     filename: string,
     content: string
   ): Promise<ProcessedFile> {
-    const document = await storage.createDocument({
-      projectId,
-      filename,
-      content: content.substring(0, 10000),
-      isProcessed: false,
-    });
-
     const chunks = this.chunkText(content);
-    let chunksCreated = 0;
-
+    
+    // Pre-generate all embeddings before starting transaction
+    // This allows us to fail fast before any DB operations
+    const embeddings: number[][] = [];
     for (let i = 0; i < chunks.length; i++) {
-      const chunkText = chunks[i];
-      
       try {
-        const embedding = await generateEmbedding(chunkText);
-        
-        await storage.createDocumentChunk({
-          documentId: document.id,
-          content: chunkText,
-          chunkIndex: i,
-          embedding: embedding as any,
-        });
-        
-        chunksCreated++;
+        const embedding = await generateEmbedding(chunks[i]);
+        embeddings.push(embedding);
       } catch (error) {
-        console.error(`Failed to create chunk ${i} for ${filename}:`, error);
+        console.error(`Failed to generate embedding for chunk ${i} of ${filename}:`, error);
+        throw new Error(`Embedding generation failed for ${filename}: ${error}`);
       }
     }
 
-    await storage.updateDocumentProcessed(document.id, true);
+    // Use a transaction to ensure atomic document + chunk creation
+    const client = await pool.connect();
+    let documentId: number;
+    
+    try {
+      await client.query('BEGIN');
+      
+      // Create the document
+      const docResult = await client.query(
+        `INSERT INTO documents (project_id, filename, content, is_processed) 
+         VALUES ($1, $2, $3, $4) 
+         RETURNING id`,
+        [projectId, filename, content.substring(0, 10000), false]
+      );
+      documentId = docResult.rows[0].id;
+
+      // Create all chunks within the same transaction
+      for (let i = 0; i < chunks.length; i++) {
+        const embeddingStr = `[${embeddings[i].join(',')}]`;
+        await client.query(
+          `INSERT INTO document_chunks (document_id, content, chunk_index, embedding) 
+           VALUES ($1, $2, $3, $4::vector)`,
+          [documentId, chunks[i], i, embeddingStr]
+        );
+      }
+
+      // Mark document as processed
+      await client.query(
+        `UPDATE documents SET is_processed = true WHERE id = $1`,
+        [documentId]
+      );
+
+      await client.query('COMMIT');
+    } catch (error) {
+      await client.query('ROLLBACK');
+      console.error(`Transaction failed for ${filename}, rolling back:`, error);
+      throw new Error(`Document ingestion failed for ${filename}: ${error}`);
+    } finally {
+      client.release();
+    }
 
     return {
-      documentId: document.id,
+      documentId,
       filename,
-      chunksCreated,
+      chunksCreated: chunks.length,
     };
   }
 
