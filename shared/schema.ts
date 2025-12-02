@@ -56,24 +56,26 @@ export const documentChunksRelations = relations(documentChunks, ({ one }) => ({
   }),
 }));
 
-// Insert Schemas
-export const insertProjectSchema = createInsertSchema(projects, {
+// Insert Schemas - using z.object directly for simpler typing
+export const insertProjectSchema = z.object({
   name: z.string().min(1, "Project name is required"),
   clientName: z.string().min(1, "Client name is required"),
   status: projectStatusEnum.optional(),
-}).omit({ id: true, createdAt: true });
-
-export const insertDocumentSchema = createInsertSchema(documents, {
-  isProcessed: z.boolean().optional(),
-}).omit({ 
-  id: true, 
-  uploadedAt: true 
+  metadata: z.any().optional(),
 });
 
-export const insertDocumentChunkSchema = createInsertSchema(documentChunks, {
+export const insertDocumentSchema = z.object({
+  projectId: z.string(),
+  filename: z.string(),
+  content: z.string().optional().nullable(),
+  isProcessed: z.boolean().optional(),
+});
+
+export const insertDocumentChunkSchema = z.object({
+  documentId: z.number(),
+  content: z.string(),
+  chunkIndex: z.number(),
   embedding: z.any().optional(),
-}).omit({ 
-  id: true 
 });
 
 // Select Schemas

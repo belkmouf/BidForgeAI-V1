@@ -76,7 +76,7 @@ export class DatabaseStorage implements IStorage {
   async createDocument(insertDocument: InsertDocument): Promise<Document> {
     const [document] = await db
       .insert(documents)
-      .values(insertDocument)
+      .values(insertDocument as typeof documents.$inferInsert)
       .returning();
     return document;
   }
@@ -108,7 +108,7 @@ export class DatabaseStorage implements IStorage {
   async createDocumentChunk(insertChunk: InsertDocumentChunk): Promise<DocumentChunk> {
     const [chunk] = await db
       .insert(documentChunks)
-      .values(insertChunk)
+      .values(insertChunk as typeof documentChunks.$inferInsert)
       .returning();
     return chunk;
   }

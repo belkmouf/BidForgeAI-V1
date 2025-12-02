@@ -6,6 +6,7 @@ import { generateEmbedding, generateBidContent, refineBidContent } from "./lib/o
 import { generateBidWithAnthropic, refineBidWithAnthropic } from "./lib/anthropic";
 import { generateBidWithGemini, refineBidWithGemini } from "./lib/gemini";
 import { generateBidWithDeepSeek, refineBidWithDeepSeek } from "./lib/deepseek";
+import { ingestionService } from "./lib/ingestion";
 import multer from "multer";
 import { z } from "zod";
 
@@ -91,7 +92,7 @@ export async function registerRoutes(
 
   // ==================== DOCUMENTS ====================
 
-  // Upload a document to a project
+  // Upload a document to a project with recursive file processing
   app.post("/api/projects/:id/upload", upload.single('file'), async (req, res) => {
     try {
       if (!req.file) {
@@ -106,33 +107,30 @@ export async function registerRoutes(
         return res.status(404).json({ error: "Project not found" });
       }
 
-      // For now, we'll store basic file info
-      // In a full implementation, you'd process PDF/MSG/ZIP files here
-      const content = req.file.buffer.toString('utf-8', 0, Math.min(req.file.size, 10000));
+      // Validate file type
+      const allowedExtensions = ['.pdf', '.msg', '.zip', '.txt', '.doc', '.docx'];
+      const fileExt = req.file.originalname.toLowerCase().match(/\.[^.]*$/)?.[0] || '';
       
-      const document = await storage.createDocument({
-        projectId,
-        filename: req.file.originalname,
-        content,
-        isProcessed: true, // Mark as processed for now
-      });
-
-      // Generate embedding for the content (simplified - in production, chunk the content)
-      try {
-        const embedding = await generateEmbedding(content);
-        await storage.createDocumentChunk({
-          documentId: document.id,
-          content: content.substring(0, 2000), // First 2000 chars
-          chunkIndex: 0,
-          embedding: embedding as any,
+      if (!allowedExtensions.includes(fileExt)) {
+        return res.status(400).json({ 
+          error: `Unsupported file type. Allowed: ${allowedExtensions.join(', ')}` 
         });
-      } catch (embeddingError) {
-        console.error('Failed to generate embedding:', embeddingError);
       }
+
+      // Process file with recursive extraction (ZIP→MSG→PDF chains)
+      const processedFiles = await ingestionService.processFile(
+        req.file.buffer,
+        req.file.originalname,
+        projectId
+      );
+
+      const totalChunks = processedFiles.reduce((sum, f) => sum + f.chunksCreated, 0);
 
       res.json({
         message: "File uploaded and processed successfully",
-        document,
+        filesProcessed: processedFiles.length,
+        totalChunks,
+        documents: processedFiles,
       });
     } catch (error: any) {
       console.error('Upload error:', error);
