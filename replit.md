@@ -107,6 +107,29 @@ Preferred communication style: Simple, everyday language.
 - Similarity search using cosine distance with pgvector
 - Dashboard statistics aggregation (pipeline counts, win rate)
 
+### RFP Analysis & Risk Assessment Module
+
+**Analysis Features**
+- AI-powered RFP document analysis using OpenAI GPT-4o
+- Four key scores: Quality (0-100), Clarity (0-100), Doability (0-100), Vendor Risk (0-100)
+- Overall risk level assessment: Low, Medium, High, Critical
+- Vendor payment history tracking from internal database
+- Missing documents detection with request functionality
+- Red flags and opportunities identification
+- Actionable recommendations with priority and time estimates
+
+**Missing Documents Request Feature**
+- WhatsApp and Email buttons to request missing documents from vendors
+- AI-generated professional messages tailored for each channel
+- Editable message preview before sending
+- WhatsApp messages sent directly via Meta Business API
+- Email opens in user's default email client with pre-filled content
+
+**Database Tables**
+- `rfp_analyses` - Stores analysis results with scores and findings
+- `analysis_alerts` - Tracks actionable alerts with resolution status
+- `vendor_database` - Payment history and ratings for known vendors
+
 ### WhatsApp Integration
 
 **Meta WhatsApp Business API**
@@ -114,6 +137,7 @@ Preferred communication style: Simple, everyday language.
 - Send text messages, documents, and template messages
 - Receive messages via webhook with signature verification
 - Configuration page at `/whatsapp` route
+- Missing documents request integration from Analysis module
 
 **Required Environment Variables:**
 - `WA_PHONE_NUMBER_ID` - Phone number ID from Meta Developer Console
