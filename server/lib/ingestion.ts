@@ -3,21 +3,19 @@ import * as path from 'path';
 import * as os from 'os';
 import AdmZip from 'adm-zip';
 import { pool } from '../db';
+import { createRequire } from 'module';
 
-// Dynamic PDF parsing with proper module handling
+// Create require for CommonJS modules
+const require = createRequire(import.meta.url);
+
+// PDF parsing 
 async function parsePdf(buffer: Buffer): Promise<{ text: string }> {
   try {
-    const pdfModule = await import('pdf-parse');
-    const pdfParse = pdfModule.default || pdfModule;
-    if (typeof pdfParse === 'function') {
-      return await pdfParse(buffer);
-    }
-    if (pdfParse && typeof pdfParse.default === 'function') {
-      return await pdfParse.default(buffer);
-    }
-    throw new Error('Could not find pdf-parse function');
+    const pdfParse = require('pdf-parse');
+    const result = await pdfParse(buffer);
+    return { text: result.text || '' };
   } catch (error: any) {
-    console.error('PDF parse module error:', error);
+    console.error('PDF parse error:', error);
     return { text: `[PDF content could not be extracted: ${error.message}]` };
   }
 }

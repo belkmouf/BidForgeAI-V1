@@ -44,8 +44,16 @@ export async function uploadDocument(projectId: string, file: File) {
     method: 'POST',
     body: formData,
   });
-  if (!res.ok) throw new Error(await res.text());
-  return res.json() as Promise<{ message: string; document: Document }>;
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({ error: 'Upload failed' }));
+    throw new Error(errorData.error || 'Upload failed');
+  }
+  return res.json() as Promise<{ 
+    message: string; 
+    filesProcessed: number;
+    totalChunks: number;
+    documents: Array<{ filename: string; documentId: number; chunksCreated: number }>;
+  }>;
 }
 
 export async function listDocuments(projectId: string) {

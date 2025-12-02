@@ -93,10 +93,12 @@ export default function ProjectWorkspace() {
   const handleFileUpload = async (file: File) => {
     try {
       const result = await uploadDocument(projectId, file);
-      setDocuments(prev => [...prev, result.document]);
+      // Reload documents list after successful upload
+      const docsData = await listDocuments(projectId);
+      setDocuments(docsData);
       toast({
         title: "Upload Successful",
-        description: `${file.name} has been processed and is ready for use.`,
+        description: `${file.name} has been processed (${result.filesProcessed} file(s), ${result.totalChunks} chunks).`,
       });
     } catch (error: any) {
       toast({
@@ -189,7 +191,7 @@ export default function ProjectWorkspace() {
                 </h2>
                 <div className="flex-1 overflow-hidden">
                   <DropZone 
-                    files={documents.map(doc => ({
+                    files={documents.filter(doc => doc).map(doc => ({
                       name: doc.filename,
                       size: 0,
                       uploadedAt: new Date(doc.uploadedAt),
