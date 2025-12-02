@@ -203,7 +203,7 @@ export async function registerRoutes(
 
       res.json({
         html,
-        chunksUsed: similarChunks.length,
+        chunksUsed: relevantChunks.length,
         model,
       });
     } catch (error: any) {
