@@ -1,5 +1,4 @@
 import { AppSidebar } from '@/components/layout/AppSidebar';
-import { SidebarProvider, SidebarInset, SidebarTrigger } from '@/components/ui/sidebar';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -10,19 +9,16 @@ import { Settings as SettingsIcon, Bell, Palette, Shield } from 'lucide-react';
 
 export default function Settings() {
   return (
-    <SidebarProvider>
+    <div className="flex min-h-screen bg-background">
       <AppSidebar />
-      <SidebarInset>
-        <header className="flex h-16 shrink-0 items-center gap-2 border-b border-border px-4">
-          <SidebarTrigger className="-ml-1" />
-          <Separator orientation="vertical" className="mr-2 h-4" />
-          <div className="flex items-center gap-2">
-            <SettingsIcon className="h-5 w-5 text-primary" />
-            <h1 className="text-xl font-display font-semibold">Settings</h1>
+      
+      <main className="flex-1 ml-64 p-8 overflow-auto">
+        <div className="max-w-7xl mx-auto space-y-8">
+          <div className="flex items-center gap-2 mb-6">
+            <SettingsIcon className="h-6 w-6 text-primary" />
+            <h1 className="text-3xl font-display font-bold">Settings</h1>
           </div>
-        </header>
 
-        <main className="flex-1 p-6">
           <div className="max-w-4xl mx-auto space-y-6">
             <Card data-testid="card-company-settings">
               <CardHeader>
@@ -129,8 +125,8 @@ export default function Settings() {
               </CardContent>
             </Card>
           </div>
-        </main>
-      </SidebarInset>
-    </SidebarProvider>
+        </div>
+      </main>
+    </div>
   );
 }
