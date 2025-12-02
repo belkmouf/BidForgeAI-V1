@@ -1,8 +1,15 @@
+import { useState } from 'react';
+import { useLocation } from 'wouter';
 import { AppSidebar } from '@/components/layout/AppSidebar';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { FileText, Plus, Copy, Pencil, Trash2 } from 'lucide-react';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { FileText, Plus, Copy, Pencil, Trash2, Loader2 } from 'lucide-react';
+import { createProject } from '@/lib/api';
+import { toast } from '@/hooks/use-toast';
 
 const templates = [
   {
@@ -36,6 +43,61 @@ const templates = [
 ];
 
 export default function Templates() {
+  const [, setLocation] = useLocation();
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [selectedTemplate, setSelectedTemplate] = useState<typeof templates[0] | null>(null);
+  const [projectName, setProjectName] = useState('');
+  const [clientName, setClientName] = useState('');
+  const [isCreating, setIsCreating] = useState(false);
+
+  const handleUseTemplate = (template: typeof templates[0]) => {
+    setSelectedTemplate(template);
+    setProjectName(`${template.name} - New Project`);
+    setClientName('');
+    setDialogOpen(true);
+  };
+
+  const handleCreateProject = async () => {
+    if (!projectName.trim() || !clientName.trim()) {
+      toast({
+        title: "Missing Information",
+        description: "Please enter both project name and client name.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsCreating(true);
+    try {
+      const project = await createProject({
+        name: projectName.trim(),
+        clientName: clientName.trim(),
+        status: 'Active',
+        metadata: {
+          templateId: selectedTemplate?.id,
+          templateName: selectedTemplate?.name,
+          category: selectedTemplate?.category
+        }
+      });
+      
+      toast({
+        title: "Project Created",
+        description: "You can now upload your RFQ documents.",
+      });
+      
+      setDialogOpen(false);
+      setLocation(`/projects/${project.id}`);
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to create project",
+        variant: "destructive",
+      });
+    } finally {
+      setIsCreating(false);
+    }
+  };
+
   return (
     <div className="flex min-h-screen bg-background">
       <AppSidebar />
@@ -91,7 +153,12 @@ export default function Templates() {
                     <span className="text-sm text-muted-foreground">
                       Last used: {template.lastUsed}
                     </span>
-                    <Button variant="outline" size="sm" data-testid={`button-use-template-${template.id}`}>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => handleUseTemplate(template)}
+                      data-testid={`button-use-template-${template.id}`}
+                    >
                       Use Template
                     </Button>
                   </div>
@@ -113,6 +180,58 @@ export default function Templates() {
           </div>
         </div>
       </main>
+
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Create Project from Template</DialogTitle>
+            <DialogDescription>
+              {selectedTemplate && (
+                <>Using template: <span className="font-medium text-foreground">{selectedTemplate.name}</span></>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="project-name">Project Name</Label>
+              <Input
+                id="project-name"
+                value={projectName}
+                onChange={(e) => setProjectName(e.target.value)}
+                placeholder="Enter project name"
+                data-testid="input-project-name"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="client-name">Client Name</Label>
+              <Input
+                id="client-name"
+                value={clientName}
+                onChange={(e) => setClientName(e.target.value)}
+                placeholder="Enter client name"
+                data-testid="input-client-name"
+              />
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleCreateProject} disabled={isCreating} data-testid="button-create-from-template">
+              {isCreating ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Creating...
+                </>
+              ) : (
+                'Create & Upload Documents'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
