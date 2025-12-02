@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Link } from 'wouter';
 import { Building2, FileText, Brain, Zap, Shield, Menu, X, ChevronRight, ArrowRight } from 'lucide-react';
 import gsap from 'gsap';
+import constructionBg from '@assets/stock_images/construction_site_bu_f0afb754.jpg';
 
 const features = [
   {
@@ -140,6 +141,18 @@ export default function Landing() {
 
       <section ref={heroRef} className="min-h-screen flex items-center justify-center relative overflow-hidden pt-20">
         <div className="absolute inset-0 bg-gradient-to-br from-charcoal-900 via-teal-900 to-charcoal-800" />
+        
+        <div 
+          className="absolute inset-0 opacity-[0.08] mix-blend-luminosity"
+          style={{
+            backgroundImage: `url(${constructionBg})`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            filter: 'grayscale(100%) contrast(1.1)'
+          }}
+        />
+        
+        <div className="absolute inset-0 bg-gradient-to-t from-charcoal-900/90 via-transparent to-charcoal-900/60" />
         
         <div className="absolute inset-0 opacity-[0.03]">
           <svg className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
