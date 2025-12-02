@@ -54,25 +54,28 @@ export async function listDocuments(projectId: string) {
   return res.json() as Promise<Document[]>;
 }
 
+// AI Model type
+export type AIModel = 'openai' | 'anthropic' | 'gemini';
+
 // Bid Generation API
-export async function generateBid(projectId: string, instructions: string, tone?: string) {
+export async function generateBid(projectId: string, instructions: string, tone?: string, model?: AIModel) {
   const res = await fetch(`${API_BASE}/projects/${projectId}/generate`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ instructions, tone }),
+    body: JSON.stringify({ instructions, tone, model: model || 'openai' }),
   });
   if (!res.ok) throw new Error(await res.text());
-  return res.json() as Promise<{ html: string; chunksUsed: number }>;
+  return res.json() as Promise<{ html: string; chunksUsed: number; model: AIModel }>;
 }
 
-export async function refineBid(projectId: string, currentHtml: string, feedback: string) {
+export async function refineBid(projectId: string, currentHtml: string, feedback: string, model?: AIModel) {
   const res = await fetch(`${API_BASE}/projects/${projectId}/refine`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ currentHtml, feedback }),
+    body: JSON.stringify({ currentHtml, feedback, model: model || 'openai' }),
   });
   if (!res.ok) throw new Error(await res.text());
-  return res.json() as Promise<{ html: string }>;
+  return res.json() as Promise<{ html: string; model: AIModel }>;
 }
 
 // Dashboard API

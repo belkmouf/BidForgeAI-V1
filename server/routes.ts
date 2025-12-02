@@ -3,6 +3,8 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertProjectSchema, insertDocumentSchema } from "@shared/schema";
 import { generateEmbedding, generateBidContent, refineBidContent } from "./lib/openai";
+import { generateBidWithAnthropic, refineBidWithAnthropic } from "./lib/anthropic";
+import { generateBidWithGemini, refineBidWithGemini } from "./lib/gemini";
 import multer from "multer";
 import { z } from "zod";
 
@@ -18,11 +20,13 @@ const upload = multer({
 const generateBidSchema = z.object({
   instructions: z.string().min(1),
   tone: z.string().optional().default('professional'),
+  model: z.enum(['openai', 'anthropic', 'gemini']).optional().default('openai'),
 });
 
 const refineBidSchema = z.object({
   currentHtml: z.string().min(1),
   feedback: z.string().min(1),
+  model: z.enum(['openai', 'anthropic', 'gemini']).optional().default('openai'),
 });
 
 const updateStatusSchema = z.object({
@@ -150,7 +154,7 @@ export async function registerRoutes(
   // Generate a bid using RAG
   app.post("/api/projects/:id/generate", async (req, res) => {
     try {
-      const { instructions, tone } = generateBidSchema.parse(req.body);
+      const { instructions, tone, model } = generateBidSchema.parse(req.body);
       const projectId = req.params.id;
 
       // Verify project exists
@@ -159,7 +163,7 @@ export async function registerRoutes(
         return res.status(404).json({ error: "Project not found" });
       }
 
-      // Generate embedding for the instructions
+      // Generate embedding for the instructions (always use OpenAI for embeddings)
       const queryEmbedding = await generateEmbedding(instructions);
 
       // Retrieve similar chunks using RAG
@@ -170,16 +174,27 @@ export async function registerRoutes(
         .map((chunk, i) => `[Chunk ${i + 1}]: ${chunk.content}`)
         .join('\n\n');
 
-      // Generate bid content using OpenAI
-      const html = await generateBidContent({
-        instructions,
-        context: context || 'No relevant context found from previous documents.',
-        tone,
-      });
+      const contextOrDefault = context || 'No relevant context found from previous documents.';
+
+      // Generate bid content using selected model
+      let html: string;
+      switch (model) {
+        case 'anthropic':
+          html = await generateBidWithAnthropic({ instructions, context: contextOrDefault, tone });
+          break;
+        case 'gemini':
+          html = await generateBidWithGemini({ instructions, context: contextOrDefault, tone });
+          break;
+        case 'openai':
+        default:
+          html = await generateBidContent({ instructions, context: contextOrDefault, tone });
+          break;
+      }
 
       res.json({
         html,
         chunksUsed: similarChunks.length,
+        model,
       });
     } catch (error: any) {
       console.error('Generation error:', error);
@@ -190,14 +205,24 @@ export async function registerRoutes(
   // Refine an existing bid
   app.post("/api/projects/:id/refine", async (req, res) => {
     try {
-      const { currentHtml, feedback } = refineBidSchema.parse(req.body);
+      const { currentHtml, feedback, model } = refineBidSchema.parse(req.body);
 
-      const html = await refineBidContent({
-        currentHtml,
-        feedback,
-      });
+      // Refine using selected model
+      let html: string;
+      switch (model) {
+        case 'anthropic':
+          html = await refineBidWithAnthropic({ currentHtml, feedback });
+          break;
+        case 'gemini':
+          html = await refineBidWithGemini({ currentHtml, feedback });
+          break;
+        case 'openai':
+        default:
+          html = await refineBidContent({ currentHtml, feedback });
+          break;
+      }
 
-      res.json({ html });
+      res.json({ html, model });
     } catch (error: any) {
       console.error('Refinement error:', error);
       res.status(500).json({ error: error.message });

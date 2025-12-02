@@ -5,19 +5,21 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import type { AIModel } from '@/lib/api';
 
 interface GeneratePanelProps {
-  onGenerate: (instructions: string, tone?: string) => void;
+  onGenerate: (instructions: string, tone?: string, model?: AIModel) => void;
   isGenerating: boolean;
 }
 
 export function GeneratePanel({ onGenerate, isGenerating }: GeneratePanelProps) {
   const [instructions, setInstructions] = useState('');
   const [tone, setTone] = useState('professional');
+  const [model, setModel] = useState<AIModel>('openai');
 
   const handleGenerate = () => {
     if (!instructions) return;
-    onGenerate(instructions, tone);
+    onGenerate(instructions, tone, model);
   };
 
   return (
@@ -29,6 +31,20 @@ export function GeneratePanel({ onGenerate, isGenerating }: GeneratePanelProps) 
 
       <Card className="p-4 bg-card border-border shadow-sm">
         <div className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="model">AI Model</Label>
+            <Select value={model} onValueChange={(v) => setModel(v as AIModel)}>
+              <SelectTrigger id="model" data-testid="select-ai-model">
+                <SelectValue placeholder="Select AI model" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="openai">OpenAI GPT-4o</SelectItem>
+                <SelectItem value="anthropic">Anthropic Claude</SelectItem>
+                <SelectItem value="gemini">Google Gemini</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
           <div className="space-y-2">
             <Label htmlFor="tone">Tone & Style</Label>
             <Select value={tone} onValueChange={setTone}>

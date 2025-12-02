@@ -10,7 +10,7 @@ import { ChevronLeft, Save, Share2, Eye } from 'lucide-react';
 import { Link } from 'wouter';
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { toast } from '@/hooks/use-toast';
-import { getProject, listDocuments, uploadDocument, generateBid, refineBid } from '@/lib/api';
+import { getProject, listDocuments, uploadDocument, generateBid, refineBid, type AIModel } from '@/lib/api';
 import type { Project, Document } from '@shared/schema';
 
 const initialEditorContent = '<h1>Welcome to BidForge AI</h1><p>Use the Generate panel to create your first bid draft, or start typing to manually build your proposal.</p>';
@@ -49,14 +49,18 @@ export default function ProjectWorkspace() {
     loadProject();
   }, [projectId]);
 
-  const handleGenerate = async (instructions: string, tone?: string) => {
+  const [selectedModel, setSelectedModel] = useState<AIModel>('openai');
+
+  const handleGenerate = async (instructions: string, tone?: string, model?: AIModel) => {
     setIsGenerating(true);
+    const modelToUse = model || selectedModel;
+    setSelectedModel(modelToUse);
     try {
-      const result = await generateBid(projectId, instructions, tone);
+      const result = await generateBid(projectId, instructions, tone, modelToUse);
       setEditorContent(result.html);
       toast({
         title: "Bid Generated",
-        description: `Generated bid using ${result.chunksUsed} context chunks from your documents and past winning bids.`,
+        description: `Generated bid using ${result.chunksUsed} context chunks with ${result.model.toUpperCase()}.`,
       });
     } catch (error: any) {
       toast({
@@ -71,11 +75,11 @@ export default function ProjectWorkspace() {
 
   const handleRefine = async (feedback: string) => {
     try {
-      const result = await refineBid(projectId, editorContent, feedback);
+      const result = await refineBid(projectId, editorContent, feedback, selectedModel);
       setEditorContent(result.html);
       toast({
         title: "Bid Refined",
-        description: "Your bid has been updated based on your feedback.",
+        description: `Your bid has been updated using ${result.model.toUpperCase()}.`,
       });
     } catch (error: any) {
       toast({
