@@ -55,6 +55,18 @@ async function buildAll() {
     define: {
       "process.env.NODE_ENV": '"production"',
     },
+    plugins: [
+      {
+        name: 'exclude-dev-only',
+        setup(build) {
+          // Mark vite.ts as external since it's only used in development
+          build.onResolve({ filter: /\.\/vite$/ }, () => ({
+            path: './vite',
+            external: true,
+          }));
+        },
+      },
+    ],
     minify: true,
     external: externals,
     logLevel: "info",

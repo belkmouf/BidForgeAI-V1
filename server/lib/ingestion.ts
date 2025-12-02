@@ -3,15 +3,11 @@ import * as path from 'path';
 import * as os from 'os';
 import AdmZip from 'adm-zip';
 import { pool } from '../db';
-import { createRequire } from 'module';
 
-// Create require for CommonJS modules
-const require = createRequire(import.meta.url);
-
-// PDF parsing 
+// PDF parsing - use dynamic import to avoid ESM/CJS issues
 async function parsePdf(buffer: Buffer): Promise<{ text: string }> {
   try {
-    const pdfParse = require('pdf-parse');
+    const pdfParse = (await import('pdf-parse')).default;
     const result = await pdfParse(buffer);
     return { text: result.text || '' };
   } catch (error: any) {
