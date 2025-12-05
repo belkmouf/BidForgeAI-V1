@@ -214,18 +214,18 @@ export default function Analytics() {
   })) : [];
 
   return (
-    <div className="min-h-screen bg-[#121212] text-white">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 text-slate-900">
       <div className="max-w-7xl mx-auto px-6 py-8">
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-4">
             <Link href="/dashboard">
-              <Button variant="ghost" size="icon" className="text-gray-400 hover:text-white">
+              <Button variant="ghost" size="icon" className="text-slate-600 hover:text-slate-900">
                 <ArrowLeft className="h-5 w-5" />
               </Button>
             </Link>
             <div>
-              <h1 className="text-3xl font-bold font-display">Analytics Dashboard</h1>
-              <p className="text-gray-400 mt-1">Company-wide performance metrics and insights</p>
+              <h1 className="text-3xl font-bold font-display text-slate-900">Analytics Dashboard</h1>
+              <p className="text-slate-600 mt-1">Company-wide performance metrics and insights</p>
             </div>
           </div>
           <div className="flex items-center gap-3">
@@ -299,7 +299,7 @@ export default function Analytics() {
         </div>
 
         <Tabs defaultValue="overview" className="space-y-6">
-          <TabsList className="bg-white/5">
+          <TabsList className="bg-slate-100">
             <TabsTrigger value="overview" className="data-[state=active]:bg-[#0d7377]">
               <BarChart3 className="h-4 w-4 mr-2" />
               Overview
@@ -374,21 +374,21 @@ export default function Analytics() {
                         <div className="text-5xl font-bold text-[#0d7377]">
                           {overview?.bidding.winRate || 0}%
                         </div>
-                        <div className="text-gray-400 mt-1">Win Rate</div>
+                        <div className="text-slate-500 mt-1">Win Rate</div>
                       </div>
                     </div>
                     <div className="grid grid-cols-3 gap-4 text-center">
                       <div className="p-4 rounded-lg bg-green-500/10">
                         <div className="text-2xl font-bold text-green-500">{overview?.bidding.won || 0}</div>
-                        <div className="text-sm text-gray-400">Won</div>
+                        <div className="text-sm text-slate-600">Won</div>
                       </div>
                       <div className="p-4 rounded-lg bg-red-500/10">
                         <div className="text-2xl font-bold text-red-500">{overview?.bidding.lost || 0}</div>
-                        <div className="text-sm text-gray-400">Lost</div>
+                        <div className="text-sm text-slate-600">Lost</div>
                       </div>
                       <div className="p-4 rounded-lg bg-blue-500/10">
                         <div className="text-2xl font-bold text-blue-500">{overview?.bidding.totalBids || 0}</div>
-                        <div className="text-sm text-gray-400">Total</div>
+                        <div className="text-sm text-slate-600">Total</div>
                       </div>
                     </div>
                   </div>
@@ -485,18 +485,18 @@ export default function Analytics() {
                   <div className="overflow-x-auto">
                     <table className="w-full">
                       <thead>
-                        <tr className="border-b border-white/10">
-                          <th className="text-left py-3 px-4 text-gray-400 font-medium">Client</th>
-                          <th className="text-center py-3 px-4 text-gray-400 font-medium">Projects</th>
-                          <th className="text-center py-3 px-4 text-gray-400 font-medium">Active</th>
-                          <th className="text-center py-3 px-4 text-gray-400 font-medium">Won</th>
-                          <th className="text-center py-3 px-4 text-gray-400 font-medium">Lost</th>
-                          <th className="text-center py-3 px-4 text-gray-400 font-medium">Win Rate</th>
+                        <tr className="border-b border-slate-200">
+                          <th className="text-left py-3 px-4 text-slate-600 font-medium">Client</th>
+                          <th className="text-center py-3 px-4 text-slate-600 font-medium">Projects</th>
+                          <th className="text-center py-3 px-4 text-slate-600 font-medium">Active</th>
+                          <th className="text-center py-3 px-4 text-slate-600 font-medium">Won</th>
+                          <th className="text-center py-3 px-4 text-slate-600 font-medium">Lost</th>
+                          <th className="text-center py-3 px-4 text-slate-600 font-medium">Win Rate</th>
                         </tr>
                       </thead>
                       <tbody>
                         {clients.clients.map((client, idx) => (
-                          <tr key={idx} className="border-b border-white/5 hover:bg-white/5">
+                          <tr key={idx} className="border-b border-slate-200 hover:bg-slate-50">
                             <td className="py-3 px-4 font-medium">{client.name}</td>
                             <td className="text-center py-3 px-4">{client.projects}</td>
                             <td className="text-center py-3 px-4">
@@ -614,7 +614,7 @@ function MetricCard({ title, value, icon: Icon, trend, subtitle, color = 'text-[
       <CardContent className="pt-6">
         <div className="flex items-start justify-between">
           <div>
-            <p className="text-sm text-gray-400">{title}</p>
+            <p className="text-sm text-slate-600">{title}</p>
             <p className={`text-3xl font-bold mt-1 ${color}`}>{value}</p>
             {subtitle && <p className="text-xs text-gray-500 mt-1">{subtitle}</p>}
           </div>
@@ -644,10 +644,10 @@ function ScoreBar({ label, value, color, inverted }: ScoreBarProps) {
   return (
     <div>
       <div className="flex justify-between text-sm mb-1">
-        <span className="text-gray-400">{label}</span>
+        <span className="text-slate-600">{label}</span>
         <span className="font-medium">{inverted ? `${100 - value}% risk` : `${value}%`}</span>
       </div>
-      <div className="h-2 bg-white/10 rounded-full overflow-hidden">
+      <div className="h-2 bg-slate-200 rounded-full overflow-hidden">
         <div 
           className={`h-full ${color} rounded-full transition-all duration-500`}
           style={{ width: `${value}%` }}
