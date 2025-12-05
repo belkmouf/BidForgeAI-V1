@@ -143,6 +143,26 @@ export default function Admin() {
     enabled: !!token,
   });
 
+  interface ApiStatus {
+    openai: { configured: boolean; hasCustomBaseUrl: boolean };
+    anthropic: { configured: boolean; hasCustomBaseUrl: boolean };
+    gemini: { configured: boolean; hasCustomBaseUrl: boolean };
+    database: { configured: boolean };
+    whatsapp: { configured: boolean };
+  }
+
+  const { data: apiStatus } = useQuery<ApiStatus>({
+    queryKey: ['admin-api-status'],
+    queryFn: async () => {
+      const res = await fetch('/api/admin/api-status', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error('Failed to fetch API status');
+      return res.json();
+    },
+    enabled: !!token,
+  });
+
   const createUserMutation = useMutation({
     mutationFn: async (userData: typeof newUser) => {
       const res = await fetch('/api/admin/users', {
@@ -491,21 +511,49 @@ export default function Admin() {
                 <CardDescription className="text-slate-500">Configure system-wide settings</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
+                <div className="p-4 rounded-lg bg-blue-50 border border-blue-200 mb-6">
+                  <p className="text-sm text-blue-800">
+                    <strong>How to configure API keys:</strong> API keys are managed securely through environment secrets. 
+                    To add or update keys, go to the <strong>Secrets</strong> tab in Replit's Tools panel (lock icon in the sidebar).
+                  </p>
+                </div>
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-4">
                     <h3 className="text-lg font-semibold text-slate-800">AI Configuration</h3>
                     <div className="p-4 rounded-lg bg-slate-50 border border-slate-200 space-y-3">
                       <div className="flex items-center justify-between">
-                        <span className="text-slate-600">OpenAI API</span>
-                        <Badge variant="outline" className="bg-green-50 text-green-600 border-green-200">Configured</Badge>
+                        <div>
+                          <span className="text-slate-600">OpenAI API</span>
+                          <p className="text-xs text-slate-400">AI_INTEGRATIONS_OPENAI_API_KEY</p>
+                        </div>
+                        <Badge variant="outline" className={apiStatus?.openai?.configured 
+                          ? "bg-green-50 text-green-600 border-green-200" 
+                          : "bg-red-50 text-red-600 border-red-200"}>
+                          {apiStatus?.openai?.configured ? 'Configured' : 'Not Set'}
+                        </Badge>
                       </div>
                       <div className="flex items-center justify-between">
-                        <span className="text-slate-600">Anthropic API</span>
-                        <Badge variant="outline" className="bg-green-50 text-green-600 border-green-200">Configured</Badge>
+                        <div>
+                          <span className="text-slate-600">Anthropic API</span>
+                          <p className="text-xs text-slate-400">AI_INTEGRATIONS_ANTHROPIC_API_KEY</p>
+                        </div>
+                        <Badge variant="outline" className={apiStatus?.anthropic?.configured 
+                          ? "bg-green-50 text-green-600 border-green-200" 
+                          : "bg-red-50 text-red-600 border-red-200"}>
+                          {apiStatus?.anthropic?.configured ? 'Configured' : 'Not Set'}
+                        </Badge>
                       </div>
                       <div className="flex items-center justify-between">
-                        <span className="text-slate-600">Google Gemini API</span>
-                        <Badge variant="outline" className="bg-green-50 text-green-600 border-green-200">Configured</Badge>
+                        <div>
+                          <span className="text-slate-600">Google Gemini API</span>
+                          <p className="text-xs text-slate-400">AI_INTEGRATIONS_GEMINI_API_KEY</p>
+                        </div>
+                        <Badge variant="outline" className={apiStatus?.gemini?.configured 
+                          ? "bg-green-50 text-green-600 border-green-200" 
+                          : "bg-red-50 text-red-600 border-red-200"}>
+                          {apiStatus?.gemini?.configured ? 'Configured' : 'Not Set'}
+                        </Badge>
                       </div>
                     </div>
                   </div>
@@ -514,8 +562,15 @@ export default function Admin() {
                     <h3 className="text-lg font-semibold text-slate-800">Database</h3>
                     <div className="p-4 rounded-lg bg-slate-50 border border-slate-200 space-y-3">
                       <div className="flex items-center justify-between">
-                        <span className="text-slate-600">PostgreSQL</span>
-                        <Badge variant="outline" className="bg-green-50 text-green-600 border-green-200">Connected</Badge>
+                        <div>
+                          <span className="text-slate-600">PostgreSQL</span>
+                          <p className="text-xs text-slate-400">DATABASE_URL</p>
+                        </div>
+                        <Badge variant="outline" className={apiStatus?.database?.configured 
+                          ? "bg-green-50 text-green-600 border-green-200" 
+                          : "bg-red-50 text-red-600 border-red-200"}>
+                          {apiStatus?.database?.configured ? 'Connected' : 'Not Set'}
+                        </Badge>
                       </div>
                       <div className="flex items-center justify-between">
                         <span className="text-slate-600">pgvector Extension</span>
@@ -546,8 +601,15 @@ export default function Admin() {
                     <h3 className="text-lg font-semibold text-slate-800">Integrations</h3>
                     <div className="p-4 rounded-lg bg-slate-50 border border-slate-200 space-y-3">
                       <div className="flex items-center justify-between">
-                        <span className="text-slate-600">WhatsApp API</span>
-                        <Badge variant="outline" className="bg-amber-50 text-amber-600 border-amber-200">Not Configured</Badge>
+                        <div>
+                          <span className="text-slate-600">WhatsApp API</span>
+                          <p className="text-xs text-slate-400">WA_PHONE_NUMBER_ID + CLOUD_API_ACCESS_TOKEN</p>
+                        </div>
+                        <Badge variant="outline" className={apiStatus?.whatsapp?.configured 
+                          ? "bg-green-50 text-green-600 border-green-200" 
+                          : "bg-amber-50 text-amber-600 border-amber-200"}>
+                          {apiStatus?.whatsapp?.configured ? 'Configured' : 'Not Configured'}
+                        </Badge>
                       </div>
                     </div>
                   </div>

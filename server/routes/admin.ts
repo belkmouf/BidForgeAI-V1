@@ -268,6 +268,39 @@ router.get('/stats', authenticateToken, requireRole(['admin', 'manager']), async
   }
 });
 
+// ==================== API CONFIGURATION STATUS ====================
+
+// Get API configuration status (checks if environment variables are set)
+router.get('/api-status', authenticateToken, requireRole(['admin']), async (req: AuthRequest, res) => {
+  try {
+    const status = {
+      openai: {
+        configured: !!process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
+        hasCustomBaseUrl: !!process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
+      },
+      anthropic: {
+        configured: !!process.env.AI_INTEGRATIONS_ANTHROPIC_API_KEY,
+        hasCustomBaseUrl: !!process.env.AI_INTEGRATIONS_ANTHROPIC_BASE_URL,
+      },
+      gemini: {
+        configured: !!process.env.AI_INTEGRATIONS_GEMINI_API_KEY,
+        hasCustomBaseUrl: !!process.env.AI_INTEGRATIONS_GEMINI_BASE_URL,
+      },
+      database: {
+        configured: !!process.env.DATABASE_URL,
+      },
+      whatsapp: {
+        configured: !!(process.env.WA_PHONE_NUMBER_ID && process.env.CLOUD_API_ACCESS_TOKEN),
+      },
+    };
+
+    res.json(status);
+  } catch (error: any) {
+    console.error('Error checking API status:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // ==================== ROLES MANAGEMENT ====================
 
 // Get all roles
