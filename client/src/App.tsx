@@ -17,6 +17,7 @@ import Templates from "@/pages/Templates";
 import WhatsAppPage from "@/pages/WhatsApp";
 import Login from "@/pages/Login";
 import Register from "@/pages/Register";
+import ProjectConflicts from "@/pages/ProjectConflicts";
 
 function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
   const { isAuthenticated, isLoading } = useAuthStore();
@@ -102,6 +103,9 @@ function Router() {
       </Route>
       <Route path="/projects/:id/analysis">
         {() => <ProtectedRoute component={ProjectAnalysis} />}
+      </Route>
+      <Route path="/projects/:id/conflicts">
+        {() => <ProtectedRoute component={ProjectConflicts} />}
       </Route>
       <Route path="/settings">
         {() => <ProtectedRoute component={Settings} />}

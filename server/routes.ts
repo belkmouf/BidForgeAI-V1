@@ -30,6 +30,7 @@ import {
 } from "./lib/whatsapp";
 import authRoutes from "./routes/auth";
 import agentRoutes from "./routes/agents";
+import { conflictRouter } from "./routes/conflicts";
 import { authenticateToken, optionalAuth, AuthRequest } from "./middleware/auth";
 import { requirePermission, requireRole, PERMISSIONS } from "./middleware/rbac";
 import multer from "multer";
@@ -70,6 +71,9 @@ export async function registerRoutes(
   
   // ==================== AI AGENTS ====================
   app.use('/api/agents', agentRoutes);
+  
+  // ==================== CONFLICT DETECTION ====================
+  app.use('/api/conflicts', conflictRouter);
   
   // ==================== PROJECTS ====================
   

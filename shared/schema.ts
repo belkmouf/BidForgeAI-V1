@@ -125,6 +125,70 @@ export const analysisAlerts = pgTable("analysis_alerts", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+// Conflict Type Enum
+export const conflictTypeEnum = z.enum(["semantic", "numeric", "temporal", "scope"]);
+export type ConflictType = z.infer<typeof conflictTypeEnum>;
+
+// Conflict Severity Enum
+export const conflictSeverityEnum = z.enum(["low", "medium", "high", "critical"]);
+export type ConflictSeverity = z.infer<typeof conflictSeverityEnum>;
+
+// Conflict Status Enum
+export const conflictStatusEnum = z.enum(["detected", "reviewing", "resolved", "dismissed"]);
+export type ConflictStatus = z.infer<typeof conflictStatusEnum>;
+
+// Document Conflicts Table
+export const documentConflicts = pgTable("document_conflicts", {
+  id: serial("id").primaryKey(),
+  projectId: varchar("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  
+  conflictType: text("conflict_type").notNull(),
+  severity: text("severity").notNull().default("medium"),
+  status: text("status").notNull().default("detected"),
+  
+  sourceDocumentId: integer("source_document_id").references(() => documents.id, { onDelete: "cascade" }),
+  sourceChunkId: integer("source_chunk_id").references(() => documentChunks.id, { onDelete: "cascade" }),
+  sourceText: text("source_text").notNull(),
+  sourceLocation: jsonb("source_location").$type<{ page?: number; paragraph?: number; sentence?: number }>(),
+  
+  targetDocumentId: integer("target_document_id").references(() => documents.id, { onDelete: "cascade" }),
+  targetChunkId: integer("target_chunk_id").references(() => documentChunks.id, { onDelete: "cascade" }),
+  targetText: text("target_text").notNull(),
+  targetLocation: jsonb("target_location").$type<{ page?: number; paragraph?: number; sentence?: number }>(),
+  
+  description: text("description").notNull(),
+  suggestedResolution: text("suggested_resolution"),
+  
+  confidenceScore: real("confidence_score"),
+  semanticSimilarity: real("semantic_similarity"),
+  
+  resolvedBy: integer("resolved_by").references(() => users.id),
+  resolvedAt: timestamp("resolved_at"),
+  resolution: text("resolution"),
+  
+  metadata: jsonb("metadata").default(sql`'{}'::jsonb`),
+  detectedAt: timestamp("detected_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Conflict Detection Runs Table
+export const conflictDetectionRuns = pgTable("conflict_detection_runs", {
+  id: serial("id").primaryKey(),
+  projectId: varchar("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  
+  status: text("status").notNull().default("running"),
+  startedAt: timestamp("started_at").defaultNow().notNull(),
+  completedAt: timestamp("completed_at"),
+  
+  totalConflicts: integer("total_conflicts").default(0),
+  semanticConflicts: integer("semantic_conflicts").default(0),
+  numericConflicts: integer("numeric_conflicts").default(0),
+  temporalConflicts: integer("temporal_conflicts").default(0),
+  
+  error: text("error"),
+  metadata: jsonb("metadata").default(sql`'{}'::jsonb`),
+});
+
 // Agent Executions Table (for workflow tracking)
 export const agentExecutions = pgTable("agent_executions", {
   id: serial("id").primaryKey(),
@@ -322,3 +386,43 @@ export const loginSchema = z.object({
 
 export type InsertUserInput = z.infer<typeof insertUserSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
+
+// Conflict Types
+export type DocumentConflict = typeof documentConflicts.$inferSelect;
+export type InsertDocumentConflict = typeof documentConflicts.$inferInsert;
+
+export type ConflictDetectionRun = typeof conflictDetectionRuns.$inferSelect;
+export type InsertConflictDetectionRun = typeof conflictDetectionRuns.$inferInsert;
+
+// Conflict Schemas
+export const insertConflictSchema = z.object({
+  projectId: z.string(),
+  conflictType: conflictTypeEnum,
+  severity: conflictSeverityEnum.optional().default("medium"),
+  status: conflictStatusEnum.optional().default("detected"),
+  sourceDocumentId: z.number().optional(),
+  sourceChunkId: z.number().optional(),
+  sourceText: z.string(),
+  sourceLocation: z.object({
+    page: z.number().optional(),
+    paragraph: z.number().optional(),
+    sentence: z.number().optional(),
+  }).optional(),
+  targetDocumentId: z.number().optional(),
+  targetChunkId: z.number().optional(),
+  targetText: z.string(),
+  targetLocation: z.object({
+    page: z.number().optional(),
+    paragraph: z.number().optional(),
+    sentence: z.number().optional(),
+  }).optional(),
+  description: z.string(),
+  suggestedResolution: z.string().optional(),
+  confidenceScore: z.number().optional(),
+  semanticSimilarity: z.number().optional(),
+});
+
+export const updateConflictStatusSchema = z.object({
+  status: conflictStatusEnum,
+  resolution: z.string().optional(),
+});

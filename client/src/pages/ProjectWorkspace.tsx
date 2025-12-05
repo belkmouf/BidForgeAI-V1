@@ -6,7 +6,7 @@ import { TiptapEditor } from '@/components/editor/TiptapEditor';
 import { GeneratePanel } from '@/components/ai/GeneratePanel';
 import { RefineChat } from '@/components/ai/RefineChat';
 import { Button } from '@/components/ui/button';
-import { ChevronLeft, Save, Share2, Eye, ShieldCheck } from 'lucide-react';
+import { ChevronLeft, Save, Share2, Eye, ShieldCheck, AlertTriangle } from 'lucide-react';
 import { Link } from 'wouter';
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { toast } from '@/hooks/use-toast';
@@ -168,6 +168,12 @@ export default function ProjectWorkspace() {
               <Button variant="outline" size="sm" className="gap-2 h-8" data-testid="button-analysis">
                 <ShieldCheck className="h-3.5 w-3.5" />
                 RFP Analysis
+              </Button>
+            </Link>
+            <Link href={`/projects/${projectId}/conflicts`}>
+              <Button variant="outline" size="sm" className="gap-2 h-8" data-testid="button-conflicts">
+                <AlertTriangle className="h-3.5 w-3.5" />
+                Conflicts
               </Button>
             </Link>
             <Button variant="outline" size="sm" className="gap-2 h-8">
