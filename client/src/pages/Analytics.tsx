@@ -321,7 +321,7 @@ export default function Analytics() {
           <TabsContent value="overview" className="space-y-6">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Project Status Distribution */}
-              <Card className="border-white/10 bg-[#1a1a1a]">
+              <Card className="border-slate-200 bg-white shadow-sm">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <PieChartIcon className="h-5 w-5 text-[#0d7377]" />
@@ -360,7 +360,7 @@ export default function Analytics() {
               </Card>
 
               {/* Win/Loss Breakdown */}
-              <Card className="border-white/10 bg-[#1a1a1a]">
+              <Card className="border-slate-200 bg-white shadow-sm">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <Award className="h-5 w-5 text-[#b8995a]" />
@@ -400,7 +400,7 @@ export default function Analytics() {
           <TabsContent value="trends" className="space-y-6">
             <div className="grid grid-cols-1 gap-6">
               {/* Project Creation Trend */}
-              <Card className="border-white/10 bg-[#1a1a1a]">
+              <Card className="border-slate-200 bg-white shadow-sm">
                 <CardHeader>
                   <CardTitle>Projects Created Over Time</CardTitle>
                   <CardDescription>New projects created in the selected period</CardDescription>
@@ -438,7 +438,7 @@ export default function Analytics() {
               </Card>
 
               {/* Activity Trend */}
-              <Card className="border-white/10 bg-[#1a1a1a]">
+              <Card className="border-slate-200 bg-white shadow-sm">
                 <CardHeader>
                   <CardTitle>User Activity</CardTitle>
                   <CardDescription>System activity over time</CardDescription>
@@ -472,7 +472,7 @@ export default function Analytics() {
           </TabsContent>
 
           <TabsContent value="clients" className="space-y-6">
-            <Card className="border-white/10 bg-[#1a1a1a]">
+            <Card className="border-slate-200 bg-white shadow-sm">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Building2 className="h-5 w-5 text-[#0d7377]" />
@@ -540,7 +540,7 @@ export default function Analytics() {
           <TabsContent value="insights" className="space-y-6">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Average Analysis Scores */}
-              <Card className="border-white/10 bg-[#1a1a1a]">
+              <Card className="border-slate-200 bg-white shadow-sm">
                 <CardHeader>
                   <CardTitle>Average Analysis Scores</CardTitle>
                   <CardDescription>Based on {insights?.totalAnalyses || 0} analyses</CardDescription>
@@ -556,7 +556,7 @@ export default function Analytics() {
               </Card>
 
               {/* Risk Distribution */}
-              <Card className="border-white/10 bg-[#1a1a1a]">
+              <Card className="border-slate-200 bg-white shadow-sm">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <AlertTriangle className="h-5 w-5 text-amber-500" />
@@ -610,7 +610,7 @@ interface MetricCardProps {
 
 function MetricCard({ title, value, icon: Icon, trend, subtitle, color = 'text-[#0d7377]' }: MetricCardProps) {
   return (
-    <Card className="border-white/10 bg-[#1a1a1a]">
+    <Card className="border-slate-200 bg-white shadow-sm">
       <CardContent className="pt-6">
         <div className="flex items-start justify-between">
           <div>

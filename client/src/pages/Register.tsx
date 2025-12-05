@@ -45,8 +45,8 @@ export default function Register() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-charcoal to-charcoal/95 p-4">
-      <Card className="w-full max-w-md bg-charcoal/80 border-deep-teal/30 backdrop-blur">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-100 to-slate-200 p-4">
+      <Card className="w-full max-w-md bg-white border-deep-teal/30 shadow-xl">
         <CardHeader className="text-center">
           <div className="mx-auto mb-4">
             <img 
@@ -55,8 +55,8 @@ export default function Register() {
               className="h-16 w-auto mx-auto"
             />
           </div>
-          <CardTitle className="text-2xl font-syne text-white">Create Account</CardTitle>
-          <CardDescription className="text-gray-400">
+          <CardTitle className="text-2xl font-syne text-slate-800">Create Account</CardTitle>
+          <CardDescription className="text-slate-500">
             Get started with BidForge AI
           </CardDescription>
         </CardHeader>
@@ -69,32 +69,32 @@ export default function Register() {
             )}
             
             <div className="space-y-2">
-              <Label htmlFor="name" className="text-gray-300">Full Name</Label>
+              <Label htmlFor="name" className="text-slate-700">Full Name</Label>
               <div className="relative">
-                <User className="absolute left-3 top-3 h-4 w-4 text-gray-500" />
+                <User className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
                 <Input
                   id="name"
                   type="text"
                   placeholder="John Doe"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  className="pl-10 bg-charcoal/50 border-gray-700 text-white placeholder:text-gray-500"
+                  className="pl-10 bg-slate-50 border-slate-300 text-slate-900 placeholder:text-slate-400"
                   data-testid="input-name"
                 />
               </div>
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="email" className="text-gray-300">Email</Label>
+              <Label htmlFor="email" className="text-slate-700">Email</Label>
               <div className="relative">
-                <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-500" />
+                <Mail className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
                 <Input
                   id="email"
                   type="email"
                   placeholder="you@company.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="pl-10 bg-charcoal/50 border-gray-700 text-white placeholder:text-gray-500"
+                  className="pl-10 bg-slate-50 border-slate-300 text-slate-900 placeholder:text-slate-400"
                   required
                   data-testid="input-email"
                 />
@@ -102,16 +102,16 @@ export default function Register() {
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="password" className="text-gray-300">Password</Label>
+              <Label htmlFor="password" className="text-slate-700">Password</Label>
               <div className="relative">
-                <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-500" />
+                <Lock className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
                 <Input
                   id="password"
                   type="password"
                   placeholder="At least 8 characters"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="pl-10 bg-charcoal/50 border-gray-700 text-white placeholder:text-gray-500"
+                  className="pl-10 bg-slate-50 border-slate-300 text-slate-900 placeholder:text-slate-400"
                   required
                   minLength={8}
                   data-testid="input-password"
@@ -120,16 +120,16 @@ export default function Register() {
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="confirmPassword" className="text-gray-300">Confirm Password</Label>
+              <Label htmlFor="confirmPassword" className="text-slate-700">Confirm Password</Label>
               <div className="relative">
-                <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-500" />
+                <Lock className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
                 <Input
                   id="confirmPassword"
                   type="password"
                   placeholder="Confirm your password"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="pl-10 bg-charcoal/50 border-gray-700 text-white placeholder:text-gray-500"
+                  className="pl-10 bg-slate-50 border-slate-300 text-slate-900 placeholder:text-slate-400"
                   required
                   data-testid="input-confirm-password"
                 />
@@ -152,11 +152,11 @@ export default function Register() {
               Create Account
             </Button>
             
-            <p className="text-sm text-gray-400 text-center">
+            <p className="text-sm text-slate-500 text-center">
               Already have an account?{" "}
               <a 
                 href="/login" 
-                className="text-antique-gold hover:underline"
+                className="text-deep-teal hover:underline font-medium"
                 data-testid="link-login"
               >
                 Sign in
