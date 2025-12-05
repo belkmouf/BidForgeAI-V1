@@ -426,3 +426,99 @@ export const updateConflictStatusSchema = z.object({
   status: conflictStatusEnum,
   resolution: z.string().optional(),
 });
+
+// Feature Breakdown Type
+export interface FeatureBreakdown {
+  name: string;
+  displayName: string;
+  score: number;
+  weight: number;
+  contribution: number;
+  status: 'positive' | 'neutral' | 'negative';
+  insight: string;
+}
+
+// Win Probability Tables
+export const winProbabilityPredictions = pgTable("win_probability_predictions", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  projectId: varchar("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  
+  probability: real("probability").notNull(),
+  confidence: real("confidence").notNull(),
+  predictionDate: timestamp("prediction_date").defaultNow().notNull(),
+  
+  featureScores: jsonb("feature_scores").$type<Record<string, number>>().notNull(),
+  featureWeights: jsonb("feature_weights").$type<Record<string, number>>().notNull(),
+  breakdown: jsonb("breakdown").$type<FeatureBreakdown[]>().default(sql`'[]'::jsonb`),
+  
+  riskFactors: jsonb("risk_factors").$type<string[]>().default(sql`'[]'::jsonb`),
+  strengthFactors: jsonb("strength_factors").$type<string[]>().default(sql`'[]'::jsonb`),
+  recommendations: jsonb("recommendations").$type<string[]>().default(sql`'[]'::jsonb`),
+  
+  modelVersion: text("model_version").default("1.0").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const bidOutcomes = pgTable("bid_outcomes", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  projectId: varchar("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  
+  outcome: text("outcome").notNull(),
+  bidAmount: real("bid_amount"),
+  winningBidAmount: real("winning_bid_amount"),
+  competitorCount: integer("competitor_count"),
+  
+  outcomeFactors: jsonb("outcome_factors").$type<string[]>().default(sql`'[]'::jsonb`),
+  clientFeedback: text("client_feedback"),
+  lessonsLearned: text("lessons_learned"),
+  
+  recordedAt: timestamp("recorded_at").defaultNow().notNull(),
+  recordedBy: integer("recorded_by").references(() => users.id),
+});
+
+export const projectFeatures = pgTable("project_features", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  projectId: varchar("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  
+  projectTypeScore: real("project_type_score"),
+  clientRelationshipScore: real("client_relationship_score"),
+  competitivenessScore: real("competitiveness_score"),
+  teamCapacityScore: real("team_capacity_score"),
+  timelineScore: real("timeline_score"),
+  complexityScore: real("complexity_score"),
+  requirementsClarityScore: real("requirements_clarity_score"),
+  budgetAlignmentScore: real("budget_alignment_score"),
+  
+  historicalWinRate: real("historical_win_rate"),
+  similarProjectsWon: integer("similar_projects_won").default(0),
+  similarProjectsLost: integer("similar_projects_lost").default(0),
+  
+  rawFeatures: jsonb("raw_features").$type<Record<string, any>>().default(sql`'{}'::jsonb`),
+  extractedAt: timestamp("extracted_at").defaultNow().notNull(),
+  version: text("version").default("1.0"),
+});
+
+// Win Probability Types
+export type WinProbabilityPrediction = typeof winProbabilityPredictions.$inferSelect;
+export type InsertWinProbabilityPrediction = typeof winProbabilityPredictions.$inferInsert;
+
+export type BidOutcome = typeof bidOutcomes.$inferSelect;
+export type InsertBidOutcome = typeof bidOutcomes.$inferInsert;
+
+export type ProjectFeature = typeof projectFeatures.$inferSelect;
+export type InsertProjectFeature = typeof projectFeatures.$inferInsert;
+
+// Win Probability Schemas
+export const bidOutcomeEnum = z.enum(["won", "lost", "no_bid", "pending"]);
+export type BidOutcomeType = z.infer<typeof bidOutcomeEnum>;
+
+export const insertBidOutcomeSchema = z.object({
+  projectId: z.string(),
+  outcome: bidOutcomeEnum,
+  bidAmount: z.number().optional(),
+  winningBidAmount: z.number().optional(),
+  competitorCount: z.number().optional(),
+  outcomeFactors: z.array(z.string()).optional(),
+  clientFeedback: z.string().optional(),
+  lessonsLearned: z.string().optional(),
+});

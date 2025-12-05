@@ -219,6 +219,74 @@ Preferred communication style: Simple, everyday language.
 - `server/agents/orchestrator.ts` - LangGraph StateGraph configuration
 - `server/agents/index.ts` - Agent exports and initialization
 
+### Conflict Detection System
+
+**Semantic Conflict Detection**
+- AI-powered detection of contradictory statements in bid documents
+- Uses OpenAI embeddings for semantic similarity analysis
+- Cosine similarity threshold of 0.85 for conflict identification
+- Lazy initialization to avoid API key errors at startup
+
+**Numeric Conflict Detection**
+- Regex-based extraction of numbers, dates, percentages, and currencies
+- Context-aware grouping of values for conflict detection
+- 1% threshold for numeric value conflicts
+- Severity scoring based on conflict magnitude
+
+**Database Tables**
+- `document_conflicts` - Stores detected conflicts with source/target locations
+- `conflict_detection_runs` - Tracks detection run history with statistics
+
+**API Endpoints**
+- `POST /api/conflicts/detect/:projectId` - Run conflict detection
+- `GET /api/conflicts/:projectId` - Get conflicts with filtering
+- `GET /api/conflicts/:projectId/stats` - Get conflict statistics
+- `PATCH /api/conflicts/:conflictId/status` - Update conflict status
+
+**Frontend Components**
+- `ConflictDetection.tsx` - Detection controls and results display
+- `ProjectConflicts.tsx` - Full-page conflict management view
+- Route: `/projects/:id/conflicts`
+
+### Win Probability ML System
+
+**Feature Engineering**
+- Extracts 8 key predictive features from project data:
+  - Project Type Score - Alignment with company expertise
+  - Client Relationship Score - Historical relationship strength
+  - Competitiveness Score - Competitive positioning
+  - Team Capacity Score - Resource availability
+  - Timeline Score - Deadline feasibility
+  - Complexity Score - Project complexity assessment
+  - Requirements Clarity Score - RFP clarity level
+  - Budget Alignment Score - Budget-scope fit
+- Historical win rate integration from past bids with same client
+
+**Statistical Scoring Model**
+- Weighted feature scoring with configurable weights
+- Sigmoid transformation for probability output
+- Confidence scoring based on data quality and historical data
+- Risk and strength factor identification
+- Actionable recommendations generation
+
+**Database Tables**
+- `win_probability_predictions` - Stores predictions with feature scores
+- `bid_outcomes` - Records actual bid outcomes for model feedback
+- `project_features` - Cached extracted features per project
+
+**API Endpoints**
+- `POST /api/win-probability/predict/:projectId` - Generate new prediction
+- `GET /api/win-probability/prediction/:projectId` - Get latest prediction
+- `GET /api/win-probability/history/:projectId` - Get prediction history
+- `GET /api/win-probability/features/:projectId` - Get extracted features
+- `POST /api/win-probability/outcome/:projectId` - Record bid outcome
+- `GET /api/win-probability/metrics` - Get model performance metrics
+- `GET /api/win-probability/stats` - Get aggregate statistics
+
+**Frontend Components**
+- `WinProbability.tsx` - Probability display with feature breakdown
+- Integrated into ProjectAnalysis page
+
 ### External Dependencies
 
 **AI Services**

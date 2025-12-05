@@ -35,6 +35,7 @@ import {
 import { toast } from '@/hooks/use-toast';
 import { getProject, listDocuments } from '@/lib/api';
 import type { Project, Document } from '@shared/schema';
+import { WinProbability } from '@/components/WinProbability';
 
 interface AnalysisData {
   id: number;
@@ -418,6 +419,10 @@ export default function ProjectAnalysis() {
                   icon={<Users className="h-5 w-5" />}
                   inverted
                 />
+              </div>
+
+              <div className="grid md:grid-cols-2 gap-6">
+                <WinProbability projectId={projectId} />
               </div>
 
               {activeAlerts.length > 0 && (

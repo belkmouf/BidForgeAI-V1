@@ -31,6 +31,7 @@ import {
 import authRoutes from "./routes/auth";
 import agentRoutes from "./routes/agents";
 import { conflictRouter } from "./routes/conflicts";
+import winProbabilityRoutes from "./routes/win-probability";
 import { authenticateToken, optionalAuth, AuthRequest } from "./middleware/auth";
 import { requirePermission, requireRole, PERMISSIONS } from "./middleware/rbac";
 import multer from "multer";
@@ -74,6 +75,9 @@ export async function registerRoutes(
   
   // ==================== CONFLICT DETECTION ====================
   app.use('/api/conflicts', conflictRouter);
+  
+  // ==================== WIN PROBABILITY ====================
+  app.use('/api/win-probability', winProbabilityRoutes);
   
   // ==================== PROJECTS ====================
   
