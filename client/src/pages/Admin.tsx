@@ -106,11 +106,11 @@ export default function Admin() {
   // Check if user is admin
   if (currentUser?.role !== 'admin') {
     return (
-      <div className="min-h-screen bg-[#121212] text-white flex items-center justify-center">
-        <Card className="border-red-500/20 bg-[#1a1a1a] p-8 text-center">
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center">
+        <Card className="border-red-200 bg-white p-8 text-center shadow-lg">
           <Shield className="h-12 w-12 text-red-500 mx-auto mb-4" />
-          <h2 className="text-xl font-bold mb-2">Access Denied</h2>
-          <p className="text-gray-400">You need admin privileges to access this page.</p>
+          <h2 className="text-xl font-bold mb-2 text-slate-800">Access Denied</h2>
+          <p className="text-slate-600">You need admin privileges to access this page.</p>
           <Link href="/dashboard">
             <Button className="mt-4">Go to Dashboard</Button>
           </Link>
@@ -227,18 +227,18 @@ export default function Admin() {
   });
 
   return (
-    <div className="min-h-screen bg-[#121212] text-white">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
       <div className="max-w-7xl mx-auto px-6 py-8">
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-4">
             <Link href="/dashboard">
-              <Button variant="ghost" size="icon" className="text-gray-400 hover:text-white">
+              <Button variant="ghost" size="icon" className="text-slate-600 hover:text-slate-900">
                 <ArrowLeft className="h-5 w-5" />
               </Button>
             </Link>
             <div>
-              <h1 className="text-3xl font-bold font-display">Admin Panel</h1>
-              <p className="text-gray-400 mt-1">User management and system settings</p>
+              <h1 className="text-3xl font-bold font-display text-slate-800">Admin Panel</h1>
+              <p className="text-slate-500 mt-1">User management and system settings</p>
             </div>
           </div>
         </div>
@@ -276,27 +276,27 @@ export default function Admin() {
         </div>
 
         <Tabs defaultValue="users" className="space-y-6">
-          <TabsList className="bg-white/5">
-            <TabsTrigger value="users" className="data-[state=active]:bg-[#0d7377]">
+          <TabsList className="bg-white shadow-sm border">
+            <TabsTrigger value="users" className="data-[state=active]:bg-[#0d7377] data-[state=active]:text-white">
               <Users className="h-4 w-4 mr-2" />
               Users
             </TabsTrigger>
-            <TabsTrigger value="settings" className="data-[state=active]:bg-[#0d7377]">
+            <TabsTrigger value="settings" className="data-[state=active]:bg-[#0d7377] data-[state=active]:text-white">
               <Settings className="h-4 w-4 mr-2" />
               Settings
             </TabsTrigger>
           </TabsList>
 
           <TabsContent value="users" className="space-y-6">
-            <Card className="border-white/10 bg-[#1a1a1a]">
+            <Card className="border-slate-200 bg-white shadow-sm">
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div>
-                    <CardTitle className="flex items-center gap-2">
+                    <CardTitle className="flex items-center gap-2 text-slate-800">
                       <Users className="h-5 w-5 text-[#0d7377]" />
                       User Management
                     </CardTitle>
-                    <CardDescription>Manage user accounts and permissions</CardDescription>
+                    <CardDescription className="text-slate-500">Manage user accounts and permissions</CardDescription>
                   </div>
                   <Dialog open={isAddUserOpen} onOpenChange={setIsAddUserOpen}>
                     <DialogTrigger asChild>
@@ -369,35 +369,35 @@ export default function Admin() {
               <CardContent>
                 <Table>
                   <TableHeader>
-                    <TableRow className="border-white/10 hover:bg-transparent">
-                      <TableHead>User</TableHead>
-                      <TableHead>Role</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Last Login</TableHead>
-                      <TableHead>Created</TableHead>
+                    <TableRow className="border-slate-200 hover:bg-transparent">
+                      <TableHead className="text-slate-600">User</TableHead>
+                      <TableHead className="text-slate-600">Role</TableHead>
+                      <TableHead className="text-slate-600">Status</TableHead>
+                      <TableHead className="text-slate-600">Last Login</TableHead>
+                      <TableHead className="text-slate-600">Created</TableHead>
                       <TableHead className="w-12"></TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {loadingUsers ? (
                       <TableRow>
-                        <TableCell colSpan={6} className="text-center py-8 text-gray-500">
+                        <TableCell colSpan={6} className="text-center py-8 text-slate-500">
                           Loading users...
                         </TableCell>
                       </TableRow>
                     ) : allUsers.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={6} className="text-center py-8 text-gray-500">
+                        <TableCell colSpan={6} className="text-center py-8 text-slate-500">
                           No users found
                         </TableCell>
                       </TableRow>
                     ) : (
                       allUsers.map((user) => (
-                        <TableRow key={user.id} className="border-white/5" data-testid={`user-row-${user.id}`}>
+                        <TableRow key={user.id} className="border-slate-100" data-testid={`user-row-${user.id}`}>
                           <TableCell>
                             <div>
-                              <p className="font-medium">{user.name || 'Unnamed'}</p>
-                              <p className="text-sm text-gray-500">{user.email}</p>
+                              <p className="font-medium text-slate-800">{user.name || 'Unnamed'}</p>
+                              <p className="text-sm text-slate-500">{user.email}</p>
                             </div>
                           </TableCell>
                           <TableCell>
@@ -419,13 +419,13 @@ export default function Admin() {
                               </span>
                             </div>
                           </TableCell>
-                          <TableCell className="text-gray-400">
+                          <TableCell className="text-slate-500">
                             {user.lastLoginAt 
                               ? formatDistanceToNow(new Date(user.lastLoginAt), { addSuffix: true })
                               : 'Never'
                             }
                           </TableCell>
-                          <TableCell className="text-gray-400">
+                          <TableCell className="text-slate-500">
                             {formatDistanceToNow(new Date(user.createdAt), { addSuffix: true })}
                           </TableCell>
                           <TableCell>
@@ -482,72 +482,72 @@ export default function Admin() {
           </TabsContent>
 
           <TabsContent value="settings" className="space-y-6">
-            <Card className="border-white/10 bg-[#1a1a1a]">
+            <Card className="border-slate-200 bg-white shadow-sm">
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
+                <CardTitle className="flex items-center gap-2 text-slate-800">
                   <Settings className="h-5 w-5 text-[#0d7377]" />
                   System Settings
                 </CardTitle>
-                <CardDescription>Configure system-wide settings</CardDescription>
+                <CardDescription className="text-slate-500">Configure system-wide settings</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-4">
-                    <h3 className="text-lg font-semibold">AI Configuration</h3>
-                    <div className="p-4 rounded-lg bg-white/5 space-y-3">
+                    <h3 className="text-lg font-semibold text-slate-800">AI Configuration</h3>
+                    <div className="p-4 rounded-lg bg-slate-50 border border-slate-200 space-y-3">
                       <div className="flex items-center justify-between">
-                        <span className="text-gray-400">OpenAI API</span>
-                        <Badge variant="outline" className="bg-green-500/10 text-green-400">Configured</Badge>
+                        <span className="text-slate-600">OpenAI API</span>
+                        <Badge variant="outline" className="bg-green-50 text-green-600 border-green-200">Configured</Badge>
                       </div>
                       <div className="flex items-center justify-between">
-                        <span className="text-gray-400">Anthropic API</span>
-                        <Badge variant="outline" className="bg-green-500/10 text-green-400">Configured</Badge>
+                        <span className="text-slate-600">Anthropic API</span>
+                        <Badge variant="outline" className="bg-green-50 text-green-600 border-green-200">Configured</Badge>
                       </div>
                       <div className="flex items-center justify-between">
-                        <span className="text-gray-400">Google Gemini API</span>
-                        <Badge variant="outline" className="bg-green-500/10 text-green-400">Configured</Badge>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="space-y-4">
-                    <h3 className="text-lg font-semibold">Database</h3>
-                    <div className="p-4 rounded-lg bg-white/5 space-y-3">
-                      <div className="flex items-center justify-between">
-                        <span className="text-gray-400">PostgreSQL</span>
-                        <Badge variant="outline" className="bg-green-500/10 text-green-400">Connected</Badge>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-gray-400">pgvector Extension</span>
-                        <Badge variant="outline" className="bg-green-500/10 text-green-400">Enabled</Badge>
+                        <span className="text-slate-600">Google Gemini API</span>
+                        <Badge variant="outline" className="bg-green-50 text-green-600 border-green-200">Configured</Badge>
                       </div>
                     </div>
                   </div>
 
                   <div className="space-y-4">
-                    <h3 className="text-lg font-semibold">Security</h3>
-                    <div className="p-4 rounded-lg bg-white/5 space-y-3">
+                    <h3 className="text-lg font-semibold text-slate-800">Database</h3>
+                    <div className="p-4 rounded-lg bg-slate-50 border border-slate-200 space-y-3">
                       <div className="flex items-center justify-between">
-                        <span className="text-gray-400">JWT Authentication</span>
-                        <Badge variant="outline" className="bg-green-500/10 text-green-400">Active</Badge>
+                        <span className="text-slate-600">PostgreSQL</span>
+                        <Badge variant="outline" className="bg-green-50 text-green-600 border-green-200">Connected</Badge>
                       </div>
                       <div className="flex items-center justify-between">
-                        <span className="text-gray-400">Rate Limiting</span>
-                        <Badge variant="outline" className="bg-green-500/10 text-green-400">Enabled</Badge>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-gray-400">Audit Logging</span>
-                        <Badge variant="outline" className="bg-green-500/10 text-green-400">Active</Badge>
+                        <span className="text-slate-600">pgvector Extension</span>
+                        <Badge variant="outline" className="bg-green-50 text-green-600 border-green-200">Enabled</Badge>
                       </div>
                     </div>
                   </div>
 
                   <div className="space-y-4">
-                    <h3 className="text-lg font-semibold">Integrations</h3>
-                    <div className="p-4 rounded-lg bg-white/5 space-y-3">
+                    <h3 className="text-lg font-semibold text-slate-800">Security</h3>
+                    <div className="p-4 rounded-lg bg-slate-50 border border-slate-200 space-y-3">
                       <div className="flex items-center justify-between">
-                        <span className="text-gray-400">WhatsApp API</span>
-                        <Badge variant="outline" className="bg-yellow-500/10 text-yellow-400">Not Configured</Badge>
+                        <span className="text-slate-600">JWT Authentication</span>
+                        <Badge variant="outline" className="bg-green-50 text-green-600 border-green-200">Active</Badge>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-slate-600">Rate Limiting</span>
+                        <Badge variant="outline" className="bg-green-50 text-green-600 border-green-200">Enabled</Badge>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-slate-600">Audit Logging</span>
+                        <Badge variant="outline" className="bg-green-50 text-green-600 border-green-200">Active</Badge>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-semibold text-slate-800">Integrations</h3>
+                    <div className="p-4 rounded-lg bg-slate-50 border border-slate-200 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-slate-600">WhatsApp API</span>
+                        <Badge variant="outline" className="bg-amber-50 text-amber-600 border-amber-200">Not Configured</Badge>
                       </div>
                     </div>
                   </div>
@@ -631,13 +631,13 @@ interface StatCardProps {
 
 function StatCard({ title, value, subtitle, icon: Icon, color }: StatCardProps) {
   return (
-    <Card className="border-white/10 bg-[#1a1a1a]">
+    <Card className="border-slate-200 bg-white shadow-sm">
       <CardContent className="pt-6">
         <div className="flex items-start justify-between">
           <div>
-            <p className="text-sm text-gray-400">{title}</p>
+            <p className="text-sm text-slate-500">{title}</p>
             <p className={`text-3xl font-bold mt-1 ${color}`}>{value}</p>
-            <p className="text-xs text-gray-500 mt-1">{subtitle}</p>
+            <p className="text-xs text-slate-400 mt-1">{subtitle}</p>
           </div>
           <div className={`p-3 rounded-lg ${color.replace('text-', 'bg-')}/10`}>
             <Icon className={`h-6 w-6 ${color}`} />
