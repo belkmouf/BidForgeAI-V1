@@ -39,6 +39,12 @@ import reportsRoutes from "./routes/reports";
 import adminRoutes from "./routes/admin";
 import { authenticateToken, optionalAuth, AuthRequest } from "./middleware/auth";
 import { requirePermission, requireRole, PERMISSIONS } from "./middleware/rbac";
+import { 
+  sanitizeInstructions, 
+  sanitizeTone, 
+  sanitizeFeedback,
+  InputSanitizationError 
+} from './lib/sanitize';
 import multer from "multer";
 import { z } from "zod";
 
@@ -101,8 +107,8 @@ export async function registerRoutes(
   
   // ==================== PROJECTS ====================
   
-  // Create a new project
-  app.post("/api/projects", async (req, res) => {
+  // Create a new project (requires authentication)
+  app.post("/api/projects", authenticateToken, async (req: AuthRequest, res) => {
     try {
       const data = insertProjectSchema.parse(req.body);
       const project = await storage.createProject(data);
@@ -112,8 +118,8 @@ export async function registerRoutes(
     }
   });
 
-  // List all projects
-  app.get("/api/projects", async (req, res) => {
+  // List all projects (requires authentication)
+  app.get("/api/projects", authenticateToken, async (req: AuthRequest, res) => {
     try {
       const projects = await storage.listProjects();
       res.json(projects);
@@ -122,8 +128,8 @@ export async function registerRoutes(
     }
   });
 
-  // Get a specific project
-  app.get("/api/projects/:id", async (req, res) => {
+  // Get a specific project (requires authentication)
+  app.get("/api/projects/:id", authenticateToken, async (req: AuthRequest, res) => {
     try {
       const project = await storage.getProject(req.params.id);
       if (!project) {
@@ -135,8 +141,8 @@ export async function registerRoutes(
     }
   });
 
-  // Update project status
-  app.patch("/api/projects/:id/status", async (req, res) => {
+  // Update project status (requires authentication)
+  app.patch("/api/projects/:id/status", authenticateToken, async (req: AuthRequest, res) => {
     try {
       const { status } = updateStatusSchema.parse(req.body);
       const project = await storage.updateProjectStatus(req.params.id, status);
@@ -151,8 +157,8 @@ export async function registerRoutes(
 
   // ==================== DOCUMENTS ====================
 
-  // Upload a document to a project with recursive file processing
-  app.post("/api/projects/:id/upload", upload.single('file'), async (req, res) => {
+  // Upload a document to a project with recursive file processing (requires authentication)
+  app.post("/api/projects/:id/upload", authenticateToken, upload.single('file'), async (req: AuthRequest, res) => {
     try {
       if (!req.file) {
         return res.status(400).json({ error: "No file uploaded" });
@@ -166,9 +172,27 @@ export async function registerRoutes(
         return res.status(404).json({ error: "Project not found" });
       }
 
+      // Sanitize filename to prevent path traversal
+      const originalName = req.file.originalname;
+      const safeFilename = originalName.replace(/[^\w\s.-]/g, '_').replace(/\.{2,}/g, '.').trim();
+      if (!safeFilename || safeFilename.length === 0) {
+        return res.status(400).json({ error: 'Invalid filename' });
+      }
+
+      // Validate file size
+      const maxSize = 50 * 1024 * 1024; // 50MB
+      if (req.file.size > maxSize) {
+        return res.status(400).json({ 
+          error: `File too large. Maximum size is ${maxSize / 1024 / 1024}MB` 
+        });
+      }
+      if (req.file.size === 0) {
+        return res.status(400).json({ error: 'Empty file not allowed' });
+      }
+
       // Validate file type
       const allowedExtensions = ['.pdf', '.msg', '.zip', '.txt', '.doc', '.docx'];
-      const fileExt = req.file.originalname.toLowerCase().match(/\.[^.]*$/)?.[0] || '';
+      const fileExt = safeFilename.toLowerCase().match(/\.[^.]*$/)?.[0] || '';
       
       if (!allowedExtensions.includes(fileExt)) {
         return res.status(400).json({ 
@@ -179,7 +203,7 @@ export async function registerRoutes(
       // Process file with recursive extraction (ZIP→MSG→PDF chains)
       const processedFiles = await ingestionService.processFile(
         req.file.buffer,
-        req.file.originalname,
+        safeFilename,
         projectId
       );
 
@@ -197,8 +221,8 @@ export async function registerRoutes(
     }
   });
 
-  // List documents for a project
-  app.get("/api/projects/:id/documents", async (req, res) => {
+  // List documents for a project (requires authentication)
+  app.get("/api/projects/:id/documents", authenticateToken, async (req: AuthRequest, res) => {
     try {
       const documents = await storage.listDocumentsByProject(req.params.id);
       res.json(documents);
@@ -209,8 +233,8 @@ export async function registerRoutes(
 
   // ==================== BID GENERATION ====================
 
-  // Generate a bid using RAG
-  app.post("/api/projects/:id/generate", async (req, res) => {
+  // Generate a bid using RAG (requires authentication + AI input sanitization)
+  app.post("/api/projects/:id/generate", authenticateToken, async (req: AuthRequest, res) => {
     try {
       const { instructions, tone, model } = generateBidSchema.parse(req.body);
       const projectId = req.params.id;
@@ -221,9 +245,27 @@ export async function registerRoutes(
         return res.status(404).json({ error: "Project not found" });
       }
 
+      // Sanitize AI inputs to prevent prompt injection
+      let sanitizedInstructions: string;
+      let sanitizedTone: string;
+      
+      try {
+        sanitizedInstructions = sanitizeInstructions(instructions);
+        sanitizedTone = sanitizeTone(tone || 'professional');
+      } catch (error) {
+        if (error instanceof InputSanitizationError) {
+          return res.status(400).json({ 
+            error: 'Invalid input detected',
+            reason: error.reason,
+            message: error.message
+          });
+        }
+        throw error;
+      }
+
       // Generate embedding for the user's instructions (query)
-      console.log('Generating query embedding for:', instructions.substring(0, 100) + '...');
-      const queryEmbedding = await generateEmbedding(instructions);
+      console.log('Generating query embedding for:', sanitizedInstructions.substring(0, 100) + '...');
+      const queryEmbedding = await generateEmbedding(sanitizedInstructions);
       
       // Retrieve semantically similar chunks using vector search
       console.log('Searching for similar chunks using vector similarity...');
@@ -238,21 +280,21 @@ export async function registerRoutes(
       
       console.log(`Found ${relevantChunks.length} relevant chunks for bid generation`);
 
-      // Generate bid content using selected model
+      // Generate bid content using selected model with sanitized inputs
       let html: string;
       switch (model) {
         case 'anthropic':
-          html = await generateBidWithAnthropic({ instructions, context: contextOrDefault, tone });
+          html = await generateBidWithAnthropic({ instructions: sanitizedInstructions, context: contextOrDefault, tone: sanitizedTone });
           break;
         case 'gemini':
-          html = await generateBidWithGemini({ instructions, context: contextOrDefault, tone });
+          html = await generateBidWithGemini({ instructions: sanitizedInstructions, context: contextOrDefault, tone: sanitizedTone });
           break;
         case 'deepseek':
-          html = await generateBidWithDeepSeek({ instructions, context: contextOrDefault, tone });
+          html = await generateBidWithDeepSeek({ instructions: sanitizedInstructions, context: contextOrDefault, tone: sanitizedTone });
           break;
         case 'openai':
         default:
-          html = await generateBidContent({ instructions, context: contextOrDefault, tone });
+          html = await generateBidContent({ instructions: sanitizedInstructions, context: contextOrDefault, tone: sanitizedTone });
           break;
       }
 
@@ -271,26 +313,41 @@ export async function registerRoutes(
     }
   });
 
-  // Refine an existing bid
-  app.post("/api/projects/:id/refine", async (req, res) => {
+  // Refine an existing bid (requires authentication + AI input sanitization)
+  app.post("/api/projects/:id/refine", authenticateToken, async (req: AuthRequest, res) => {
     try {
       const { currentHtml, feedback, model } = refineBidSchema.parse(req.body);
 
-      // Refine using selected model
+      // Sanitize feedback to prevent prompt injection
+      let sanitizedFeedback: string;
+      try {
+        sanitizedFeedback = sanitizeFeedback(feedback);
+      } catch (error) {
+        if (error instanceof InputSanitizationError) {
+          return res.status(400).json({ 
+            error: 'Invalid feedback detected',
+            reason: error.reason,
+            message: error.message
+          });
+        }
+        throw error;
+      }
+
+      // Refine using selected model with sanitized feedback
       let html: string;
       switch (model) {
         case 'anthropic':
-          html = await refineBidWithAnthropic({ currentHtml, feedback });
+          html = await refineBidWithAnthropic({ currentHtml, feedback: sanitizedFeedback });
           break;
         case 'gemini':
-          html = await refineBidWithGemini({ currentHtml, feedback });
+          html = await refineBidWithGemini({ currentHtml, feedback: sanitizedFeedback });
           break;
         case 'deepseek':
-          html = await refineBidWithDeepSeek({ currentHtml, feedback });
+          html = await refineBidWithDeepSeek({ currentHtml, feedback: sanitizedFeedback });
           break;
         case 'openai':
         default:
-          html = await refineBidContent({ currentHtml, feedback });
+          html = await refineBidContent({ currentHtml, feedback: sanitizedFeedback });
           break;
       }
 
@@ -303,8 +360,8 @@ export async function registerRoutes(
 
   // ==================== DASHBOARD ====================
 
-  // Get dashboard statistics
-  app.get("/api/dashboard/stats", async (req, res) => {
+  // Get dashboard statistics (requires authentication)
+  app.get("/api/dashboard/stats", authenticateToken, async (req: AuthRequest, res) => {
     try {
       const stats = await storage.getDashboardStats();
       res.json(stats);
@@ -318,8 +375,8 @@ export async function registerRoutes(
   // Seed vendor database on startup
   seedVendorDatabase().catch(console.error);
 
-  // Run RFP analysis on a project
-  app.post("/api/projects/:id/analyze", async (req, res) => {
+  // Run RFP analysis on a project (requires authentication)
+  app.post("/api/projects/:id/analyze", authenticateToken, async (req: AuthRequest, res) => {
     try {
       const projectId = req.params.id;
       
@@ -363,8 +420,8 @@ export async function registerRoutes(
     }
   });
 
-  // Get existing analysis for a project
-  app.get("/api/projects/:id/analysis", async (req, res) => {
+  // Get existing analysis for a project (requires authentication)
+  app.get("/api/projects/:id/analysis", authenticateToken, async (req: AuthRequest, res) => {
     try {
       const { analysis, alerts } = await getAnalysisForProject(req.params.id);
       
@@ -405,8 +462,8 @@ export async function registerRoutes(
     }
   });
 
-  // Resolve an alert
-  app.post("/api/alerts/:id/resolve", async (req, res) => {
+  // Resolve an alert (requires authentication)
+  app.post("/api/alerts/:id/resolve", authenticateToken, async (req: AuthRequest, res) => {
     try {
       const alert = await resolveAlert(parseInt(req.params.id));
       res.json({ success: true, alert });
@@ -417,8 +474,8 @@ export async function registerRoutes(
 
   // ==================== VENDOR DATABASE ====================
 
-  // Get all vendors
-  app.get("/api/vendors", async (req, res) => {
+  // Get all vendors (requires authentication)
+  app.get("/api/vendors", authenticateToken, async (req: AuthRequest, res) => {
     try {
       const vendors = await getAllVendors();
       res.json(vendors);
@@ -444,7 +501,8 @@ export async function registerRoutes(
     notes: z.string().optional(),
   });
 
-  app.post("/api/vendors", async (req, res) => {
+  // Add/update a vendor (requires authentication)
+  app.post("/api/vendors", authenticateToken, async (req: AuthRequest, res) => {
     try {
       const data = vendorSchema.parse(req.body);
       const vendor = await upsertVendor(data as any);
