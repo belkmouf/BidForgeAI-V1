@@ -3,9 +3,11 @@ import bcrypt from 'bcrypt';
 import crypto from 'crypto';
 
 const getJwtSecret = (): string => {
-  const secret = process.env.JWT_SECRET;
+  // Use SESSION_SECRET for JWT signing (already configured in deployment)
+  // Fall back to JWT_SECRET for backwards compatibility
+  const secret = process.env.SESSION_SECRET || process.env.JWT_SECRET;
   if (!secret && process.env.NODE_ENV === 'production') {
-    throw new Error('JWT_SECRET environment variable is required in production');
+    throw new Error('SESSION_SECRET or JWT_SECRET environment variable is required in production');
   }
   return secret || 'bidforge-dev-secret-' + crypto.randomBytes(16).toString('hex');
 };
