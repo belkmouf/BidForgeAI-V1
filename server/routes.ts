@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertProjectSchema, insertDocumentSchema } from "@shared/schema";
-import { generateBidContent, refineBidContent } from "./lib/openai";
+import { generateBidContent, refineBidContent, generateEmbedding } from "./lib/openai";
 import { generateBidWithAnthropic, refineBidWithAnthropic } from "./lib/anthropic";
 import { generateBidWithGemini, refineBidWithGemini } from "./lib/gemini";
 import { generateBidWithDeepSeek, refineBidWithDeepSeek } from "./lib/deepseek";
@@ -221,15 +221,22 @@ export async function registerRoutes(
         return res.status(404).json({ error: "Project not found" });
       }
 
-      // Retrieve relevant chunks using text-based search
-      const relevantChunks = await storage.searchChunksByKeywords(instructions, projectId, 10);
+      // Generate embedding for the user's instructions (query)
+      console.log('Generating query embedding for:', instructions.substring(0, 100) + '...');
+      const queryEmbedding = await generateEmbedding(instructions);
+      
+      // Retrieve semantically similar chunks using vector search
+      console.log('Searching for similar chunks using vector similarity...');
+      const relevantChunks = await storage.searchSimilarChunks(queryEmbedding, projectId, 10);
 
       // Build context from retrieved chunks
       const context = relevantChunks
-        .map((chunk, i) => `[Chunk ${i + 1}]: ${chunk.content}`)
+        .map((chunk, i) => `[Chunk ${i + 1} - Similarity: ${(1 - chunk.distance).toFixed(3)}]: ${chunk.content}`)
         .join('\n\n');
 
       const contextOrDefault = context || 'No relevant context found from previous documents.';
+      
+      console.log(`Found ${relevantChunks.length} relevant chunks for bid generation`);
 
       // Generate bid content using selected model
       let html: string;
@@ -253,6 +260,10 @@ export async function registerRoutes(
         html,
         chunksUsed: relevantChunks.length,
         model,
+        searchMethod: 'vector_similarity',
+        avgSimilarity: relevantChunks.length > 0 
+          ? (relevantChunks.reduce((sum, c) => sum + (1 - c.distance), 0) / relevantChunks.length).toFixed(3)
+          : 0,
       });
     } catch (error: any) {
       console.error('Generation error:', error);

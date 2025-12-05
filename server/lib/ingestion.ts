@@ -3,6 +3,7 @@ import * as path from 'path';
 import * as os from 'os';
 import AdmZip from 'adm-zip';
 import { pool } from '../db';
+import { generateEmbedding } from './openai.js';
 
 // PDF parsing - use dynamic import to avoid ESM/CJS issues
 async function parsePdf(buffer: Buffer): Promise<{ text: string }> {
@@ -219,13 +220,36 @@ export class IngestionService {
       );
       documentId = docResult.rows[0].id;
 
-      // Create all chunks within the same transaction (without embeddings)
+      // Create chunks with embeddings
+      console.log(`Generating embeddings for ${chunks.length} chunks from ${filename}...`);
+      
       for (let i = 0; i < chunks.length; i++) {
-        await client.query(
-          `INSERT INTO document_chunks (document_id, content, chunk_index) 
-           VALUES ($1, $2, $3)`,
-          [documentId, chunks[i], i]
-        );
+        try {
+          // Generate embedding for this chunk
+          const embedding = await generateEmbedding(chunks[i]);
+          
+          // Convert embedding array to PostgreSQL vector format
+          const embeddingStr = `[${embedding.join(',')}]`;
+          
+          await client.query(
+            `INSERT INTO document_chunks (document_id, content, chunk_index, embedding) 
+             VALUES ($1, $2, $3, $4::vector)`,
+            [documentId, chunks[i], i, embeddingStr]
+          );
+          
+          // Log progress for large documents
+          if ((i + 1) % 10 === 0 || i === chunks.length - 1) {
+            console.log(`  Generated ${i + 1}/${chunks.length} embeddings for ${filename}`);
+          }
+        } catch (embeddingError) {
+          console.error(`Failed to generate embedding for chunk ${i} of ${filename}:`, embeddingError);
+          // Insert chunk without embedding as fallback
+          await client.query(
+            `INSERT INTO document_chunks (document_id, content, chunk_index) 
+             VALUES ($1, $2, $3)`,
+            [documentId, chunks[i], i]
+          );
+        }
       }
 
       // Mark document as processed
@@ -235,6 +259,7 @@ export class IngestionService {
       );
 
       await client.query('COMMIT');
+      console.log(`✅ Successfully processed ${filename} with ${chunks.length} chunks`);
     } catch (error) {
       await client.query('ROLLBACK');
       console.error(`Transaction failed for ${filename}, rolling back:`, error);
