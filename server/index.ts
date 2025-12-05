@@ -26,10 +26,22 @@ const allowedOrigins = process.env.ALLOWED_ORIGINS
 
 app.use(cors({
   origin: (origin, callback) => {
-    if (!origin || allowedOrigins.some(allowed => origin.startsWith(allowed.replace(/\/$/, '')))) {
+    // Allow requests with no origin (mobile apps, Postman, server-to-server)
+    if (!origin) {
+      return callback(null, true);
+    }
+    
+    // Check if origin is in allowed list
+    const isAllowed = allowedOrigins.some(allowed => 
+      origin.startsWith(allowed.replace(/\/$/, ''))
+    );
+    
+    if (isAllowed) {
       callback(null, true);
     } else {
-      callback(null, true);
+      // SECURITY FIX: Reject unauthorized origins
+      log(`CORS rejected origin: ${origin}`, "security");
+      callback(new Error('Not allowed by CORS'));
     }
   },
   credentials: true,
@@ -52,9 +64,33 @@ const authLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+// Upload-specific rate limiter (more restrictive)
+const uploadLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 20, // 20 uploads per hour per user
+  message: { 
+    error: 'Too many file uploads. Please try again later.',
+    limit: 20,
+    windowMs: 3600000
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req: any) => {
+    return req.user?.userId?.toString() || req.ip || 'anonymous';
+  },
+  handler: (req, res) => {
+    log(`Upload rate limit exceeded for ${(req as any).user?.email || req.ip}`, "security");
+    res.status(429).json({
+      error: 'Too many file uploads. Please try again later.',
+      retryAfter: 3600
+    });
+  }
+});
+
 app.use('/api/', apiLimiter);
 app.use('/api/auth/login', authLimiter);
 app.use('/api/auth/register', authLimiter);
+app.use('/api/projects/:id/upload', uploadLimiter);
 
 app.use(
   express.json({
@@ -107,12 +143,49 @@ app.use((req, res, next) => {
 (async () => {
   await registerRoutes(httpServer, app);
 
-  app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+  // Error handling middleware - hide stack traces in production
+  app.use((err: any, req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
-    const message = err.message || "Internal Server Error";
-
-    res.status(status).json({ message });
-    throw err;
+    
+    // Create error ID for tracking
+    const errorId = `ERR-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    
+    // Log full error details securely (not sent to client)
+    const errorLog = {
+      errorId,
+      status,
+      message: err.message,
+      stack: err.stack,
+      timestamp: new Date().toISOString(),
+      path: req.path,
+      method: req.method,
+      ip: req.ip,
+      userId: (req as any).user?.userId,
+    };
+    
+    if (process.env.NODE_ENV === 'production') {
+      // Production: Log full error, send generic message to client
+      console.error('[ERROR]', JSON.stringify(errorLog));
+      
+      const safeMessage = status === 500 
+        ? 'Internal Server Error' 
+        : err.message;
+      
+      res.status(status).json({ 
+        error: safeMessage,
+        errorId
+      });
+    } else {
+      // Development: Send detailed error to client
+      console.error('[ERROR]', errorLog);
+      
+      res.status(status).json({ 
+        error: err.message,
+        stack: err.stack,
+        status,
+        errorId
+      });
+    }
   });
 
   // importantly only setup vite in development and after
