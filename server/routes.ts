@@ -29,6 +29,7 @@ import {
   type WhatsAppWebhookPayload 
 } from "./lib/whatsapp";
 import authRoutes from "./routes/auth";
+import agentRoutes from "./routes/agents";
 import { authenticateToken, optionalAuth, AuthRequest } from "./middleware/auth";
 import { requirePermission, requireRole, PERMISSIONS } from "./middleware/rbac";
 import multer from "multer";
@@ -66,6 +67,9 @@ export async function registerRoutes(
   
   // ==================== AUTHENTICATION ====================
   app.use('/api/auth', authRoutes);
+  
+  // ==================== AI AGENTS ====================
+  app.use('/api/agents', agentRoutes);
   
   // ==================== PROJECTS ====================
   

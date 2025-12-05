@@ -1,6 +1,9 @@
-export { BaseAgent, AgentInput, AgentOutput, AgentContext, AgentRegistry, InMemoryAgentRegistry } from './base-agent';
-export { BidWorkflowAnnotation, BidWorkflowState, AgentState, AgentStateSchema } from './state';
-export { AgentOrchestrator, orchestrator, OrchestratorConfig } from './orchestrator';
+export { BaseAgent, InMemoryAgentRegistry } from './base-agent';
+export type { AgentInput, AgentOutput, AgentContext, AgentRegistry } from './base-agent';
+export { BidWorkflowAnnotation, AgentStateSchema } from './state';
+export type { BidWorkflowState, AgentState } from './state';
+export { AgentOrchestrator, orchestrator } from './orchestrator';
+export type { OrchestratorConfig } from './orchestrator';
 export { IntakeAgent, intakeAgent } from './intake-agent';
 export { AnalysisAgent, analysisAgent } from './analysis-agent';
 export { DecisionAgent, decisionAgent } from './decision-agent';

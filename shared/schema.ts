@@ -125,6 +125,31 @@ export const analysisAlerts = pgTable("analysis_alerts", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+// Agent Executions Table (for workflow tracking)
+export const agentExecutions = pgTable("agent_executions", {
+  id: serial("id").primaryKey(),
+  projectId: varchar("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  agentName: varchar("agent_name", { length: 100 }).notNull(),
+  status: varchar("status", { length: 50 }).notNull(),
+  input: jsonb("input"),
+  output: jsonb("output"),
+  error: text("error"),
+  startedAt: timestamp("started_at").defaultNow().notNull(),
+  completedAt: timestamp("completed_at"),
+  durationMs: integer("duration_ms"),
+});
+
+// Agent States Table (for workflow state persistence)
+export const agentStates = pgTable("agent_states", {
+  id: serial("id").primaryKey(),
+  projectId: varchar("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }).unique(),
+  currentAgent: varchar("current_agent", { length: 100 }).notNull(),
+  status: varchar("status", { length: 50 }).notNull().default("pending"),
+  state: jsonb("state").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
 // Vendor Database Table
 export const vendorDatabase = pgTable("vendor_database", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
@@ -274,6 +299,13 @@ export type InsertRole = typeof roles.$inferInsert;
 
 export type UserRoleAssignment = typeof userRoles.$inferSelect;
 export type InsertUserRoleAssignment = typeof userRoles.$inferInsert;
+
+// Agent Types
+export type AgentExecution = typeof agentExecutions.$inferSelect;
+export type InsertAgentExecution = typeof agentExecutions.$inferInsert;
+
+export type AgentState = typeof agentStates.$inferSelect;
+export type InsertAgentState = typeof agentStates.$inferInsert;
 
 // User Insert Schema
 export const insertUserSchema = z.object({

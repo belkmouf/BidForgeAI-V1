@@ -1,6 +1,9 @@
 import { StateGraph, END, Annotation } from '@langchain/langgraph';
 import { BidWorkflowAnnotation, BidWorkflowState, AnalysisResultType } from './state';
 import { BaseAgent, AgentRegistry, InMemoryAgentRegistry } from './base-agent';
+import { db } from '../db';
+import { agentExecutions, agentStates } from '@shared/schema';
+import { eq } from 'drizzle-orm';
 
 export interface OrchestratorConfig {
   maxRetries: number;
@@ -18,10 +21,68 @@ export class AgentOrchestrator {
   private graph: unknown = null;
   private registry: AgentRegistry;
   private config: OrchestratorConfig;
+  private cancelledProjects: Set<string> = new Set();
 
   constructor(config: Partial<OrchestratorConfig> = {}) {
     this.registry = new InMemoryAgentRegistry();
     this.config = { ...DEFAULT_CONFIG, ...config };
+  }
+
+  cancelWorkflow(projectId: string): void {
+    this.cancelledProjects.add(projectId);
+    console.log(`[Orchestrator] Workflow cancelled for project: ${projectId}`);
+  }
+
+  clearCancellation(projectId: string): void {
+    this.cancelledProjects.delete(projectId);
+  }
+
+  private isCancelled(projectId: string): boolean {
+    return this.cancelledProjects.has(projectId);
+  }
+
+  private async logExecution(
+    projectId: string,
+    agentName: string,
+    status: string,
+    input?: unknown,
+    output?: unknown,
+    error?: string,
+    startTime?: Date
+  ): Promise<void> {
+    try {
+      const durationMs = startTime ? Date.now() - startTime.getTime() : undefined;
+      
+      await db.insert(agentExecutions).values({
+        projectId,
+        agentName,
+        status,
+        input: input as Record<string, unknown>,
+        output: output as Record<string, unknown>,
+        error,
+        startedAt: startTime || new Date(),
+        completedAt: status === 'completed' || status === 'failed' ? new Date() : undefined,
+        durationMs,
+      });
+    } catch (err) {
+      console.error('[Orchestrator] Failed to log execution:', err);
+    }
+  }
+
+  private async updateState(projectId: string, currentAgent: string, status: string, state: unknown): Promise<void> {
+    try {
+      await db
+        .update(agentStates)
+        .set({
+          currentAgent,
+          status,
+          state: state as Record<string, unknown>,
+          updatedAt: new Date(),
+        })
+        .where(eq(agentStates.projectId, projectId));
+    } catch (err) {
+      console.error('[Orchestrator] Failed to update state:', err);
+    }
   }
 
   registerAgent(agent: BaseAgent): void {
@@ -32,8 +93,21 @@ export class AgentOrchestrator {
   private createAgentNode(agentName: string) {
     return async (state: BidWorkflowState): Promise<Partial<BidWorkflowState>> => {
       const agent = this.registry.get(agentName);
+      const startTime = new Date();
+
+      if (this.isCancelled(state.projectId)) {
+        console.log(`[Orchestrator] Workflow cancelled for project: ${state.projectId}`);
+        await this.logExecution(state.projectId, agentName, 'cancelled', undefined, undefined, 'Workflow cancelled by user', startTime);
+        await this.updateState(state.projectId, agentName, 'cancelled', { ...state, status: 'cancelled' });
+        return {
+          status: 'cancelled',
+          updatedAt: new Date(),
+          logs: ['Workflow cancelled by user'],
+        };
+      }
 
       if (!agent) {
+        await this.logExecution(state.projectId, agentName, 'failed', undefined, undefined, `Agent ${agentName} not found`);
         return {
           status: 'failed',
           errors: [`Agent ${agentName} not found`],
@@ -43,6 +117,8 @@ export class AgentOrchestrator {
 
       try {
         console.log(`[Orchestrator] Executing agent: ${agentName}`);
+        await this.logExecution(state.projectId, agentName, 'running', state, undefined, undefined, startTime);
+        await this.updateState(state.projectId, agentName, 'running', state);
 
         const result = await agent.execute(
           {
@@ -62,6 +138,7 @@ export class AgentOrchestrator {
         );
 
         if (!result.success) {
+          await this.logExecution(state.projectId, agentName, 'failed', state, result, result.error, startTime);
           return {
             status: 'failed',
             errors: [result.error || 'Unknown error'],
@@ -72,15 +149,21 @@ export class AgentOrchestrator {
         const agentData = result.data as Partial<BidWorkflowState>;
         const agentLogs = agentData.logs || [];
         
-        return {
+        const newState = {
           ...agentData,
           currentAgent: agentName,
-          status: 'running',
+          status: 'running' as const,
           updatedAt: new Date(),
           logs: [...agentLogs, `${agentName} completed successfully`],
         };
+
+        await this.logExecution(state.projectId, agentName, 'completed', state, newState, undefined, startTime);
+        await this.updateState(state.projectId, agentName, 'running', { ...state, ...newState });
+
+        return newState;
       } catch (error) {
         console.error(`[Orchestrator] Agent ${agentName} error:`, error);
+        await this.logExecution(state.projectId, agentName, 'failed', state, undefined, (error as Error).message, startTime);
         return {
           status: 'failed',
           errors: [(error as Error).message],
@@ -134,7 +217,22 @@ export class AgentOrchestrator {
     return 'retry';
   }
 
-  private completeNode(_state: BidWorkflowState): Partial<BidWorkflowState> {
+  private async completeNode(state: BidWorkflowState): Promise<Partial<BidWorkflowState>> {
+    const startTime = new Date();
+
+    if (this.isCancelled(state.projectId)) {
+      return {
+        status: 'cancelled',
+        updatedAt: new Date(),
+        logs: ['Workflow cancelled before completion'],
+      };
+    }
+
+    await this.logExecution(state.projectId, 'complete', 'completed', state, undefined, undefined, startTime);
+    await this.updateState(state.projectId, 'complete', 'completed', { ...state, status: 'completed', completedAt: new Date() });
+
+    this.clearCancellation(state.projectId);
+
     return {
       status: 'completed',
       updatedAt: new Date(),
@@ -145,33 +243,33 @@ export class AgentOrchestrator {
 
   buildGraph(): void {
     const workflow = new StateGraph(BidWorkflowAnnotation)
-      .addNode('intake', this.createAgentNode('intake'))
-      .addNode('analysis', this.createAgentNode('analysis'))
-      .addNode('decision', this.createAgentNode('decision'))
-      .addNode('generation', this.createAgentNode('generation'))
-      .addNode('review', this.createAgentNode('review'))
-      .addNode('complete', this.completeNode.bind(this))
-      .addEdge('__start__', 'intake')
-      .addEdge('intake', 'analysis')
+      .addNode('intake_node', this.createAgentNode('intake'))
+      .addNode('analysis_node', this.createAgentNode('analysis'))
+      .addNode('decision_node', this.createAgentNode('decision'))
+      .addNode('generation_node', this.createAgentNode('generation'))
+      .addNode('review_node', this.createAgentNode('review'))
+      .addNode('complete_node', this.completeNode.bind(this))
+      .addEdge('__start__', 'intake_node')
+      .addEdge('intake_node', 'analysis_node')
       .addConditionalEdges(
-        'analysis',
+        'analysis_node',
         this.shouldProceedAfterAnalysis.bind(this),
         {
-          proceed: 'decision',
-          reject: 'complete',
+          proceed: 'decision_node',
+          reject: 'complete_node',
         }
       )
-      .addEdge('decision', 'generation')
-      .addEdge('generation', 'review')
+      .addEdge('decision_node', 'generation_node')
+      .addEdge('generation_node', 'review_node')
       .addConditionalEdges(
-        'review',
+        'review_node',
         this.shouldRetryGeneration.bind(this),
         {
-          pass: 'complete',
-          retry: 'generation',
+          pass: 'complete_node',
+          retry: 'generation_node',
         }
       )
-      .addEdge('complete', '__end__');
+      .addEdge('complete_node', '__end__');
 
     this.graph = workflow.compile();
     console.log('[Orchestrator] Graph compiled successfully');
