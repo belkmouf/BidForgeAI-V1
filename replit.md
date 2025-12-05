@@ -147,7 +147,44 @@ Preferred communication style: Simple, everyday language.
 
 ### Authentication and Authorization
 
-Currently, the application does not implement authentication or authorization mechanisms. This is an area for future enhancement.
+**JWT-Based Authentication**
+- Secure user registration and login with bcrypt password hashing
+- JWT access tokens (24h expiry) and refresh tokens (7d expiry)
+- Password validation requirements (8+ chars, uppercase, lowercase, number)
+- Token-based API authentication via Authorization header
+
+**Database Tables**
+- `users` - User accounts with email, password hash, name, role, timestamps
+- `sessions` - Refresh token storage with expiration tracking
+- `roles` - Role definitions with permission arrays (RBAC)
+- `user_roles` - Junction table for user-role assignments (supports project-specific roles)
+
+**Role-Based Access Control (RBAC)**
+- Four user roles: Admin, Manager, User, Viewer
+- Permission-based middleware for route protection
+- Granular permissions for projects, documents, analysis, generation, and user management
+- Admin role has full system access
+
+**Security Features**
+- Helmet.js for security headers
+- Rate limiting: 1000 requests/15min (API), 20 requests/15min (auth)
+- CORS with configurable allowed origins
+- Request body size limits (10MB)
+
+**Frontend Authentication**
+- Login and Register pages at `/login` and `/register`
+- Zustand store for auth state management with localStorage persistence
+- Protected routes redirecting to login when not authenticated
+- User profile management in Settings page with password change
+
+**API Endpoints**
+- `POST /api/auth/register` - User registration
+- `POST /api/auth/login` - User login
+- `POST /api/auth/refresh` - Refresh access token
+- `GET /api/auth/me` - Get current user
+- `PATCH /api/auth/profile` - Update user profile
+- `POST /api/auth/change-password` - Change password
+- `POST /api/auth/logout` - Logout (client-side token removal)
 
 ### External Dependencies
 

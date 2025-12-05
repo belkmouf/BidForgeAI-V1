@@ -28,6 +28,9 @@ import {
   verifyWebhookSignature,
   type WhatsAppWebhookPayload 
 } from "./lib/whatsapp";
+import authRoutes from "./routes/auth";
+import { authenticateToken, optionalAuth, AuthRequest } from "./middleware/auth";
+import { requirePermission, requireRole, PERMISSIONS } from "./middleware/rbac";
 import multer from "multer";
 import { z } from "zod";
 
@@ -60,6 +63,9 @@ export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
+  
+  // ==================== AUTHENTICATION ====================
+  app.use('/api/auth', authRoutes);
   
   // ==================== PROJECTS ====================
   

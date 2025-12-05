@@ -1,5 +1,5 @@
 import { sql, relations } from "drizzle-orm";
-import { pgTable, text, varchar, timestamp, jsonb, boolean, integer, vector, real } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, timestamp, jsonb, boolean, integer, vector, real, serial } from "drizzle-orm/pg-core";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -10,6 +10,50 @@ export type ProjectStatus = z.infer<typeof projectStatusEnum>;
 // Risk Level Enum
 export const riskLevelEnum = z.enum(["Low", "Medium", "High", "Critical"]);
 export type RiskLevel = z.infer<typeof riskLevelEnum>;
+
+// User Role Enum
+export const userRoleEnum = z.enum(["admin", "manager", "user", "viewer"]);
+export type UserRole = z.infer<typeof userRoleEnum>;
+
+// Users Table
+export const users = pgTable("users", {
+  id: serial("id").primaryKey(),
+  email: varchar("email", { length: 255 }).notNull().unique(),
+  passwordHash: varchar("password_hash", { length: 255 }).notNull(),
+  name: varchar("name", { length: 255 }),
+  role: text("role").default("user").notNull(),
+  isActive: boolean("is_active").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  lastLoginAt: timestamp("last_login_at"),
+});
+
+// Sessions Table (for refresh tokens)
+export const sessions = pgTable("sessions", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  tokenHash: varchar("token_hash", { length: 255 }).notNull(),
+  expiresAt: timestamp("expires_at").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Roles Table (for RBAC)
+export const roles = pgTable("roles", {
+  id: serial("id").primaryKey(),
+  name: varchar("name", { length: 50 }).notNull().unique(),
+  permissions: jsonb("permissions").$type<string[]>().notNull().default(sql`'[]'::jsonb`),
+  description: text("description"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// User Roles Junction Table (for project-specific roles)
+export const userRoles = pgTable("user_roles", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  roleId: integer("role_id").notNull().references(() => roles.id, { onDelete: "cascade" }),
+  projectId: varchar("project_id").references(() => projects.id, { onDelete: "cascade" }),
+  grantedAt: timestamp("granted_at").defaultNow().notNull(),
+});
 
 // Projects Table
 export const projects = pgTable("projects", {
@@ -140,6 +184,38 @@ export const documentChunksRelations = relations(documentChunks, ({ one }) => ({
   }),
 }));
 
+// User Relations
+export const usersRelations = relations(users, ({ many }) => ({
+  sessions: many(sessions),
+  userRoles: many(userRoles),
+}));
+
+export const sessionsRelations = relations(sessions, ({ one }) => ({
+  user: one(users, {
+    fields: [sessions.userId],
+    references: [users.id],
+  }),
+}));
+
+export const rolesRelations = relations(roles, ({ many }) => ({
+  userRoles: many(userRoles),
+}));
+
+export const userRolesRelations = relations(userRoles, ({ one }) => ({
+  user: one(users, {
+    fields: [userRoles.userId],
+    references: [users.id],
+  }),
+  role: one(roles, {
+    fields: [userRoles.roleId],
+    references: [roles.id],
+  }),
+  project: one(projects, {
+    fields: [userRoles.projectId],
+    references: [projects.id],
+  }),
+}));
+
 // Insert Schemas - using z.object directly for simpler typing
 export const insertProjectSchema = z.object({
   name: z.string().min(1, "Project name is required"),
@@ -185,3 +261,32 @@ export type InsertAnalysisAlert = typeof analysisAlerts.$inferInsert;
 
 export type Vendor = typeof vendorDatabase.$inferSelect;
 export type InsertVendor = typeof vendorDatabase.$inferInsert;
+
+// User Types
+export type User = typeof users.$inferSelect;
+export type InsertUser = typeof users.$inferInsert;
+
+export type Session = typeof sessions.$inferSelect;
+export type InsertSession = typeof sessions.$inferInsert;
+
+export type Role = typeof roles.$inferSelect;
+export type InsertRole = typeof roles.$inferInsert;
+
+export type UserRoleAssignment = typeof userRoles.$inferSelect;
+export type InsertUserRoleAssignment = typeof userRoles.$inferInsert;
+
+// User Insert Schema
+export const insertUserSchema = z.object({
+  email: z.string().email("Invalid email address"),
+  password: z.string().min(8, "Password must be at least 8 characters"),
+  name: z.string().min(1, "Name is required").optional(),
+  role: userRoleEnum.optional().default("user"),
+});
+
+export const loginSchema = z.object({
+  email: z.string().email("Invalid email address"),
+  password: z.string().min(1, "Password is required"),
+});
+
+export type InsertUserInput = z.infer<typeof insertUserSchema>;
+export type LoginInput = z.infer<typeof loginSchema>;
