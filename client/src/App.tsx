@@ -18,6 +18,8 @@ import WhatsAppPage from "@/pages/WhatsApp";
 import Login from "@/pages/Login";
 import Register from "@/pages/Register";
 import ProjectConflicts from "@/pages/ProjectConflicts";
+import Analytics from "@/pages/Analytics";
+import Admin from "@/pages/Admin";
 
 function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
   const { isAuthenticated, isLoading } = useAuthStore();
@@ -115,6 +117,12 @@ function Router() {
       </Route>
       <Route path="/whatsapp">
         {() => <ProtectedRoute component={WhatsAppPage} />}
+      </Route>
+      <Route path="/analytics">
+        {() => <ProtectedRoute component={Analytics} />}
+      </Route>
+      <Route path="/admin">
+        {() => <ProtectedRoute component={Admin} />}
       </Route>
       <Route component={NotFound} />
     </Switch>

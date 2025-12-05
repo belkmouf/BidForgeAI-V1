@@ -32,6 +32,11 @@ import authRoutes from "./routes/auth";
 import agentRoutes from "./routes/agents";
 import { conflictRouter } from "./routes/conflicts";
 import winProbabilityRoutes from "./routes/win-probability";
+import teamRoutes from "./routes/team";
+import auditRoutes from "./routes/audit";
+import analyticsRoutes from "./routes/analytics";
+import reportsRoutes from "./routes/reports";
+import adminRoutes from "./routes/admin";
 import { authenticateToken, optionalAuth, AuthRequest } from "./middleware/auth";
 import { requirePermission, requireRole, PERMISSIONS } from "./middleware/rbac";
 import multer from "multer";
@@ -78,6 +83,21 @@ export async function registerRoutes(
   
   // ==================== WIN PROBABILITY ====================
   app.use('/api/win-probability', winProbabilityRoutes);
+  
+  // ==================== TEAM COLLABORATION ====================
+  app.use('/api/team', teamRoutes);
+  
+  // ==================== AUDIT LOGS ====================
+  app.use('/api/audit', auditRoutes);
+  
+  // ==================== ANALYTICS ====================
+  app.use('/api/analytics', analyticsRoutes);
+  
+  // ==================== REPORTS ====================
+  app.use('/api/reports', reportsRoutes);
+  
+  // ==================== ADMIN ====================
+  app.use('/api/admin', adminRoutes);
   
   // ==================== PROJECTS ====================
   

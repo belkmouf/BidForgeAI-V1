@@ -522,3 +522,103 @@ export const insertBidOutcomeSchema = z.object({
   clientFeedback: z.string().optional(),
   lessonsLearned: z.string().optional(),
 });
+
+// ==================== ENTERPRISE FEATURES ====================
+
+// Team Member Role Enum
+export const teamRoleEnum = z.enum(["owner", "editor", "viewer"]);
+export type TeamRole = z.infer<typeof teamRoleEnum>;
+
+// Project Team Members Table
+export const projectTeamMembers = pgTable("project_team_members", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  projectId: varchar("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  role: text("role").notNull().default("viewer"),
+  addedBy: integer("added_by").references(() => users.id),
+  addedAt: timestamp("added_at").defaultNow().notNull(),
+  lastAccessedAt: timestamp("last_accessed_at"),
+});
+
+// User Presence Table (for real-time collaboration)
+export const userPresence = pgTable("user_presence", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  projectId: varchar("project_id").references(() => projects.id, { onDelete: "cascade" }),
+  status: text("status").notNull().default("online"),
+  currentPage: text("current_page"),
+  lastActiveAt: timestamp("last_active_at").defaultNow().notNull(),
+  socketId: text("socket_id"),
+});
+
+// Audit Logs Table
+export const auditLogs = pgTable("audit_logs", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  userId: integer("user_id").references(() => users.id),
+  userEmail: text("user_email"),
+  action: text("action").notNull(),
+  resourceType: text("resource_type").notNull(),
+  resourceId: text("resource_id"),
+  projectId: varchar("project_id").references(() => projects.id, { onDelete: "set null" }),
+  details: jsonb("details").$type<Record<string, any>>().default(sql`'{}'::jsonb`),
+  ipAddress: text("ip_address"),
+  userAgent: text("user_agent"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Team Activity Feed
+export const teamActivity = pgTable("team_activity", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  projectId: varchar("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  activityType: text("activity_type").notNull(),
+  description: text("description").notNull(),
+  metadata: jsonb("metadata").$type<Record<string, any>>().default(sql`'{}'::jsonb`),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Project Comments (for collaboration)
+export const projectComments = pgTable("project_comments", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  projectId: varchar("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  content: text("content").notNull(),
+  parentId: integer("parent_id"),
+  isResolved: boolean("is_resolved").default(false).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Enterprise Types
+export type ProjectTeamMember = typeof projectTeamMembers.$inferSelect;
+export type InsertProjectTeamMember = typeof projectTeamMembers.$inferInsert;
+
+export type UserPresence = typeof userPresence.$inferSelect;
+export type InsertUserPresence = typeof userPresence.$inferInsert;
+
+export type AuditLog = typeof auditLogs.$inferSelect;
+export type InsertAuditLog = typeof auditLogs.$inferInsert;
+
+export type TeamActivity = typeof teamActivity.$inferSelect;
+export type InsertTeamActivity = typeof teamActivity.$inferInsert;
+
+export type ProjectComment = typeof projectComments.$inferSelect;
+export type InsertProjectComment = typeof projectComments.$inferInsert;
+
+// Enterprise Schemas
+export const insertProjectTeamMemberSchema = z.object({
+  projectId: z.string(),
+  userId: z.number(),
+  role: teamRoleEnum.optional().default("viewer"),
+});
+
+export const insertProjectCommentSchema = z.object({
+  projectId: z.string(),
+  content: z.string().min(1),
+  parentId: z.number().optional(),
+});
+
+export const updateProjectCommentSchema = z.object({
+  content: z.string().min(1).optional(),
+  isResolved: z.boolean().optional(),
+});

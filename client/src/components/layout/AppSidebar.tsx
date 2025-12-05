@@ -6,7 +6,9 @@ import {
   FileText,
   LogOut,
   Home,
-  MessageSquare
+  MessageSquare,
+  BarChart3,
+  Shield
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import bidForgeLogo from "@assets/generated_images/bidforge_ai_premium_logo.png";
@@ -17,8 +19,10 @@ export function AppSidebar() {
   const navItems = [
     { href: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
     { href: "/projects", icon: FolderKanban, label: "Projects" },
+    { href: "/analytics", icon: BarChart3, label: "Analytics" },
     { href: "/templates", icon: FileText, label: "Templates" },
     { href: "/whatsapp", icon: MessageSquare, label: "WhatsApp" },
+    { href: "/admin", icon: Shield, label: "Admin" },
     { href: "/settings", icon: Settings, label: "Settings" },
   ];
 
