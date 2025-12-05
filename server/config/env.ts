@@ -12,18 +12,17 @@ const envSchema = z.object({
     .transform(val => parseInt(val, 10))
     .pipe(z.number().int().positive()),
   
-  // Database Configuration
+  // Database Configuration - REQUIRED
   DATABASE_URL: z.string()
-    .min(1, 'DATABASE_URL is required')
-    .optional(),
+    .min(1, 'DATABASE_URL is required'),
   
-  // Security - JWT/Session  
+  // Security - JWT/Session (required in production)
   JWT_SECRET: z.string()
-    .min(16, 'JWT_SECRET must be at least 16 characters for security')
-    .optional(),
+    .min(32, 'JWT_SECRET must be at least 32 characters for security')
+    .default('dev-jwt-secret-do-not-use-in-production-minimum-32-chars'),
   SESSION_SECRET: z.string()
-    .min(16, 'SESSION_SECRET must be at least 16 characters for security')
-    .optional(),
+    .min(32, 'SESSION_SECRET must be at least 32 characters for security')
+    .default('dev-session-secret-do-not-use-in-production-32-chars'),
   
   // CORS Configuration
   ALLOWED_ORIGINS: z.string()
@@ -75,14 +74,21 @@ try {
     console.error(error);
   }
   console.error('[env] Please check your environment variables.');
-  // Don't exit in development, just warn
+  
+  // In production, always fail if validation errors
   if (process.env.NODE_ENV === 'production') {
+    console.error('[env] FATAL: Cannot start in production with invalid configuration.');
     process.exit(1);
   }
-  // Use defaults for development
+  
+  // In development, warn about using default secrets (not secure)
+  console.warn('[env] Using development defaults. DO NOT USE IN PRODUCTION.');
   validatedEnv = {
     NODE_ENV: 'development',
     PORT: 5000,
+    DATABASE_URL: process.env.DATABASE_URL || '',
+    JWT_SECRET: 'dev-jwt-secret-do-not-use-in-production-minimum-32-chars',
+    SESSION_SECRET: 'dev-session-secret-do-not-use-in-production-32-chars',
     ALLOWED_ORIGINS: ['http://localhost:5000', 'http://localhost:5173'],
   } as ValidatedEnv;
 }

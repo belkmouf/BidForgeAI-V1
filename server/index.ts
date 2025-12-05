@@ -21,8 +21,17 @@ app.use(helmet({
 }));
 
 const allowedOrigins = process.env.ALLOWED_ORIGINS
-  ? process.env.ALLOWED_ORIGINS.split(',')
+  ? process.env.ALLOWED_ORIGINS.split(',').map(o => o.trim())
   : ['http://localhost:5000', 'http://localhost:5173', 'http://0.0.0.0:5000'];
+
+// Helper to safely extract hostname from origin
+function getOriginHost(origin: string): string | null {
+  try {
+    return new URL(origin).hostname;
+  } catch {
+    return null;
+  }
+}
 
 app.use(cors({
   origin: (origin, callback) => {
@@ -31,17 +40,40 @@ app.use(cors({
       return callback(null, true);
     }
     
-    // Check if origin is in allowed list
-    const isAllowed = allowedOrigins.some(allowed => 
-      origin.startsWith(allowed.replace(/\/$/, ''))
-    );
+    const originHost = getOriginHost(origin);
+    if (!originHost) {
+      log(`CORS rejected malformed origin: ${origin}`, "security");
+      return callback(new Error('Invalid origin'));
+    }
+    
+    // Allow Replit domains for the webview to work (strict suffix matching)
+    if (originHost.endsWith('.replit.dev') || originHost.endsWith('.repl.co')) {
+      return callback(null, true);
+    }
+    
+    // Check if origin is in allowed list (exact match)
+    const isAllowed = allowedOrigins.some(allowed => {
+      try {
+        const allowedUrl = new URL(allowed);
+        const originUrl = new URL(origin);
+        return allowedUrl.origin === originUrl.origin;
+      } catch {
+        return false;
+      }
+    });
     
     if (isAllowed) {
       callback(null, true);
     } else {
-      // SECURITY FIX: Reject unauthorized origins
-      log(`CORS rejected origin: ${origin}`, "security");
-      callback(new Error('Not allowed by CORS'));
+      // SECURITY FIX: Reject unauthorized origins in production
+      if (process.env.NODE_ENV === 'production') {
+        log(`CORS rejected origin: ${origin}`, "security");
+        callback(new Error('Not allowed by CORS'));
+      } else {
+        // Development: allow all origins but log warning
+        log(`CORS allowing unlisted origin in development: ${origin}`, "security");
+        callback(null, true);
+      }
     }
   },
   credentials: true,
@@ -75,9 +107,7 @@ const uploadLimiter = rateLimit({
   },
   standardHeaders: true,
   legacyHeaders: false,
-  keyGenerator: (req: any) => {
-    return req.user?.userId?.toString() || req.ip || 'anonymous';
-  },
+  validate: { xForwardedForHeader: false },
   handler: (req, res) => {
     log(`Upload rate limit exceeded for ${(req as any).user?.email || req.ip}`, "security");
     res.status(429).json({
