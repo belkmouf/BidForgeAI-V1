@@ -45,6 +45,18 @@ export const ReviewResult = z.object({
   reviewedAt: z.date(),
 });
 
+export const BidStrategy = z.object({
+  approach: z.enum(['aggressive', 'balanced', 'conservative']),
+  pricePositioning: z.enum(['low', 'mid', 'premium']),
+  focusAreas: z.array(z.string()),
+  riskMitigations: z.array(z.object({
+    risk: z.string(),
+    mitigation: z.string(),
+  })),
+  confidenceLevel: z.number().min(0).max(100),
+  recommendedMargin: z.string(),
+});
+
 export const AgentStateSchema = z.object({
   projectId: z.string(),
   userId: z.number(),
@@ -54,6 +66,7 @@ export const AgentStateSchema = z.object({
   
   documents: z.array(DocumentInfo).optional(),
   analysis: AnalysisResult.optional(),
+  bidStrategy: BidStrategy.optional(),
   draft: DraftResult.optional(),
   review: ReviewResult.optional(),
   
@@ -68,6 +81,7 @@ export const AgentStateSchema = z.object({
 export type AgentState = z.infer<typeof AgentStateSchema>;
 export type DocumentInfoType = z.infer<typeof DocumentInfo>;
 export type AnalysisResultType = z.infer<typeof AnalysisResult>;
+export type BidStrategyType = z.infer<typeof BidStrategy>;
 export type DraftResultType = z.infer<typeof DraftResult>;
 export type ReviewResultType = z.infer<typeof ReviewResult>;
 
@@ -89,19 +103,23 @@ export const BidWorkflowAnnotation = Annotation.Root({
     default: () => 'pending',
   }),
   documents: Annotation<DocumentInfoType[]>({
-    reducer: (a, b) => [...(a || []), ...(b || [])],
+    reducer: (a, b) => (b && b.length > 0) ? b : (a || []),
     default: () => [],
   }),
   analysis: Annotation<AnalysisResultType | undefined>({
-    reducer: (_, b) => b,
+    reducer: (a, b) => b !== undefined ? b : a,
+    default: () => undefined,
+  }),
+  bidStrategy: Annotation<BidStrategyType | undefined>({
+    reducer: (a, b) => b !== undefined ? b : a,
     default: () => undefined,
   }),
   draft: Annotation<DraftResultType | undefined>({
-    reducer: (_, b) => b,
+    reducer: (a, b) => b !== undefined ? b : a,
     default: () => undefined,
   }),
   review: Annotation<ReviewResultType | undefined>({
-    reducer: (_, b) => b,
+    reducer: (a, b) => b !== undefined ? b : a,
     default: () => undefined,
   }),
   errors: Annotation<string[]>({

@@ -1,5 +1,5 @@
 import { BaseAgent, AgentInput, AgentOutput, AgentContext } from './base-agent';
-import { DocumentInfoType } from './state';
+import { DocumentInfoType, BidWorkflowState } from './state';
 import { db } from '../db';
 import { documents } from '@shared/schema';
 import { eq } from 'drizzle-orm';
@@ -11,6 +11,17 @@ export class IntakeAgent extends BaseAgent {
   async execute(input: AgentInput, context: AgentContext): Promise<AgentOutput> {
     return this.wrapExecution(async () => {
       const { projectId } = context;
+      const state = input.data as Partial<BidWorkflowState>;
+
+      if (state.documents && state.documents.length > 0) {
+        this.log('Documents already loaded, skipping intake');
+        return {
+          success: true,
+          data: {
+            logs: ['Documents already loaded, skipping duplicate intake'],
+          },
+        };
+      }
 
       this.log(`Processing documents for project: ${projectId}`);
 

@@ -69,12 +69,15 @@ export class AgentOrchestrator {
           };
         }
 
+        const agentData = result.data as Partial<BidWorkflowState>;
+        const agentLogs = agentData.logs || [];
+        
         return {
-          ...(result.data as Partial<BidWorkflowState>),
+          ...agentData,
           currentAgent: agentName,
           status: 'running',
           updatedAt: new Date(),
-          logs: [`${agentName} completed successfully`],
+          logs: [...agentLogs, `${agentName} completed successfully`],
         };
       } catch (error) {
         console.error(`[Orchestrator] Agent ${agentName} error:`, error);
@@ -131,7 +134,7 @@ export class AgentOrchestrator {
     return 'retry';
   }
 
-  private completeNode(state: BidWorkflowState): Partial<BidWorkflowState> {
+  private completeNode(_state: BidWorkflowState): Partial<BidWorkflowState> {
     return {
       status: 'completed',
       updatedAt: new Date(),

@@ -1,5 +1,5 @@
 import { BaseAgent, AgentInput, AgentOutput, AgentContext } from './base-agent';
-import { ReviewResultType, DraftResultType, AnalysisResultType } from './state';
+import { ReviewResultType, DraftResultType, AnalysisResultType, BidWorkflowState } from './state';
 import { ChatOpenAI } from '@langchain/openai';
 import { z } from 'zod';
 
@@ -16,7 +16,7 @@ export class ReviewAgent extends BaseAgent {
 
   async execute(input: AgentInput, context: AgentContext): Promise<AgentOutput> {
     return this.wrapExecution(async () => {
-      const state = input.data as {
+      const state = input.data as Partial<BidWorkflowState> & {
         draft?: DraftResultType;
         analysis?: AnalysisResultType;
         review?: ReviewResultType;
@@ -35,7 +35,8 @@ export class ReviewAgent extends BaseAgent {
 
       this.log('Reviewing bid proposal');
 
-      const attempts = (previousReview?.attempts || 0) + 1;
+      const currentAttempts = previousReview?.attempts ?? 0;
+      const attempts = currentAttempts + 1;
 
       const model = new ChatOpenAI({
         model: 'gpt-4o',

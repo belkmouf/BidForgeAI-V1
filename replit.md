@@ -186,6 +186,39 @@ Preferred communication style: Simple, everyday language.
 - `POST /api/auth/change-password` - Change password
 - `POST /api/auth/logout` - Logout (client-side token removal)
 
+### AI Agent System (LangChain/LangGraph)
+
+**Agent Orchestration Framework**
+- LangChain ecosystem for AI agent development
+- LangGraph StateGraph for workflow orchestration
+- Multi-agent pipeline: Intake → Analysis → Decision → Generation → Review
+- Conditional routing based on analysis results (risk/doability thresholds)
+
+**Agent Architecture**
+- `BaseAgent` abstract class with execution wrapping and logging
+- `AgentRegistry` for agent registration and lookup
+- `BidWorkflowAnnotation` for typed state management with reducers
+- Zod schemas for all agent inputs/outputs
+
+**Individual Agents**
+1. **IntakeAgent** - Loads and validates project documents from database
+2. **AnalysisAgent** - AI-powered RFQ analysis with scoring (quality, clarity, doability, vendor risk)
+3. **DecisionAgent** - Strategic bid approach decisions (aggressive/balanced/conservative)
+4. **GenerationAgent** - Professional HTML bid proposal generation
+5. **ReviewAgent** - Quality assessment with pass/fail and retry logic
+
+**Workflow Features**
+- Automatic retry on review failure (max 3 attempts)
+- Risk-based early termination (Critical risk or low doability)
+- Streaming support for real-time progress updates
+- Configurable thresholds via OrchestratorConfig
+
+**Files**
+- `server/agents/base-agent.ts` - Abstract agent class and registry
+- `server/agents/state.ts` - Workflow state schemas and annotations
+- `server/agents/orchestrator.ts` - LangGraph StateGraph configuration
+- `server/agents/index.ts` - Agent exports and initialization
+
 ### External Dependencies
 
 **AI Services**
