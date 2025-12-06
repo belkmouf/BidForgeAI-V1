@@ -3,15 +3,24 @@ import { z } from 'zod';
 import { winProbabilityService } from '../lib/win-probability';
 import { featureEngineeringService } from '../lib/feature-engineering';
 import { insertBidOutcomeSchema } from '@shared/schema';
+import { authenticateToken, AuthRequest } from '../middleware/auth';
+import { storage } from '../storage';
 
 const router = Router();
 
-router.post('/predict/:projectId', async (req: Request, res: Response) => {
+router.post('/predict/:projectId', authenticateToken, async (req: AuthRequest, res: Response) => {
   try {
     const { projectId } = req.params;
+    const companyId = req.user?.companyId ?? null;
 
     if (!projectId) {
       return res.status(400).json({ error: 'Project ID is required' });
+    }
+
+    // Verify project belongs to user's company
+    const project = await storage.getProject(projectId, companyId);
+    if (!project) {
+      return res.status(404).json({ error: 'Project not found' });
     }
 
     const result = await winProbabilityService.predict(projectId);
@@ -29,9 +38,16 @@ router.post('/predict/:projectId', async (req: Request, res: Response) => {
   }
 });
 
-router.get('/prediction/:projectId', async (req: Request, res: Response) => {
+router.get('/prediction/:projectId', authenticateToken, async (req: AuthRequest, res: Response) => {
   try {
     const { projectId } = req.params;
+    const companyId = req.user?.companyId ?? null;
+
+    // Verify project belongs to user's company
+    const project = await storage.getProject(projectId, companyId);
+    if (!project) {
+      return res.status(404).json({ error: 'Project not found' });
+    }
 
     const prediction = await winProbabilityService.getLatestPrediction(projectId);
 
@@ -55,9 +71,16 @@ router.get('/prediction/:projectId', async (req: Request, res: Response) => {
   }
 });
 
-router.get('/history/:projectId', async (req: Request, res: Response) => {
+router.get('/history/:projectId', authenticateToken, async (req: AuthRequest, res: Response) => {
   try {
     const { projectId } = req.params;
+    const companyId = req.user?.companyId ?? null;
+
+    // Verify project belongs to user's company
+    const project = await storage.getProject(projectId, companyId);
+    if (!project) {
+      return res.status(404).json({ error: 'Project not found' });
+    }
 
     const history = await winProbabilityService.getPredictionHistory(projectId);
 
@@ -75,9 +98,16 @@ router.get('/history/:projectId', async (req: Request, res: Response) => {
   }
 });
 
-router.get('/features/:projectId', async (req: Request, res: Response) => {
+router.get('/features/:projectId', authenticateToken, async (req: AuthRequest, res: Response) => {
   try {
     const { projectId } = req.params;
+    const companyId = req.user?.companyId ?? null;
+
+    // Verify project belongs to user's company
+    const project = await storage.getProject(projectId, companyId);
+    if (!project) {
+      return res.status(404).json({ error: 'Project not found' });
+    }
 
     const result = await featureEngineeringService.extractFeatures(projectId);
 
@@ -116,9 +146,16 @@ const recordOutcomeSchema = insertBidOutcomeSchema.extend({
   userId: z.number().optional(),
 });
 
-router.post('/outcome/:projectId', async (req: Request, res: Response) => {
+router.post('/outcome/:projectId', authenticateToken, async (req: AuthRequest, res: Response) => {
   try {
     const { projectId } = req.params;
+    const companyId = req.user?.companyId ?? null;
+
+    // Verify project belongs to user's company
+    const project = await storage.getProject(projectId, companyId);
+    if (!project) {
+      return res.status(404).json({ error: 'Project not found' });
+    }
     
     const validationResult = recordOutcomeSchema.safeParse({
       projectId,
@@ -145,7 +182,7 @@ router.post('/outcome/:projectId', async (req: Request, res: Response) => {
         clientFeedback,
         lessonsLearned,
       },
-      userId
+      userId ?? req.user?.userId
     );
 
     res.json({

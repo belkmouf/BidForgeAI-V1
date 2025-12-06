@@ -4,6 +4,7 @@ import { conflictDetectionService } from '../lib/conflict-detection';
 import { authenticateToken, AuthRequest } from '../middleware/auth';
 import { requirePermission, PERMISSIONS } from '../middleware/rbac';
 import { conflictTypeEnum, conflictSeverityEnum, conflictStatusEnum, updateConflictStatusSchema } from '@shared/schema';
+import { storage } from '../storage';
 
 const router = Router();
 
@@ -20,6 +21,14 @@ router.post(
   async (req: AuthRequest, res: Response) => {
     try {
       const { projectId } = req.params;
+      const companyId = req.user?.companyId ?? null;
+      
+      // Verify project belongs to user's company
+      const project = await storage.getProject(projectId, companyId);
+      if (!project) {
+        return res.status(404).json({ error: 'Project not found' });
+      }
+      
       const validatedBody = runDetectionSchema.parse(req.body);
 
       const result = await conflictDetectionService.runDetection(projectId, {
@@ -49,6 +58,14 @@ router.get(
   async (req: AuthRequest, res: Response) => {
     try {
       const { projectId } = req.params;
+      const companyId = req.user?.companyId ?? null;
+      
+      // Verify project belongs to user's company
+      const project = await storage.getProject(projectId, companyId);
+      if (!project) {
+        return res.status(404).json({ error: 'Project not found' });
+      }
+      
       const { type, severity, status } = req.query;
 
       const filters: {
@@ -87,6 +104,14 @@ router.get(
   async (req: AuthRequest, res: Response) => {
     try {
       const { projectId } = req.params;
+      const companyId = req.user?.companyId ?? null;
+      
+      // Verify project belongs to user's company
+      const project = await storage.getProject(projectId, companyId);
+      if (!project) {
+        return res.status(404).json({ error: 'Project not found' });
+      }
+      
       const stats = await conflictDetectionService.getConflictStats(projectId);
 
       res.json(stats);
@@ -103,7 +128,15 @@ router.patch(
   requirePermission(PERMISSIONS.ANALYSIS_RUN),
   async (req: AuthRequest, res: Response) => {
     try {
-      const { conflictId } = req.params;
+      const { projectId, conflictId } = req.params;
+      const companyId = req.user?.companyId ?? null;
+      
+      // Verify project belongs to user's company
+      const project = await storage.getProject(projectId, companyId);
+      if (!project) {
+        return res.status(404).json({ error: 'Project not found' });
+      }
+      
       const validatedBody = updateConflictStatusSchema.parse(req.body);
 
       const updated = await conflictDetectionService.updateConflictStatus(
