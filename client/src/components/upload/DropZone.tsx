@@ -143,11 +143,14 @@ export function DropZone({ onUpload, onDelete, files: initialFiles = [] }: DropZ
                 <Button 
                   variant="ghost" 
                   size="icon" 
-                  className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity -mr-1 hover:bg-destructive/10 hover:text-destructive"
-                  onClick={() => onDelete(file.id)}
+                  className="h-6 w-6 text-muted-foreground hover:bg-destructive/10 hover:text-destructive flex-shrink-0"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDelete(file.id);
+                  }}
                   data-testid={`button-delete-document-${file.id}`}
                 >
-                  <X className="h-3 w-3" />
+                  <X className="h-4 w-4" />
                 </Button>
               )}
             </div>
