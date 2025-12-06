@@ -324,12 +324,12 @@ export async function registerRoutes(
 
       // Get all documents from this project to build context
       console.log('Loading project documents for context...');
-      const documents = await storage.getProjectDocuments(projectId);
+      const documents = await storage.listDocumentsByProject(projectId);
       
       // Build context from document content (simplified - no embedding search)
       const context = documents
-        .filter(doc => doc.content && !doc.content.startsWith('[PDF content could not be extracted'))
-        .map((doc, i) => `[Document ${i + 1}: ${doc.filename}]\n${doc.content?.substring(0, 5000) || ''}`)
+        .filter((doc: { content: string | null }) => doc.content && !doc.content.startsWith('[PDF content could not be extracted'))
+        .map((doc: { filename: string; content: string | null }, i: number) => `[Document ${i + 1}: ${doc.filename}]\n${doc.content?.substring(0, 5000) || ''}`)
         .join('\n\n---\n\n');
 
       const contextOrDefault = context || 'No document content available. Please provide project details in your instructions.';

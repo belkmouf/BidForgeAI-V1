@@ -119,18 +119,21 @@ router.post('/login', async (req, res) => {
       .where(eq(users.email, email.toLowerCase()))
       .limit(1);
 
-    if (!user) {
+    // SECURITY FIX (CWE-208): Constant-time response to prevent timing attacks
+    // Always perform password verification to prevent user enumeration
+    // Use a valid pre-computed bcrypt hash when user doesn't exist to ensure constant time
+    // This hash is for a random password and exists solely to consume verification time
+    const DUMMY_HASH = '$2b$10$K4mZ7VqF5Q8WxN3pR1sY2e9X6zU4tL0jA.K1hC3dF5gH7iJ9kL1mN';
+    const hashToVerify = user?.passwordHash || DUMMY_HASH;
+    const isValid = await verifyPassword(password, hashToVerify);
+
+    // Check all conditions after password verification to prevent timing leaks
+    if (!user || !isValid) {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
     if (!user.isActive) {
       return res.status(403).json({ error: 'Account is deactivated' });
-    }
-
-    const isValid = await verifyPassword(password, user.passwordHash);
-
-    if (!isValid) {
-      return res.status(401).json({ error: 'Invalid credentials' });
     }
 
     await db

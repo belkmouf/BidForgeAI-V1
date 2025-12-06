@@ -3,7 +3,27 @@ import crypto from 'crypto';
 
 const phoneNumberId = process.env.WA_PHONE_NUMBER_ID;
 const accessToken = process.env.CLOUD_API_ACCESS_TOKEN;
-const webhookVerifyToken = process.env.WEBHOOK_VERIFY_TOKEN || 'bidforge_webhook_token';
+
+// SECURITY FIX (CWE-798): Require explicit webhook token in production
+// Generate random token only in development to prevent predictable defaults
+const webhookVerifyToken = (() => {
+  const envToken = process.env.WEBHOOK_VERIFY_TOKEN;
+  
+  if (envToken) {
+    return envToken;
+  }
+  
+  // In production, require explicit configuration
+  if (process.env.NODE_ENV === 'production' && phoneNumberId && accessToken) {
+    console.error('SECURITY ERROR: WEBHOOK_VERIFY_TOKEN must be set in production when WhatsApp is configured');
+    throw new Error('WEBHOOK_VERIFY_TOKEN environment variable is required in production');
+  }
+  
+  // In development, generate random token but warn
+  const generatedToken = crypto.randomBytes(32).toString('hex');
+  console.warn('DEV: WEBHOOK_VERIFY_TOKEN not set. Using random token for this session.');
+  return generatedToken;
+})();
 const appSecret = process.env.WA_APP_SECRET;
 const apiVersion = process.env.CLOUD_API_VERSION || 'v18.0';
 
@@ -52,7 +72,7 @@ export function getWhatsAppClient() {
 }
 
 export function getWebhookVerifyToken() {
-  return webhookVerifyToken || 'bidforge_webhook_token';
+  return webhookVerifyToken;
 }
 
 export async function sendTextMessage(to: string, message: string): Promise<{ success: boolean; messageId?: string; error?: string }> {

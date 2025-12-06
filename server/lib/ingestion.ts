@@ -86,22 +86,49 @@ export class IngestionService {
   ): Promise<ProcessedFile[]> {
     const results: ProcessedFile[] = [];
     const tempDir = this.createTempDir();
+    const resolvedTempDir = path.resolve(tempDir);
 
     try {
       const zip = new AdmZip(buffer);
-      zip.extractAllTo(tempDir, true);
-
-      const extractedFiles = this.getAllFiles(tempDir);
-
-      for (const filePath of extractedFiles) {
-        const fileBuffer = fs.readFileSync(filePath);
-        const fileName = path.basename(filePath);
+      const entries = zip.getEntries();
+      
+      // SECURITY FIX (CWE-22): Extract ONLY validated entries one by one
+      // This prevents path traversal attacks by validating before any disk writes
+      for (const entry of entries) {
+        const entryName = entry.entryName;
         
+        // Skip directories
+        if (entry.isDirectory) {
+          continue;
+        }
+        
+        // Block entries with path traversal patterns
+        if (entryName.includes('..') || 
+            entryName.startsWith('/') || 
+            entryName.startsWith('\\') ||
+            /^[a-zA-Z]:/.test(entryName)) {
+          console.warn(`SECURITY: Blocked malicious ZIP entry: ${entryName}`);
+          continue;
+        }
+        
+        // Resolve the target path and verify it's within tempDir
+        const targetPath = path.resolve(tempDir, entryName);
+        
+        if (!targetPath.startsWith(resolvedTempDir + path.sep)) {
+          console.warn(`SECURITY: Blocked path traversal attempt: ${entryName} -> ${targetPath}`);
+          continue;
+        }
+        
+        // Only extract validated entries - get file data directly from ZIP
         try {
+          const fileBuffer = entry.getData();
+          const fileName = path.basename(entryName);
+          
+          // Process directly from memory without writing to disk first
           const fileResults = await this.processFile(fileBuffer, fileName, projectId);
           results.push(...fileResults);
         } catch (error) {
-          console.error(`Failed to process ${fileName} from ZIP:`, error);
+          console.error(`Failed to process ${entryName} from ZIP:`, error);
         }
       }
     } catch (error) {
