@@ -1,4 +1,49 @@
-import { companyConfig, formatCurrency, formatDate, generateProposalNumber, calculateValidityDate, defaultValuePropositions } from '../../config/company';
+import { companyConfig, formatCurrency, formatDate, generateProposalNumber, calculateValidityDate, defaultValuePropositions, type CompanyConfig } from '../../config/company';
+import { db } from '../../db';
+import { companies } from '@shared/schema';
+import { eq } from 'drizzle-orm';
+
+export async function getCompanyConfig(companyId: number | null): Promise<CompanyConfig> {
+  if (!companyId) {
+    return companyConfig;
+  }
+  
+  try {
+    const [company] = await db
+      .select()
+      .from(companies)
+      .where(eq(companies.id, companyId))
+      .limit(1);
+    
+    if (company?.settings && typeof company.settings === 'object') {
+      const settings = company.settings as Record<string, any>;
+      return {
+        ...companyConfig,
+        name: company.name || companyConfig.name,
+        primaryColor: settings.primaryColor || companyConfig.primaryColor,
+        secondaryColor: settings.secondaryColor || companyConfig.secondaryColor,
+        accentColor: settings.accentColor || companyConfig.accentColor,
+        tagline: settings.tagline || companyConfig.tagline,
+        address: settings.address || companyConfig.address,
+        city: settings.city || companyConfig.city,
+        state: settings.state || companyConfig.state,
+        zip: settings.zip || companyConfig.zip,
+        phone: settings.phone || companyConfig.phone,
+        email: settings.email || companyConfig.email,
+        website: settings.website || companyConfig.website,
+        licenseNumber: settings.licenseNumber || companyConfig.licenseNumber,
+      };
+    }
+    
+    return {
+      ...companyConfig,
+      name: company?.name || companyConfig.name,
+    };
+  } catch (error) {
+    console.error('Failed to load company config:', error);
+    return companyConfig;
+  }
+}
 
 export interface BidData {
   projectName: string;
@@ -33,8 +78,11 @@ export interface TemplateOptions {
 
 export function generateBidTemplate(
   bidData: BidData,
-  options: TemplateOptions = {}
+  options: TemplateOptions = {},
+  companyConfigOverride?: CompanyConfig
 ): string {
+  const activeConfig = companyConfigOverride || companyConfig;
+  
   const {
     includeValuePropositions = true,
     includeTerms = true,
@@ -44,9 +92,9 @@ export function generateBidTemplate(
   } = options;
 
   const colors = {
-    primary: customColors.primary || companyConfig.primaryColor,
-    secondary: customColors.secondary || companyConfig.secondaryColor,
-    accent: customColors.accent || companyConfig.accentColor,
+    primary: customColors.primary || activeConfig.primaryColor,
+    secondary: customColors.secondary || activeConfig.secondaryColor,
+    accent: customColors.accent || activeConfig.accentColor,
   };
 
   const proposalNumber = bidData.proposalNumber || generateProposalNumber(Math.floor(Math.random() * 1000));
@@ -217,11 +265,11 @@ export function generateBidTemplate(
     <!-- Header -->
     <div class="header">
       <div class="company-info">
-        <h1>${companyConfig.name}</h1>
-        <div class="tagline">${companyConfig.tagline}</div>
+        <h1>${activeConfig.name}</h1>
+        <div class="tagline">${activeConfig.tagline}</div>
         <div class="contact">
-          ${companyConfig.address}, ${companyConfig.city}, ${companyConfig.state} ${companyConfig.zip}<br>
-          ${companyConfig.phone} | ${companyConfig.email}
+          ${activeConfig.address}, ${activeConfig.city}, ${activeConfig.state} ${activeConfig.zip}<br>
+          ${activeConfig.phone} | ${activeConfig.email}
         </div>
       </div>
       <div class="proposal-meta">
@@ -242,7 +290,7 @@ export function generateBidTemplate(
     <div class="section">
       <h3>Executive Summary</h3>
       <div class="section-content">
-        <p>${companyConfig.name} is pleased to submit this proposal for <strong>${bidData.projectName}</strong>. 
+        <p>${activeConfig.name} is pleased to submit this proposal for <strong>${bidData.projectName}</strong>. 
         ${bidData.projectDescription || 'We are committed to delivering exceptional quality and value for this project.'}</p>
       </div>
     </div>
@@ -307,7 +355,7 @@ export function generateBidTemplate(
     ${includeValuePropositions ? `
     <!-- Why Choose Us -->
     <div class="section">
-      <h3>Why Choose ${companyConfig.name}</h3>
+      <h3>Why Choose ${activeConfig.name}</h3>
       <div class="value-props">
         ${defaultValuePropositions.slice(0, 6).map(prop => `
         <div class="value-prop">
@@ -324,7 +372,7 @@ export function generateBidTemplate(
     <div class="section">
       <h3>Certifications & Qualifications</h3>
       <div class="certifications">
-        ${companyConfig.certifications.map(cert => `
+        ${activeConfig.certifications.map(cert => `
         <span class="cert-badge">${cert}</span>
         `).join('')}
       </div>
@@ -337,9 +385,9 @@ export function generateBidTemplate(
       <h3>Insurance & Bonding</h3>
       <div class="section-content">
         <ul>
-          <li><strong>General Liability:</strong> ${companyConfig.insurance.generalLiability}</li>
-          <li><strong>Workers' Compensation:</strong> ${companyConfig.insurance.workersComp}</li>
-          <li><strong>Bonding Capacity:</strong> ${companyConfig.insurance.bondingCapacity}</li>
+          <li><strong>General Liability:</strong> ${activeConfig.insurance.generalLiability}</li>
+          <li><strong>Workers' Compensation:</strong> ${activeConfig.insurance.workersComp}</li>
+          <li><strong>Bonding Capacity:</strong> ${activeConfig.insurance.bondingCapacity}</li>
         </ul>
       </div>
     </div>
@@ -361,7 +409,7 @@ export function generateBidTemplate(
       <h3>Terms & Conditions</h3>
       <div class="section-content">
         <ol>
-          ${companyConfig.defaultTerms.map(term => `
+          ${activeConfig.defaultTerms.map(term => `
           <li>${term}</li>
           `).join('')}
         </ol>
@@ -373,10 +421,10 @@ export function generateBidTemplate(
     <div class="signature-block">
       <div>
         <p><strong>Submitted by:</strong></p>
-        <p>${companyConfig.defaultRep.name}<br>
-        ${companyConfig.defaultRep.title}<br>
-        ${companyConfig.defaultRep.email}<br>
-        ${companyConfig.defaultRep.phone}</p>
+        <p>${activeConfig.defaultRep.name}<br>
+        ${activeConfig.defaultRep.title}<br>
+        ${activeConfig.defaultRep.email}<br>
+        ${activeConfig.defaultRep.phone}</p>
         <div class="signature-area">
           <div class="signature-label">Authorized Signature & Date</div>
         </div>
@@ -392,8 +440,8 @@ export function generateBidTemplate(
     
     <!-- Footer -->
     <div class="footer">
-      <p>${companyConfig.name} | License #${companyConfig.licenseNumber}</p>
-      <p>${companyConfig.website}</p>
+      <p>${activeConfig.name} | License #${activeConfig.licenseNumber}</p>
+      <p>${activeConfig.website}</p>
     </div>
   </div>
 </body>
@@ -405,14 +453,17 @@ export function wrapContentInTemplate(
   content: string,
   projectName: string,
   clientName: string,
-  options: TemplateOptions = {}
+  options: TemplateOptions = {},
+  companyConfigOverride?: CompanyConfig
 ): string {
+  const activeConfig = companyConfigOverride || companyConfig;
+  
   const bidData: BidData = {
     projectName,
     clientName,
   };
   
-  const templateStart = generateBidTemplate(bidData, options).split('<!-- Executive Summary -->')[0];
+  const templateStart = generateBidTemplate(bidData, options, activeConfig).split('<!-- Executive Summary -->')[0];
   const templateEnd = `
     <!-- Generated Content -->
     <div class="section">
@@ -424,8 +475,8 @@ export function wrapContentInTemplate(
     
     <!-- Footer -->
     <div class="footer">
-      <p>${companyConfig.name} | License #${companyConfig.licenseNumber}</p>
-      <p>${companyConfig.website}</p>
+      <p>${activeConfig.name} | License #${activeConfig.licenseNumber}</p>
+      <p>${activeConfig.website}</p>
     </div>
   </div>
 </body>

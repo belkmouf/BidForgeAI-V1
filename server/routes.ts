@@ -45,7 +45,7 @@ import {
   sanitizeFeedback,
   InputSanitizationError 
 } from './lib/sanitize';
-import { generateBidTemplate, wrapContentInTemplate, type BidData, type TemplateOptions } from './lib/templates/bid-template-generator';
+import { generateBidTemplate, wrapContentInTemplate, getCompanyConfig, type BidData, type TemplateOptions } from './lib/templates/bid-template-generator';
 import multer from "multer";
 import { z } from "zod";
 
@@ -423,6 +423,10 @@ export async function registerRoutes(
   app.post("/api/templates/generate", authenticateToken, async (req: AuthRequest, res) => {
     try {
       const data = bidTemplateSchema.parse(req.body);
+      const companyId = req.user?.companyId ?? null;
+      
+      // Load company-specific config
+      const companyConfigData = await getCompanyConfig(companyId);
       
       const bidData: BidData = {
         projectName: data.projectName,
@@ -433,7 +437,7 @@ export async function registerRoutes(
         pricing: data.pricing,
       };
       
-      const html = generateBidTemplate(bidData, data.options || {});
+      const html = generateBidTemplate(bidData, data.options || {}, companyConfigData);
       
       res.json({ html });
     } catch (error: any) {
@@ -448,12 +452,16 @@ export async function registerRoutes(
   app.post("/api/templates/wrap", authenticateToken, async (req: AuthRequest, res) => {
     try {
       const { content, projectName, clientName, options } = req.body;
+      const companyId = req.user?.companyId ?? null;
       
       if (!content || !projectName || !clientName) {
         return res.status(400).json({ error: 'Content, projectName, and clientName are required' });
       }
       
-      const html = wrapContentInTemplate(content, projectName, clientName, options || {});
+      // Load company-specific config
+      const companyConfigData = await getCompanyConfig(companyId);
+      
+      const html = wrapContentInTemplate(content, projectName, clientName, options || {}, companyConfigData);
       
       res.json({ html });
     } catch (error: any) {
