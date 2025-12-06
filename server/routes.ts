@@ -2,9 +2,9 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertProjectSchema, insertDocumentSchema } from "@shared/schema";
-import { generateBidContent, refineBidContent, generateEmbedding } from "./lib/openai";
+import { generateBidContent, refineBidContent } from "./lib/openai";
 import { generateBidWithAnthropic, refineBidWithAnthropic } from "./lib/anthropic";
-import { generateBidWithGemini, refineBidWithGemini } from "./lib/gemini";
+import { generateBidWithGemini, refineBidWithGemini, generateEmbeddingWithGemini } from "./lib/gemini";
 import { generateBidWithDeepSeek, refineBidWithDeepSeek } from "./lib/deepseek";
 import { ingestionService } from "./lib/ingestion";
 import { 
@@ -322,9 +322,9 @@ export async function registerRoutes(
         throw error;
       }
 
-      // Generate embedding for the user's instructions (query)
+      // Generate embedding for the user's instructions (query) using Gemini
       console.log('Generating query embedding for:', sanitizedInstructions.substring(0, 100) + '...');
-      const queryEmbedding = await generateEmbedding(sanitizedInstructions);
+      const queryEmbedding = await generateEmbeddingWithGemini(sanitizedInstructions);
       
       // Retrieve semantically similar chunks using vector search (company-scoped)
       console.log('Searching for similar chunks using vector similarity...');
