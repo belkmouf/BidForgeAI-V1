@@ -5,6 +5,8 @@ import gsap from 'gsap';
 import constructionBg from '@assets/stock_images/construction_site_bu_f0afb754.jpg';
 import bidForgeLogo from '@assets/generated_images/bidforge_ai_premium_logo.png';
 
+import _1764979718 from "@assets/1764979718.png";
+
 const features = [
   {
     icon: Brain,
@@ -80,7 +82,7 @@ export default function Landing() {
         <div className="max-w-7xl mx-auto px-6 lg:px-8 flex justify-between items-center">
           <Link href="/" className="flex items-center gap-3 group" data-testid="link-home">
             <img 
-              src={bidForgeLogo} 
+              src={_1764979718} 
               alt="BidForge AI Logo" 
               className="h-10 w-10 object-contain"
             />
@@ -141,7 +143,6 @@ export default function Landing() {
           </div>
         )}
       </nav>
-
       <section ref={heroRef} className="min-h-screen flex items-center justify-center relative overflow-hidden pt-20">
         <div className="absolute inset-0 bg-gradient-to-br from-charcoal-900 via-teal-900 to-charcoal-800" />
         
@@ -213,7 +214,6 @@ export default function Landing() {
           </div>
         </div>
       </section>
-
       <section className="py-20 bg-charcoal-900 border-y border-charcoal-700">
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
@@ -230,7 +230,6 @@ export default function Landing() {
           </div>
         </div>
       </section>
-
       <section id="features" className="py-24 md:py-32 bg-background">
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
           <div className="text-center mb-20">
@@ -276,7 +275,6 @@ export default function Landing() {
           </div>
         </div>
       </section>
-
       <section id="testimonial" className="py-24 md:py-32 bg-charcoal-900 text-white relative overflow-hidden">
         <div className="absolute inset-0 opacity-5">
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-teal-500 via-transparent to-transparent" />
@@ -303,7 +301,6 @@ export default function Landing() {
           </div>
         </div>
       </section>
-
       <section className="py-24 md:py-32 bg-gradient-to-br from-teal-900 to-charcoal-900 relative overflow-hidden">
         <div className="absolute inset-0 opacity-5">
           <svg className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
@@ -333,7 +330,6 @@ export default function Landing() {
           </Link>
         </div>
       </section>
-
       <footer className="bg-charcoal-900 border-t border-charcoal-800 py-16">
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
           <div className="grid md:grid-cols-4 gap-12 mb-12">
