@@ -1,16 +1,18 @@
 import OpenAI from 'openai';
 
-if (!process.env.AI_INTEGRATIONS_OPENAI_API_KEY) {
-  throw new Error('AI_INTEGRATIONS_OPENAI_API_KEY is not set');
+const openaiApiKey = process.env.OPENAI_API_KEY || process.env.AI_INTEGRATIONS_OPENAI_API_KEY;
+
+if (!openaiApiKey) {
+  throw new Error('OPENAI_API_KEY is not set');
 }
 
 export const openai = new OpenAI({
-  apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
+  apiKey: openaiApiKey,
   baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
 });
 
 const embeddingsClient = new OpenAI({
-  apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
+  apiKey: openaiApiKey,
 });
 
 // Generate text embedding using OpenAI (direct API, not proxy)
