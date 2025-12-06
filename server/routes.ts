@@ -58,19 +58,19 @@ const upload = multer({
 });
 
 // Request schemas
-const modelEnum = z.enum(['openai', 'anthropic', 'gemini', 'deepseek']);
+const modelEnum = z.enum(['anthropic', 'gemini', 'deepseek', 'openai']);
 
 const generateBidSchema = z.object({
   instructions: z.string().min(1),
   tone: z.string().optional().default('professional'),
-  model: modelEnum.optional().default('openai'),
+  model: modelEnum.optional().default('anthropic'),
   models: z.array(modelEnum).optional(),
 });
 
 const refineBidSchema = z.object({
   currentHtml: z.string().min(1),
   feedback: z.string().min(1),
-  model: z.enum(['openai', 'anthropic', 'gemini', 'deepseek']).optional().default('openai'),
+  model: z.enum(['anthropic', 'gemini', 'deepseek', 'openai']).optional().default('anthropic'),
 });
 
 const updateStatusSchema = z.object({

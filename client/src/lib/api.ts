@@ -69,14 +69,14 @@ export async function deleteDocument(documentId: number) {
   return res.json() as Promise<{ message: string }>;
 }
 
-// AI Model type
-export type AIModel = 'openai' | 'anthropic' | 'gemini' | 'deepseek';
+// AI Model type (order: Anthropic first, then Gemini, DeepSeek, OpenAI last)
+export type AIModel = 'anthropic' | 'gemini' | 'deepseek' | 'openai';
 
 // Bid Generation API
 export async function generateBid(projectId: string, instructions: string, tone?: string, model?: AIModel) {
   const res = await apiRequest(`${API_BASE}/projects/${projectId}/generate`, {
     method: 'POST',
-    body: JSON.stringify({ instructions, tone, model: model || 'openai' }),
+    body: JSON.stringify({ instructions, tone, model: model || 'anthropic' }),
   });
   if (!res.ok) throw new Error(await res.text());
   return res.json() as Promise<{ html: string; chunksUsed: number; model: AIModel }>;
@@ -85,7 +85,7 @@ export async function generateBid(projectId: string, instructions: string, tone?
 export async function refineBid(projectId: string, currentHtml: string, feedback: string, model?: AIModel) {
   const res = await apiRequest(`${API_BASE}/projects/${projectId}/refine`, {
     method: 'POST',
-    body: JSON.stringify({ currentHtml, feedback, model: model || 'openai' }),
+    body: JSON.stringify({ currentHtml, feedback, model: model || 'anthropic' }),
   });
   if (!res.ok) throw new Error(await res.text());
   return res.json() as Promise<{ html: string; model: AIModel }>;

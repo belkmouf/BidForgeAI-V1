@@ -15,7 +15,7 @@ interface GeneratePanelProps {
 export function GeneratePanel({ onGenerate, isGenerating }: GeneratePanelProps) {
   const [instructions, setInstructions] = useState('');
   const [tone, setTone] = useState('professional');
-  const [model, setModel] = useState<AIModel>('openai');
+  const [model, setModel] = useState<AIModel>('anthropic');
 
   const handleGenerate = () => {
     if (!instructions) return;
@@ -38,10 +38,10 @@ export function GeneratePanel({ onGenerate, isGenerating }: GeneratePanelProps) 
                 <SelectValue placeholder="Select AI model" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="openai">OpenAI GPT-4o</SelectItem>
                 <SelectItem value="anthropic">Anthropic Claude</SelectItem>
                 <SelectItem value="gemini">Google Gemini</SelectItem>
-                <SelectItem value="deepseek">DeepSeek (Chinese)</SelectItem>
+                <SelectItem value="deepseek">DeepSeek</SelectItem>
+                <SelectItem value="openai">OpenAI GPT-4o</SelectItem>
               </SelectContent>
             </Select>
           </div>
