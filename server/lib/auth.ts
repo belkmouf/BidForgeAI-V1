@@ -20,6 +20,7 @@ export interface TokenPayload {
   userId: number;
   email: string;
   role: string;
+  companyId: number | null;
 }
 
 export async function hashPassword(password: string): Promise<string> {

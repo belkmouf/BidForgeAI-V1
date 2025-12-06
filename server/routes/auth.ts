@@ -68,6 +68,7 @@ router.post('/register', async (req, res) => {
       userId: newUser.id,
       email: newUser.email,
       role: newUser.role,
+      companyId: newUser.companyId,
     };
 
     const accessToken = generateAccessToken(tokenPayload);
@@ -88,6 +89,7 @@ router.post('/register', async (req, res) => {
         email: newUser.email,
         name: newUser.name,
         role: newUser.role,
+        companyId: newUser.companyId,
       },
       accessToken,
       refreshToken,
@@ -140,6 +142,7 @@ router.post('/login', async (req, res) => {
       userId: user.id,
       email: user.email,
       role: user.role,
+      companyId: user.companyId,
     };
 
     const accessToken = generateAccessToken(tokenPayload);
@@ -160,6 +163,7 @@ router.post('/login', async (req, res) => {
         email: user.email,
         name: user.name,
         role: user.role,
+        companyId: user.companyId,
       },
       accessToken,
       refreshToken,
@@ -216,6 +220,7 @@ router.post('/refresh', async (req, res) => {
       userId: user.id,
       email: user.email,
       role: user.role,
+      companyId: user.companyId,
     };
 
     const accessToken = generateAccessToken(newTokenPayload);

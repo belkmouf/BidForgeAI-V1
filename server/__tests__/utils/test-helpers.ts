@@ -44,6 +44,7 @@ export async function createTestUser(data?: {
     userId: newUser.id,
     email: newUser.email,
     role: newUser.role,
+    companyId: newUser.companyId,
   };
 
   const accessToken = generateAccessToken(tokenPayload);
