@@ -95,7 +95,7 @@ export default function Login() {
           <CardFooter className="flex flex-col gap-4">
             <Button
               type="submit"
-              className="w-full bg-deep-teal hover:bg-deep-teal/80 text-white"
+              className="w-full hover:bg-deep-teal/80 text-white bg-[#2c2d2f]"
               disabled={isLoading}
               data-testid="button-login"
             >
