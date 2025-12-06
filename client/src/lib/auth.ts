@@ -86,8 +86,10 @@ export async function apiRequest(
 ): Promise<Response> {
   const { accessToken, refreshToken, setAuth, clearAuth } = useAuthStore.getState();
   
+  const isFormData = options.body instanceof FormData;
+  
   const headers: HeadersInit = {
-    'Content-Type': 'application/json',
+    ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
     ...options.headers,
   };
 

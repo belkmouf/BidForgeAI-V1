@@ -1,12 +1,12 @@
 import type { Project, Document } from '@shared/schema';
+import { apiRequest } from './auth';
 
 const API_BASE = '/api';
 
 // Projects API
 export async function createProject(data: { name: string; clientName: string; status?: string; metadata?: any }) {
-  const res = await fetch(`${API_BASE}/projects`, {
+  const res = await apiRequest(`${API_BASE}/projects`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
   });
   if (!res.ok) throw new Error(await res.text());
@@ -14,21 +14,20 @@ export async function createProject(data: { name: string; clientName: string; st
 }
 
 export async function listProjects() {
-  const res = await fetch(`${API_BASE}/projects`);
+  const res = await apiRequest(`${API_BASE}/projects`);
   if (!res.ok) throw new Error(await res.text());
   return res.json() as Promise<Project[]>;
 }
 
 export async function getProject(id: string) {
-  const res = await fetch(`${API_BASE}/projects/${id}`);
+  const res = await apiRequest(`${API_BASE}/projects/${id}`);
   if (!res.ok) throw new Error(await res.text());
   return res.json() as Promise<Project>;
 }
 
 export async function updateProjectStatus(id: string, status: string) {
-  const res = await fetch(`${API_BASE}/projects/${id}/status`, {
+  const res = await apiRequest(`${API_BASE}/projects/${id}/status`, {
     method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ status }),
   });
   if (!res.ok) throw new Error(await res.text());
@@ -40,7 +39,7 @@ export async function uploadDocument(projectId: string, file: File) {
   const formData = new FormData();
   formData.append('file', file);
   
-  const res = await fetch(`${API_BASE}/projects/${projectId}/upload`, {
+  const res = await apiRequest(`${API_BASE}/projects/${projectId}/upload`, {
     method: 'POST',
     body: formData,
   });
@@ -57,7 +56,7 @@ export async function uploadDocument(projectId: string, file: File) {
 }
 
 export async function listDocuments(projectId: string) {
-  const res = await fetch(`${API_BASE}/projects/${projectId}/documents`);
+  const res = await apiRequest(`${API_BASE}/projects/${projectId}/documents`);
   if (!res.ok) throw new Error(await res.text());
   return res.json() as Promise<Document[]>;
 }
@@ -67,9 +66,8 @@ export type AIModel = 'openai' | 'anthropic' | 'gemini' | 'deepseek';
 
 // Bid Generation API
 export async function generateBid(projectId: string, instructions: string, tone?: string, model?: AIModel) {
-  const res = await fetch(`${API_BASE}/projects/${projectId}/generate`, {
+  const res = await apiRequest(`${API_BASE}/projects/${projectId}/generate`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ instructions, tone, model: model || 'openai' }),
   });
   if (!res.ok) throw new Error(await res.text());
@@ -77,9 +75,8 @@ export async function generateBid(projectId: string, instructions: string, tone?
 }
 
 export async function refineBid(projectId: string, currentHtml: string, feedback: string, model?: AIModel) {
-  const res = await fetch(`${API_BASE}/projects/${projectId}/refine`, {
+  const res = await apiRequest(`${API_BASE}/projects/${projectId}/refine`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ currentHtml, feedback, model: model || 'openai' }),
   });
   if (!res.ok) throw new Error(await res.text());
@@ -88,7 +85,7 @@ export async function refineBid(projectId: string, currentHtml: string, feedback
 
 // Dashboard API
 export async function getDashboardStats() {
-  const res = await fetch(`${API_BASE}/dashboard/stats`);
+  const res = await apiRequest(`${API_BASE}/dashboard/stats`);
   if (!res.ok) throw new Error(await res.text());
   return res.json() as Promise<{
     pipeline: Record<string, number>;
