@@ -1,11 +1,13 @@
 import Anthropic from '@anthropic-ai/sdk';
 
-if (!process.env.AI_INTEGRATIONS_ANTHROPIC_API_KEY) {
-  throw new Error('AI_INTEGRATIONS_ANTHROPIC_API_KEY is not set');
+const anthropicApiKey = process.env.ANTHROPIC_API_KEY || process.env.AI_INTEGRATIONS_ANTHROPIC_API_KEY;
+
+if (!anthropicApiKey) {
+  throw new Error('ANTHROPIC_API_KEY is not set');
 }
 
 export const anthropic = new Anthropic({
-  apiKey: process.env.AI_INTEGRATIONS_ANTHROPIC_API_KEY,
+  apiKey: anthropicApiKey,
   baseURL: process.env.AI_INTEGRATIONS_ANTHROPIC_BASE_URL,
 });
 
