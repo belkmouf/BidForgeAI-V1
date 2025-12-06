@@ -40,7 +40,7 @@ export function AppSidebar() {
         </div>
       </div>
       <nav className="flex-1 p-4 space-y-1">
-        <div className="px-3 mb-4 text-[10px] font-semibold text-charcoal-500 uppercase tracking-[0.2em]">
+        <div className="px-3 mb-4 text-[10px] font-semibold uppercase tracking-[0.2em] text-[#f0f1f2]">
           Navigation
         </div>
         {navItems.map((item) => {
