@@ -13,6 +13,8 @@ import {
 import { cn } from "@/lib/utils";
 import bidForgeLogo from "@assets/generated_images/bidforge_ai_premium_logo.png";
 
+import _1764979718 from "@assets/1764979718.png";
+
 export function AppSidebar() {
   const [location] = useLocation();
 
@@ -30,9 +32,9 @@ export function AppSidebar() {
     <aside className="w-64 bg-charcoal-900 flex flex-col h-screen text-white fixed left-0 top-0 bottom-0 z-10" data-testid="app-sidebar">
       <div className="p-6 flex items-center gap-3 border-b border-charcoal-700">
         <img 
-          src={bidForgeLogo} 
+          src={_1764979718} 
           alt="BidForge AI Logo" 
-          className="h-10 w-10 object-contain"
+          className="h-10 w-10 object-contain bg-white rounded p-1"
         />
         <div>
           <h1 className="font-display font-bold text-xl tracking-tight text-white">BidForge AI</h1>
