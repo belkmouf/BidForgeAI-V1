@@ -17,6 +17,8 @@ export const PERMISSIONS = {
   USER_MANAGE: 'user:manage',
   ROLE_MANAGE: 'role:manage',
   
+  WHATSAPP_SEND: 'whatsapp:send',
+  
   SYSTEM_ADMIN: 'system:admin',
 } as const;
 
@@ -37,6 +39,7 @@ export const ROLE_PERMISSIONS: Record<string, Permission[]> = {
     PERMISSIONS.GENERATION_EDIT,
     PERMISSIONS.USER_MANAGE,
     PERMISSIONS.ROLE_MANAGE,
+    PERMISSIONS.WHATSAPP_SEND,
     PERMISSIONS.SYSTEM_ADMIN,
   ],
   manager: [
@@ -50,6 +53,7 @@ export const ROLE_PERMISSIONS: Record<string, Permission[]> = {
     PERMISSIONS.ANALYSIS_VIEW,
     PERMISSIONS.GENERATION_CREATE,
     PERMISSIONS.GENERATION_EDIT,
+    PERMISSIONS.WHATSAPP_SEND,
   ],
   user: [
     PERMISSIONS.PROJECT_VIEW,
@@ -60,6 +64,7 @@ export const ROLE_PERMISSIONS: Record<string, Permission[]> = {
     PERMISSIONS.ANALYSIS_VIEW,
     PERMISSIONS.GENERATION_CREATE,
     PERMISSIONS.GENERATION_EDIT,
+    PERMISSIONS.WHATSAPP_SEND,
   ],
   viewer: [
     PERMISSIONS.PROJECT_VIEW,

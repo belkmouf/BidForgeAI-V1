@@ -58,10 +58,13 @@ const upload = multer({
 });
 
 // Request schemas
+const modelEnum = z.enum(['openai', 'anthropic', 'gemini', 'deepseek']);
+
 const generateBidSchema = z.object({
   instructions: z.string().min(1),
   tone: z.string().optional().default('professional'),
-  model: z.enum(['openai', 'anthropic', 'gemini', 'deepseek']).optional().default('openai'),
+  model: modelEnum.optional().default('openai'),
+  models: z.array(modelEnum).optional(),
 });
 
 const refineBidSchema = z.object({
@@ -269,10 +272,29 @@ export async function registerRoutes(
 
   // ==================== BID GENERATION ====================
 
+  // Helper function to generate bid with a specific model
+  async function generateBidWithModel(
+    modelName: string,
+    params: { instructions: string; context: string; tone: string }
+  ): Promise<string> {
+    switch (modelName) {
+      case 'anthropic':
+        return generateBidWithAnthropic(params);
+      case 'gemini':
+        return generateBidWithGemini(params);
+      case 'deepseek':
+        return generateBidWithDeepSeek(params);
+      case 'openai':
+      default:
+        return generateBidContent(params);
+    }
+  }
+
   // Generate a bid using RAG (requires authentication + AI input sanitization, company-scoped)
+  // Supports multi-model comparison when 'models' array is provided
   app.post("/api/projects/:id/generate", authenticateToken, async (req: AuthRequest, res) => {
     try {
-      const { instructions, tone, model } = generateBidSchema.parse(req.body);
+      const { instructions, tone, model, models } = generateBidSchema.parse(req.body);
       const projectId = req.params.id;
       const companyId = req.user?.companyId ?? null;
 
@@ -317,33 +339,52 @@ export async function registerRoutes(
       
       console.log(`Found ${relevantChunks.length} relevant chunks for bid generation`);
 
-      // Generate bid content using selected model with sanitized inputs
-      let html: string;
-      switch (model) {
-        case 'anthropic':
-          html = await generateBidWithAnthropic({ instructions: sanitizedInstructions, context: contextOrDefault, tone: sanitizedTone });
-          break;
-        case 'gemini':
-          html = await generateBidWithGemini({ instructions: sanitizedInstructions, context: contextOrDefault, tone: sanitizedTone });
-          break;
-        case 'deepseek':
-          html = await generateBidWithDeepSeek({ instructions: sanitizedInstructions, context: contextOrDefault, tone: sanitizedTone });
-          break;
-        case 'openai':
-        default:
-          html = await generateBidContent({ instructions: sanitizedInstructions, context: contextOrDefault, tone: sanitizedTone });
-          break;
-      }
+      const generationParams = {
+        instructions: sanitizedInstructions,
+        context: contextOrDefault,
+        tone: sanitizedTone,
+      };
 
-      res.json({
-        html,
-        chunksUsed: relevantChunks.length,
-        model,
-        searchMethod: 'vector_similarity',
-        avgSimilarity: relevantChunks.length > 0 
-          ? (relevantChunks.reduce((sum, c) => sum + (1 - c.distance), 0) / relevantChunks.length).toFixed(3)
-          : 0,
-      });
+      // Check if multi-model comparison is requested
+      if (models && models.length > 1) {
+        console.log(`Multi-model comparison requested for: ${models.join(', ')}`);
+        
+        // Generate bids in parallel for all requested models
+        const results = await Promise.all(
+          models.map(async (modelName) => {
+            try {
+              const html = await generateBidWithModel(modelName, generationParams);
+              return { model: modelName, html, success: true };
+            } catch (error: any) {
+              return { model: modelName, html: '', success: false, error: error.message };
+            }
+          })
+        );
+
+        res.json({
+          comparison: true,
+          results,
+          chunksUsed: relevantChunks.length,
+          searchMethod: 'vector_similarity',
+          avgSimilarity: relevantChunks.length > 0 
+            ? (relevantChunks.reduce((sum, c) => sum + (1 - c.distance), 0) / relevantChunks.length).toFixed(3)
+            : 0,
+        });
+      } else {
+        // Single model generation (original behavior)
+        const selectedModel = models?.[0] || model;
+        const html = await generateBidWithModel(selectedModel, generationParams);
+
+        res.json({
+          html,
+          chunksUsed: relevantChunks.length,
+          model: selectedModel,
+          searchMethod: 'vector_similarity',
+          avgSimilarity: relevantChunks.length > 0 
+            ? (relevantChunks.reduce((sum, c) => sum + (1 - c.distance), 0) / relevantChunks.length).toFixed(3)
+            : 0,
+        });
+      }
     } catch (error: any) {
       console.error('Generation error:', error);
       res.status(500).json({ error: error.message });
@@ -586,6 +627,60 @@ export async function registerRoutes(
     }
   });
 
+  // ==================== DECISION LOGS ====================
+
+  // Get decision log for a project (Go/No-Go visualization)
+  app.get("/api/projects/:id/decision-log", authenticateToken, async (req: AuthRequest, res) => {
+    try {
+      const projectId = req.params.id;
+      const companyId = req.user?.companyId ?? null;
+      
+      const project = await storage.getProject(projectId, companyId);
+      if (!project) {
+        return res.status(404).json({ error: "Project not found" });
+      }
+
+      const decisionLog = await storage.getDecisionLogByProject(projectId, companyId);
+      if (!decisionLog) {
+        return res.status(404).json({ error: "No decision log found. Run the analysis pipeline first." });
+      }
+
+      res.json({
+        id: decisionLog.id,
+        projectId: decisionLog.projectId,
+        doabilityScore: decisionLog.doabilityScore,
+        minDoabilityThreshold: decisionLog.minDoabilityThreshold,
+        criticalRiskLevel: decisionLog.criticalRiskLevel,
+        vendorRiskScore: decisionLog.vendorRiskScore,
+        decision: decisionLog.decision,
+        reason: decisionLog.reason,
+        triggeredRule: decisionLog.triggeredRule,
+        bidStrategy: decisionLog.bidStrategy,
+        createdAt: decisionLog.createdAt,
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get decision log history for a project
+  app.get("/api/projects/:id/decision-log/history", authenticateToken, async (req: AuthRequest, res) => {
+    try {
+      const projectId = req.params.id;
+      const companyId = req.user?.companyId ?? null;
+      
+      const project = await storage.getProject(projectId, companyId);
+      if (!project) {
+        return res.status(404).json({ error: "Project not found" });
+      }
+
+      const history = await storage.getDecisionLogHistory(projectId, companyId);
+      res.json(history);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // ==================== VENDOR DATABASE ====================
 
   // Get all vendors (requires authentication)
@@ -700,7 +795,7 @@ export async function registerRoutes(
     message: z.string().min(1),
   });
 
-  app.post("/api/whatsapp/send", async (req, res) => {
+  app.post("/api/whatsapp/send", authenticateToken, requirePermission(PERMISSIONS.WHATSAPP_SEND), async (req: AuthRequest, res) => {
     try {
       const { to, message } = sendMessageSchema.parse(req.body);
       const result = await sendTextMessage(to, message);
@@ -723,7 +818,7 @@ export async function registerRoutes(
     caption: z.string().optional(),
   });
 
-  app.post("/api/whatsapp/send-document", async (req, res) => {
+  app.post("/api/whatsapp/send-document", authenticateToken, requirePermission(PERMISSIONS.WHATSAPP_SEND), async (req: AuthRequest, res) => {
     try {
       const { to, documentUrl, filename, caption } = sendDocumentSchema.parse(req.body);
       const result = await sendDocument(to, documentUrl, filename, caption);
@@ -746,7 +841,7 @@ export async function registerRoutes(
     components: z.array(z.any()).optional(),
   });
 
-  app.post("/api/whatsapp/send-template", async (req, res) => {
+  app.post("/api/whatsapp/send-template", authenticateToken, requirePermission(PERMISSIONS.WHATSAPP_SEND), async (req: AuthRequest, res) => {
     try {
       const { to, templateName, languageCode, components } = sendTemplateSchema.parse(req.body);
       const result = await sendTemplateMessage(to, templateName, languageCode, components);

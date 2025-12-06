@@ -67,10 +67,12 @@ Preferred communication style: Simple, everyday language.
 - Migration management via Drizzle Kit
 
 **AI Integration Strategy**
-- Multiple AI provider support: OpenAI (GPT-4o), Anthropic (Claude Sonnet 4.5), Google Gemini (2.5 Flash)
+- Multiple AI provider support: OpenAI (GPT-4o), Anthropic (Claude Sonnet 4.5), Google Gemini (2.5 Flash), DeepSeek
 - Separate service modules for each AI provider
 - Unified interface for bid generation and refinement
 - User-selectable model at runtime
+- Multi-model comparison: Request multiple AI providers in parallel for side-by-side draft comparison
+- API accepts `models: ['openai', 'anthropic', 'gemini', 'deepseek']` array for parallel generation
 
 **RAG Implementation**
 - Vector embeddings using OpenAI's text-embedding-3-small model (1536 dimensions)

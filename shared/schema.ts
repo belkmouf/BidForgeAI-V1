@@ -662,3 +662,50 @@ export const updateProjectCommentSchema = z.object({
   content: z.string().min(1).optional(),
   isResolved: z.boolean().optional(),
 });
+
+// ==================== DECISION LOGS ====================
+
+// Decision Log Schema (for Go/No-Go visualization)
+export const decisionLogSchema = z.object({
+  doabilityScore: z.number(),
+  minDoabilityThreshold: z.number().default(30),
+  criticalRiskLevel: z.boolean(),
+  vendorRiskScore: z.number(),
+  decision: z.enum(['PROCEED', 'REJECT']),
+  reason: z.string(),
+  triggeredRule: z.string(),
+  bidStrategy: z.object({
+    approach: z.enum(['aggressive', 'balanced', 'conservative']),
+    pricePositioning: z.enum(['low', 'mid', 'premium']),
+    focusAreas: z.array(z.string()),
+    confidenceLevel: z.number(),
+    recommendedMargin: z.string(),
+  }).optional(),
+});
+
+export type DecisionLog = z.infer<typeof decisionLogSchema>;
+
+// Decision Logs Table
+export const decisionLogs = pgTable("decision_logs", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  projectId: varchar("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  companyId: integer("company_id").references(() => companies.id, { onDelete: "cascade" }),
+  doabilityScore: real("doability_score").notNull(),
+  minDoabilityThreshold: real("min_doability_threshold").default(30),
+  criticalRiskLevel: boolean("critical_risk_level").notNull(),
+  vendorRiskScore: real("vendor_risk_score"),
+  decision: text("decision").notNull(),
+  reason: text("reason").notNull(),
+  triggeredRule: text("triggered_rule").notNull(),
+  bidStrategy: jsonb("bid_strategy").$type<{
+    approach: string;
+    pricePositioning: string;
+    focusAreas: string[];
+    confidenceLevel: number;
+    recommendedMargin: string;
+  }>(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export type DecisionLogRecord = typeof decisionLogs.$inferSelect;
+export type InsertDecisionLog = typeof decisionLogs.$inferInsert;

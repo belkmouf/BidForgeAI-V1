@@ -5,6 +5,7 @@ import {
   rfpAnalyses,
   analysisAlerts,
   vendorDatabase,
+  decisionLogs,
   type Project, 
   type InsertProject,
   type Document,
@@ -17,7 +18,9 @@ import {
   type AnalysisAlert,
   type InsertAnalysisAlert,
   type Vendor,
-  type InsertVendor
+  type InsertVendor,
+  type DecisionLogRecord,
+  type InsertDecisionLog
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, sql, and, isNull, or } from "drizzle-orm";
@@ -486,6 +489,47 @@ export class DatabaseStorage implements IStorage {
       .limit(limit);
     
     return results;
+  }
+
+  // Decision Logs
+  async createDecisionLog(data: InsertDecisionLog): Promise<DecisionLogRecord> {
+    const [log] = await db
+      .insert(decisionLogs)
+      .values(data)
+      .returning();
+    return log;
+  }
+
+  async getDecisionLogByProject(projectId: string, companyId: number | null): Promise<DecisionLogRecord | undefined> {
+    const conditions = [eq(decisionLogs.projectId, projectId)];
+    if (companyId !== null) {
+      conditions.push(eq(decisionLogs.companyId, companyId));
+    } else {
+      conditions.push(isNull(decisionLogs.companyId));
+    }
+    
+    const [log] = await db
+      .select()
+      .from(decisionLogs)
+      .where(and(...conditions))
+      .orderBy(desc(decisionLogs.createdAt))
+      .limit(1);
+    return log || undefined;
+  }
+
+  async getDecisionLogHistory(projectId: string, companyId: number | null): Promise<DecisionLogRecord[]> {
+    const conditions = [eq(decisionLogs.projectId, projectId)];
+    if (companyId !== null) {
+      conditions.push(eq(decisionLogs.companyId, companyId));
+    } else {
+      conditions.push(isNull(decisionLogs.companyId));
+    }
+    
+    return await db
+      .select()
+      .from(decisionLogs)
+      .where(and(...conditions))
+      .orderBy(desc(decisionLogs.createdAt));
   }
 }
 

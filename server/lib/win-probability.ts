@@ -20,6 +20,14 @@ export interface WinProbabilityResult {
   strengthFactors: string[];
   recommendations: string[];
   breakdown: FeatureBreakdown[];
+  topContributors: ContributionSummary[];
+  topDetractors: ContributionSummary[];
+}
+
+export interface ContributionSummary {
+  factor: string;
+  contribution: string;
+  insight: string;
 }
 
 export interface FeatureBreakdown {
@@ -97,6 +105,8 @@ export class WinProbabilityService {
     const strengthFactors = this.identifyStrengthFactors(featureScores);
     const recommendations = this.generateRecommendations(featureScores, riskFactors);
 
+    const { topContributors, topDetractors } = this.generateContributionSummaries(breakdown);
+
     const result: WinProbabilityResult = {
       probability: Math.round(probability * 100) / 100,
       confidence: Math.round(confidence * 100) / 100,
@@ -106,11 +116,89 @@ export class WinProbabilityService {
       strengthFactors,
       recommendations,
       breakdown,
+      topContributors,
+      topDetractors,
     };
 
     await this.savePrediction(projectId, result);
 
     return result;
+  }
+
+  private generateContributionSummaries(breakdown: FeatureBreakdown[]): {
+    topContributors: ContributionSummary[];
+    topDetractors: ContributionSummary[];
+  } {
+    const sorted = [...breakdown].sort((a, b) => b.contribution - a.contribution);
+    
+    const topContributors: ContributionSummary[] = sorted
+      .filter(b => b.status === 'positive')
+      .slice(0, 3)
+      .map(b => ({
+        factor: b.displayName,
+        contribution: `+${Math.round(b.contribution * 100)}%`,
+        insight: this.generateDetailedInsight(b, 'positive'),
+      }));
+
+    const topDetractors: ContributionSummary[] = sorted
+      .filter(b => b.status === 'negative')
+      .slice(0, 3)
+      .map(b => ({
+        factor: b.displayName,
+        contribution: `-${Math.round((0.5 - b.score) * b.weight * 100)}%`,
+        insight: this.generateDetailedInsight(b, 'negative'),
+      }));
+
+    return { topContributors, topDetractors };
+  }
+
+  private generateDetailedInsight(breakdown: FeatureBreakdown, type: 'positive' | 'negative'): string {
+    const scorePercent = Math.round(breakdown.score * 100);
+    const weightPercent = Math.round(breakdown.weight * 100);
+    
+    if (type === 'positive') {
+      switch (breakdown.name) {
+        case 'clientRelationshipScore':
+          return `Strong ${scorePercent}/100 rating indicating excellent client history and trust.`;
+        case 'projectTypeScore':
+          return `${scorePercent}% alignment with your core expertise areas.`;
+        case 'competitivenessScore':
+          return `Competitive advantage score of ${scorePercent}% in this market segment.`;
+        case 'teamCapacityScore':
+          return `Team availability rated at ${scorePercent}%, resources are ready.`;
+        case 'timelineScore':
+          return `Timeline feasibility at ${scorePercent}%, deliverables are achievable.`;
+        case 'requirementsClarityScore':
+          return `Requirements clarity at ${scorePercent}%, reducing scope risk.`;
+        case 'budgetAlignmentScore':
+          return `Budget alignment at ${scorePercent}%, expectations match capabilities.`;
+        case 'complexityScore':
+          return `Complexity manageable at ${scorePercent}%, within team capabilities.`;
+        default:
+          return `Contributing ${weightPercent}% weight with ${scorePercent}% score.`;
+      }
+    } else {
+      switch (breakdown.name) {
+        case 'clientRelationshipScore':
+          return `Limited history (${scorePercent}/100) increases relationship building effort needed.`;
+        case 'projectTypeScore':
+          return `Only ${scorePercent}% alignment with expertise - may require additional resources.`;
+        case 'competitivenessScore':
+          return `Competitive position at ${scorePercent}% indicates strong market competition.`;
+        case 'teamCapacityScore':
+          return `Team availability at ${scorePercent}% may constrain project execution.`;
+        case 'timelineScore':
+          return `Timeline feasibility at ${scorePercent}% poses delivery risk.`;
+        case 'requirementsClarityScore':
+          return `Requirements clarity at ${scorePercent}% increases scope creep risk.`;
+        case 'budgetAlignmentScore':
+          return `Budget alignment at ${scorePercent}% indicates potential margin pressure.`;
+        case 'complexityScore':
+          return `Complexity score of ${scorePercent}% indicates challenging execution.`;
+        default:
+          return `Reducing probability by ${weightPercent}% weight with ${scorePercent}% score.`;
+      }
+    }
   }
 
   private applyHistoricalAdjustment(probability: number, features: ExtractedFeatures): number {
