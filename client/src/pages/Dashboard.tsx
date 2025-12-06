@@ -34,9 +34,11 @@ import {
 } from '@/components/ui/table';
 import { Link } from 'wouter';
 import { listProjects, getDashboardStats } from '@/lib/api';
+import { useAuthStore } from '@/lib/auth';
 import type { Project } from '@shared/schema';
 
 export default function Dashboard() {
+  const user = useAuthStore((state) => state.user);
   const [projects, setProjects] = useState<Project[]>([]);
   const [stats, setStats] = useState<{
     pipeline: Record<string, number>;
@@ -86,8 +88,15 @@ export default function Dashboard() {
           {/* Header */}
           <div className="flex items-center justify-between">
             <div>
+              {user?.companyName && (
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-sm font-medium text-primary bg-primary/10 px-3 py-1 rounded-full">
+                    {user.companyName}
+                  </span>
+                </div>
+              )}
               <h1 className="text-3xl font-display font-bold tracking-tight text-foreground">Dashboard</h1>
-              <p className="text-muted-foreground mt-1">Welcome back, Belkacem. Here's what's happening with your bids.</p>
+              <p className="text-muted-foreground mt-1">Welcome back{user?.name ? `, ${user.name}` : ''}. Here's what's happening with your bids.</p>
             </div>
             <div className="flex gap-3">
                <Button variant="outline" className="gap-2">

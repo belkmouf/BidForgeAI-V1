@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { db } from '../db';
-import { users, sessions, insertUserSchema, loginSchema } from '@shared/schema';
+import { users, sessions, companies, insertUserSchema, loginSchema } from '@shared/schema';
 import { eq, and, gt } from 'drizzle-orm';
 import {
   hashPassword,
@@ -250,24 +250,27 @@ router.get('/me', authenticateToken, async (req: AuthRequest, res) => {
       return res.status(401).json({ error: 'Not authenticated' });
     }
 
-    const [user] = await db
+    const [userResult] = await db
       .select({
         id: users.id,
         email: users.email,
         name: users.name,
         role: users.role,
+        companyId: users.companyId,
+        companyName: companies.name,
         createdAt: users.createdAt,
         lastLoginAt: users.lastLoginAt,
       })
       .from(users)
+      .leftJoin(companies, eq(users.companyId, companies.id))
       .where(eq(users.id, req.user.userId))
       .limit(1);
 
-    if (!user) {
+    if (!userResult) {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    res.json({ user });
+    res.json({ user: userResult });
   } catch (error: any) {
     console.error('Get user error:', error);
     res.status(500).json({ error: 'Failed to get user info' });
