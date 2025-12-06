@@ -140,7 +140,7 @@ export default function Register() {
           <CardFooter className="flex flex-col gap-4">
             <Button
               type="submit"
-              className="w-full bg-deep-teal hover:bg-deep-teal/80 text-white"
+              className="w-full hover:bg-deep-teal/80 text-white bg-[#151719]"
               disabled={isLoading}
               data-testid="button-register"
             >
