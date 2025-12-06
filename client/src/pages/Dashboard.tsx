@@ -80,7 +80,6 @@ export default function Dashboard() {
   return (
     <div className="flex min-h-screen bg-background">
       <AppSidebar />
-      
       <main className="flex-1 ml-64 p-8 overflow-auto">
         <div className="max-w-7xl mx-auto space-y-8">
           
@@ -88,7 +87,7 @@ export default function Dashboard() {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-3xl font-display font-bold tracking-tight text-foreground">Dashboard</h1>
-              <p className="text-muted-foreground mt-1">Welcome back, John. Here's what's happening with your bids.</p>
+              <p className="text-muted-foreground mt-1">Welcome back, Belkacem. Here's what's happening with your bids.</p>
             </div>
             <div className="flex gap-3">
                <Button variant="outline" className="gap-2">

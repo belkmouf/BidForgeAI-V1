@@ -107,31 +107,34 @@ export async function registerRoutes(
   
   // ==================== PROJECTS ====================
   
-  // Create a new project (requires authentication)
+  // Create a new project (requires authentication, company-scoped)
   app.post("/api/projects", authenticateToken, async (req: AuthRequest, res) => {
     try {
       const data = insertProjectSchema.parse(req.body);
-      const project = await storage.createProject(data);
+      const companyId = req.user?.companyId ?? null;
+      const project = await storage.createProject(data, companyId);
       res.json(project);
     } catch (error: any) {
       res.status(400).json({ error: error.message });
     }
   });
 
-  // List all projects (requires authentication)
+  // List all projects (requires authentication, company-scoped)
   app.get("/api/projects", authenticateToken, async (req: AuthRequest, res) => {
     try {
-      const projects = await storage.listProjects();
+      const companyId = req.user?.companyId ?? null;
+      const projects = await storage.listProjects(companyId);
       res.json(projects);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
   });
 
-  // Get a specific project (requires authentication)
+  // Get a specific project (requires authentication, company-scoped)
   app.get("/api/projects/:id", authenticateToken, async (req: AuthRequest, res) => {
     try {
-      const project = await storage.getProject(req.params.id);
+      const companyId = req.user?.companyId ?? null;
+      const project = await storage.getProject(req.params.id, companyId);
       if (!project) {
         return res.status(404).json({ error: "Project not found" });
       }
@@ -141,11 +144,12 @@ export async function registerRoutes(
     }
   });
 
-  // Update project status (requires authentication)
+  // Update project status (requires authentication, company-scoped)
   app.patch("/api/projects/:id/status", authenticateToken, async (req: AuthRequest, res) => {
     try {
       const { status } = updateStatusSchema.parse(req.body);
-      const project = await storage.updateProjectStatus(req.params.id, status);
+      const companyId = req.user?.companyId ?? null;
+      const project = await storage.updateProjectStatus(req.params.id, status, companyId);
       if (!project) {
         return res.status(404).json({ error: "Project not found" });
       }
@@ -157,7 +161,7 @@ export async function registerRoutes(
 
   // ==================== DOCUMENTS ====================
 
-  // Upload a document to a project with recursive file processing (requires authentication)
+  // Upload a document to a project with recursive file processing (requires authentication, company-scoped)
   app.post("/api/projects/:id/upload", authenticateToken, upload.single('file'), async (req: AuthRequest, res) => {
     try {
       if (!req.file) {
@@ -165,9 +169,10 @@ export async function registerRoutes(
       }
 
       const projectId = req.params.id;
+      const companyId = req.user?.companyId ?? null;
       
-      // Verify project exists
-      const project = await storage.getProject(projectId);
+      // Verify project exists and belongs to this company
+      const project = await storage.getProject(projectId, companyId);
       if (!project) {
         return res.status(404).json({ error: "Project not found" });
       }
@@ -231,7 +236,7 @@ export async function registerRoutes(
     }
   });
 
-  // Delete a document (requires authentication)
+  // Delete a document (requires authentication, company-scoped)
   app.delete("/api/documents/:documentId", authenticateToken, async (req: AuthRequest, res) => {
     try {
       const documentId = parseInt(req.params.documentId, 10);
@@ -239,14 +244,16 @@ export async function registerRoutes(
         return res.status(400).json({ error: "Invalid document ID" });
       }
 
-      // Verify document exists
-      const document = await storage.getDocument(documentId);
+      const companyId = req.user?.companyId ?? null;
+      
+      // Verify document exists and belongs to this company's project
+      const document = await storage.getDocument(documentId, companyId);
       if (!document) {
         return res.status(404).json({ error: "Document not found" });
       }
 
       // Delete the document and its chunks
-      const deleted = await storage.deleteDocument(documentId);
+      const deleted = await storage.deleteDocument(documentId, companyId);
       
       if (deleted) {
         res.json({ message: "Document deleted successfully" });
@@ -261,14 +268,15 @@ export async function registerRoutes(
 
   // ==================== BID GENERATION ====================
 
-  // Generate a bid using RAG (requires authentication + AI input sanitization)
+  // Generate a bid using RAG (requires authentication + AI input sanitization, company-scoped)
   app.post("/api/projects/:id/generate", authenticateToken, async (req: AuthRequest, res) => {
     try {
       const { instructions, tone, model } = generateBidSchema.parse(req.body);
       const projectId = req.params.id;
+      const companyId = req.user?.companyId ?? null;
 
-      // Verify project exists
-      const project = await storage.getProject(projectId);
+      // Verify project exists and belongs to this company
+      const project = await storage.getProject(projectId, companyId);
       if (!project) {
         return res.status(404).json({ error: "Project not found" });
       }

@@ -20,29 +20,29 @@ import {
   type InsertVendor
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, sql } from "drizzle-orm";
+import { eq, desc, sql, and, isNull, or } from "drizzle-orm";
 
 export interface IStorage {
-  // Projects
-  createProject(project: InsertProject): Promise<Project>;
-  getProject(id: string): Promise<Project | undefined>;
-  listProjects(): Promise<Project[]>;
-  updateProjectStatus(id: string, status: ProjectStatus): Promise<Project | undefined>;
+  // Projects (company-scoped)
+  createProject(project: InsertProject, companyId: number | null): Promise<Project>;
+  getProject(id: string, companyId: number | null): Promise<Project | undefined>;
+  listProjects(companyId: number | null): Promise<Project[]>;
+  updateProjectStatus(id: string, status: ProjectStatus, companyId: number | null): Promise<Project | undefined>;
   
   // Documents
   createDocument(document: InsertDocument): Promise<Document>;
-  getDocument(id: number): Promise<Document | undefined>;
+  getDocument(id: number, companyId: number | null): Promise<Document | undefined>;
   listDocumentsByProject(projectId: string): Promise<Document[]>;
   updateDocumentProcessed(id: number, isProcessed: boolean): Promise<void>;
-  deleteDocument(id: number): Promise<boolean>;
+  deleteDocument(id: number, companyId: number | null): Promise<boolean>;
   
-  // Document Chunks
+  // Document Chunks (company-scoped RAG)
   createDocumentChunk(chunk: InsertDocumentChunk): Promise<DocumentChunk>;
-  searchSimilarChunks(embedding: number[], projectId: string, limit: number): Promise<Array<DocumentChunk & { distance: number }>>;
-  searchChunksByKeywords(query: string, projectId: string, limit: number): Promise<Array<DocumentChunk & { rank: number }>>;
+  searchSimilarChunks(embedding: number[], projectId: string, companyId: number | null, limit: number): Promise<Array<DocumentChunk & { distance: number }>>;
+  searchChunksByKeywords(query: string, projectId: string, companyId: number | null, limit: number): Promise<Array<DocumentChunk & { rank: number }>>;
   
-  // Dashboard Stats
-  getDashboardStats(): Promise<{
+  // Dashboard Stats (company-scoped)
+  getDashboardStats(companyId: number | null): Promise<{
     pipeline: Record<string, number>;
     winRate: number;
     totalProjects: number;
@@ -58,7 +58,7 @@ export interface IStorage {
   resolveAlert(alertId: number): Promise<AnalysisAlert>;
   deleteAlertsByAnalysis(analysisId: number): Promise<void>;
   
-  // Vendor Database
+  // Vendor Database (global - not company-scoped)
   getVendorByName(name: string): Promise<Vendor | undefined>;
   listVendors(): Promise<Vendor[]>;
   upsertVendor(data: Omit<InsertVendor, 'lastUpdated'>): Promise<Vendor>;
@@ -69,40 +69,54 @@ export interface IStorage {
 }
 
 export class DatabaseStorage implements IStorage {
-  // Projects
-  async createProject(insertProject: InsertProject): Promise<Project> {
+  // Helper to build company filter condition
+  private companyFilter(companyId: number | null) {
+    return companyId !== null 
+      ? eq(projects.companyId, companyId)
+      : isNull(projects.companyId);
+  }
+
+  // Projects (company-scoped)
+  async createProject(insertProject: InsertProject, companyId: number | null): Promise<Project> {
     const [project] = await db
       .insert(projects)
-      .values(insertProject)
+      .values({ ...insertProject, companyId })
       .returning();
     return project;
   }
 
-  async getProject(id: string): Promise<Project | undefined> {
+  async getProject(id: string, companyId: number | null): Promise<Project | undefined> {
     const [project] = await db
       .select()
       .from(projects)
-      .where(eq(projects.id, id));
+      .where(and(
+        eq(projects.id, id),
+        this.companyFilter(companyId)
+      ));
     return project || undefined;
   }
 
-  async listProjects(): Promise<Project[]> {
+  async listProjects(companyId: number | null): Promise<Project[]> {
     return await db
       .select()
       .from(projects)
+      .where(this.companyFilter(companyId))
       .orderBy(desc(projects.createdAt));
   }
 
-  async updateProjectStatus(id: string, status: ProjectStatus): Promise<Project | undefined> {
+  async updateProjectStatus(id: string, status: ProjectStatus, companyId: number | null): Promise<Project | undefined> {
     const [project] = await db
       .update(projects)
       .set({ status })
-      .where(eq(projects.id, id))
+      .where(and(
+        eq(projects.id, id),
+        this.companyFilter(companyId)
+      ))
       .returning();
     return project || undefined;
   }
 
-  // Documents
+  // Documents (company access verified through project ownership)
   async createDocument(insertDocument: InsertDocument): Promise<Document> {
     const [document] = await db
       .insert(documents)
@@ -111,12 +125,17 @@ export class DatabaseStorage implements IStorage {
     return document;
   }
 
-  async getDocument(id: number): Promise<Document | undefined> {
+  async getDocument(id: number, companyId: number | null): Promise<Document | undefined> {
+    // Verify document belongs to a project owned by this company
     const [document] = await db
-      .select()
+      .select({ document: documents })
       .from(documents)
-      .where(eq(documents.id, id));
-    return document || undefined;
+      .innerJoin(projects, eq(documents.projectId, projects.id))
+      .where(and(
+        eq(documents.id, id),
+        this.companyFilter(companyId)
+      ));
+    return document?.document || undefined;
   }
 
   async listDocumentsByProject(projectId: string): Promise<Document[]> {
@@ -134,8 +153,14 @@ export class DatabaseStorage implements IStorage {
       .where(eq(documents.id, id));
   }
 
-  async deleteDocument(id: number): Promise<boolean> {
-    // First delete associated chunks (cascade should handle this, but being explicit)
+  async deleteDocument(id: number, companyId: number | null): Promise<boolean> {
+    // First verify document belongs to this company's project
+    const doc = await this.getDocument(id, companyId);
+    if (!doc) {
+      return false;
+    }
+    
+    // Delete associated chunks (cascade should handle this, but being explicit)
     await db
       .delete(documentChunks)
       .where(eq(documentChunks.documentId, id));
@@ -149,7 +174,7 @@ export class DatabaseStorage implements IStorage {
     return result.length > 0;
   }
 
-  // Document Chunks
+  // Document Chunks (company-scoped RAG)
   async createDocumentChunk(insertChunk: InsertDocumentChunk): Promise<DocumentChunk> {
     const [chunk] = await db
       .insert(documentChunks)
@@ -161,12 +186,18 @@ export class DatabaseStorage implements IStorage {
   async searchSimilarChunks(
     embedding: number[], 
     projectId: string, 
+    companyId: number | null,
     limit: number = 10
   ): Promise<Array<DocumentChunk & { distance: number }>> {
     // Convert embedding array to string format for pgvector
     const embeddingStr = `[${embedding.join(',')}]`;
     
-    // Search chunks from current project AND "Closed-Won" projects
+    // Search chunks from current project AND "Closed-Won" projects WITHIN THE SAME COMPANY
+    // This ensures complete data isolation between tenants
+    const companyCondition = companyId !== null 
+      ? sql`p.company_id = ${companyId}`
+      : sql`p.company_id IS NULL`;
+    
     const results = await db.execute(sql`
       SELECT 
         dc.id,
@@ -178,11 +209,12 @@ export class DatabaseStorage implements IStorage {
       FROM document_chunks dc
       JOIN documents d ON dc.document_id = d.id
       JOIN projects p ON d.project_id = p.id
-      WHERE (
-        p.id = ${projectId}
-        OR
-        p.status = 'Closed-Won'
-      )
+      WHERE ${companyCondition}
+        AND (
+          p.id = ${projectId}
+          OR
+          p.status = 'Closed-Won'
+        )
       ORDER BY distance ASC
       LIMIT ${limit}
     `);
@@ -200,6 +232,7 @@ export class DatabaseStorage implements IStorage {
   async searchChunksByKeywords(
     query: string, 
     projectId: string, 
+    companyId: number | null,
     limit: number = 10
   ): Promise<Array<DocumentChunk & { rank: number }>> {
     // Extract keywords from query (simple word extraction)
@@ -209,8 +242,13 @@ export class DatabaseStorage implements IStorage {
       .split(/\s+/)
       .filter(word => word.length > 2);
 
+    // Build company condition for tenant isolation
+    const companyCondition = companyId !== null 
+      ? sql`p.company_id = ${companyId}`
+      : sql`p.company_id IS NULL`;
+
     if (keywords.length === 0) {
-      // If no valid keywords, return recent chunks from the project
+      // If no valid keywords, return recent chunks from the project (company-scoped)
       const results = await db.execute(sql`
         SELECT 
           dc.id,
@@ -221,11 +259,12 @@ export class DatabaseStorage implements IStorage {
         FROM document_chunks dc
         JOIN documents d ON dc.document_id = d.id
         JOIN projects p ON d.project_id = p.id
-        WHERE (
-          p.id = ${projectId}
-          OR
-          p.status = 'Closed-Won'
-        )
+        WHERE ${companyCondition}
+          AND (
+            p.id = ${projectId}
+            OR
+            p.status = 'Closed-Won'
+          )
         ORDER BY dc.id DESC
         LIMIT ${limit}
       `);
@@ -243,7 +282,7 @@ export class DatabaseStorage implements IStorage {
     // Build a pattern for case-insensitive keyword matching
     const keywordPattern = keywords.join('|');
     
-    // Search chunks using ILIKE for keyword matching
+    // Search chunks using ILIKE for keyword matching (company-scoped)
     const results = await db.execute(sql`
       SELECT 
         dc.id,
@@ -258,12 +297,13 @@ export class DatabaseStorage implements IStorage {
       FROM document_chunks dc
       JOIN documents d ON dc.document_id = d.id
       JOIN projects p ON d.project_id = p.id
-      WHERE (
-        p.id = ${projectId}
-        OR
-        p.status = 'Closed-Won'
-      )
-      AND lower(dc.content) ~ ${keywordPattern}
+      WHERE ${companyCondition}
+        AND (
+          p.id = ${projectId}
+          OR
+          p.status = 'Closed-Won'
+        )
+        AND lower(dc.content) ~ ${keywordPattern}
       ORDER BY rank DESC, dc.id DESC
       LIMIT ${limit}
     `);
@@ -278,19 +318,20 @@ export class DatabaseStorage implements IStorage {
     }));
   }
 
-  // Dashboard Stats
-  async getDashboardStats(): Promise<{
+  // Dashboard Stats (company-scoped)
+  async getDashboardStats(companyId: number | null): Promise<{
     pipeline: Record<string, number>;
     winRate: number;
     totalProjects: number;
   }> {
-    // Get project counts by status
+    // Get project counts by status for this company only
     const statusCounts = await db
       .select({
         status: projects.status,
         count: sql<number>`count(*)::int`,
       })
       .from(projects)
+      .where(this.companyFilter(companyId))
       .groupBy(projects.status);
 
     const pipeline: Record<string, number> = {
