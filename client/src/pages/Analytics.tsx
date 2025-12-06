@@ -300,19 +300,19 @@ export default function Analytics() {
 
         <Tabs defaultValue="overview" className="space-y-6">
           <TabsList className="bg-slate-100">
-            <TabsTrigger value="overview" className="data-[state=active]:bg-[#0d7377]">
+            <TabsTrigger value="overview" className="data-[state=active]:bg-[#0d7377] data-[state=active]:text-white">
               <BarChart3 className="h-4 w-4 mr-2" />
               Overview
             </TabsTrigger>
-            <TabsTrigger value="trends" className="data-[state=active]:bg-[#0d7377]">
+            <TabsTrigger value="trends" className="data-[state=active]:bg-[#0d7377] data-[state=active]:text-white">
               <Activity className="h-4 w-4 mr-2" />
               Trends
             </TabsTrigger>
-            <TabsTrigger value="clients" className="data-[state=active]:bg-[#0d7377]">
+            <TabsTrigger value="clients" className="data-[state=active]:bg-[#0d7377] data-[state=active]:text-white">
               <Building2 className="h-4 w-4 mr-2" />
               Clients
             </TabsTrigger>
-            <TabsTrigger value="insights" className="data-[state=active]:bg-[#0d7377]">
+            <TabsTrigger value="insights" className="data-[state=active]:bg-[#0d7377] data-[state=active]:text-white">
               <AlertTriangle className="h-4 w-4 mr-2" />
               Analysis Insights
             </TabsTrigger>
