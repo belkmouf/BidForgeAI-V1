@@ -34,6 +34,7 @@ import {
 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { getProject, listDocuments } from '@/lib/api';
+import { apiRequest } from '@/lib/auth';
 import type { Project, Document } from '@shared/schema';
 import { WinProbability } from '@/components/WinProbability';
 
@@ -141,7 +142,7 @@ export default function ProjectAnalysis() {
         setProject(projectData);
         setDocuments(docsData);
         
-        const analysisRes = await fetch(`/api/projects/${projectId}/analysis`);
+        const analysisRes = await apiRequest(`/api/projects/${projectId}/analysis`);
         if (analysisRes.ok) {
           const data = await analysisRes.json();
           setAnalysis(data.analysis);
@@ -159,9 +160,8 @@ export default function ProjectAnalysis() {
   const runAnalysis = async () => {
     setIsAnalyzing(true);
     try {
-      const res = await fetch(`/api/projects/${projectId}/analyze`, {
+      const res = await apiRequest(`/api/projects/${projectId}/analyze`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
       });
       
       if (!res.ok) {
@@ -190,7 +190,7 @@ export default function ProjectAnalysis() {
 
   const resolveAlert = async (alertId: number) => {
     try {
-      await fetch(`/api/alerts/${alertId}/resolve`, { method: 'POST' });
+      await apiRequest(`/api/alerts/${alertId}/resolve`, { method: 'POST' });
       setAlerts(alerts.map(a => a.id === alertId ? { ...a, isResolved: true } : a));
       toast({ title: "Alert Resolved" });
     } catch (error) {
@@ -205,9 +205,8 @@ export default function ProjectAnalysis() {
     setShowWhatsAppDialog(true);
     
     try {
-      const res = await fetch(`/api/projects/${projectId}/generate-missing-docs-message`, {
+      const res = await apiRequest(`/api/projects/${projectId}/generate-missing-docs-message`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           missingDocuments: analysis.missingDocuments,
           format: 'whatsapp'
@@ -232,9 +231,8 @@ export default function ProjectAnalysis() {
     setShowEmailDialog(true);
     
     try {
-      const res = await fetch(`/api/projects/${projectId}/generate-missing-docs-message`, {
+      const res = await apiRequest(`/api/projects/${projectId}/generate-missing-docs-message`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           missingDocuments: analysis.missingDocuments,
           format: 'email'
@@ -258,9 +256,8 @@ export default function ProjectAnalysis() {
     
     setIsSending(true);
     try {
-      const res = await fetch(`/api/projects/${projectId}/send-missing-docs-whatsapp`, {
+      const res = await apiRequest(`/api/projects/${projectId}/send-missing-docs-whatsapp`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           to: phoneNumber,
           message: generatedMessage
