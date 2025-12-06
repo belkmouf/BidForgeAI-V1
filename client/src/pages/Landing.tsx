@@ -144,7 +144,7 @@ export default function Landing() {
         )}
       </nav>
       <section ref={heroRef} className="min-h-screen flex items-center justify-center relative overflow-hidden pt-20">
-        <div className="absolute inset-0 bg-gradient-to-br from-charcoal-800 via-teal-700 to-charcoal-700" />
+        <div className="absolute inset-0 bg-gradient-to-br from-charcoal-800 via-teal-600 to-charcoal-700" />
         
         <div 
           className="absolute inset-0 opacity-[0.08] mix-blend-luminosity"
