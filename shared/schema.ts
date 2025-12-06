@@ -15,9 +15,34 @@ export type RiskLevel = z.infer<typeof riskLevelEnum>;
 export const userRoleEnum = z.enum(["admin", "manager", "user", "viewer"]);
 export type UserRole = z.infer<typeof userRoleEnum>;
 
+// ==================== MULTI-TENANCY ====================
+
+// Companies Table
+export const companies = pgTable("companies", {
+  id: serial("id").primaryKey(),
+  name: varchar("name", { length: 255 }).notNull(),
+  slug: varchar("slug", { length: 100 }).notNull().unique(),
+  logo: text("logo"),
+  settings: jsonb("settings").$type<Record<string, any>>().default(sql`'{}'::jsonb`),
+  isActive: boolean("is_active").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export type Company = typeof companies.$inferSelect;
+export type InsertCompany = typeof companies.$inferInsert;
+
+export const insertCompanySchema = z.object({
+  name: z.string().min(1, "Company name is required"),
+  slug: z.string().min(1, "Company slug is required").regex(/^[a-z0-9-]+$/, "Slug must be lowercase alphanumeric with dashes"),
+  logo: z.string().optional(),
+  settings: z.record(z.any()).optional(),
+});
+
 // Users Table
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
+  companyId: integer("company_id").references(() => companies.id, { onDelete: "cascade" }),
   email: varchar("email", { length: 255 }).notNull().unique(),
   passwordHash: varchar("password_hash", { length: 255 }).notNull(),
   name: varchar("name", { length: 255 }),
@@ -58,6 +83,7 @@ export const userRoles = pgTable("user_roles", {
 // Projects Table
 export const projects = pgTable("projects", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyId: integer("company_id").references(() => companies.id, { onDelete: "cascade" }),
   name: text("name").notNull(),
   clientName: text("client_name").notNull(),
   status: text("status").notNull().default("Active"),
@@ -79,6 +105,7 @@ export const documents = pgTable("documents", {
 export const documentChunks = pgTable("document_chunks", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   documentId: integer("document_id").notNull().references(() => documents.id, { onDelete: "cascade" }),
+  companyId: integer("company_id").references(() => companies.id, { onDelete: "cascade" }),
   content: text("content").notNull(),
   embedding: vector("embedding", { dimensions: 1536 }),
   chunkIndex: integer("chunk_index").notNull(),
@@ -238,7 +265,16 @@ export const vendorDatabase = pgTable("vendor_database", {
 });
 
 // Relations
+export const companiesRelations = relations(companies, ({ many }) => ({
+  users: many(users),
+  projects: many(projects),
+}));
+
 export const projectsRelations = relations(projects, ({ many, one }) => ({
+  company: one(companies, {
+    fields: [projects.companyId],
+    references: [companies.id],
+  }),
   documents: many(documents),
   analysis: one(rfpAnalyses),
 }));
@@ -274,7 +310,11 @@ export const documentChunksRelations = relations(documentChunks, ({ one }) => ({
 }));
 
 // User Relations
-export const usersRelations = relations(users, ({ many }) => ({
+export const usersRelations = relations(users, ({ many, one }) => ({
+  company: one(companies, {
+    fields: [users.companyId],
+    references: [companies.id],
+  }),
   sessions: many(sessions),
   userRoles: many(userRoles),
 }));
