@@ -39,7 +39,6 @@ export function AppSidebar() {
           <p className="text-[10px] text-gold-500 tracking-[0.15em] uppercase">Intelligent Bidding</p>
         </div>
       </div>
-
       <nav className="flex-1 p-4 space-y-1">
         <div className="px-3 mb-4 text-[10px] font-semibold text-charcoal-500 uppercase tracking-[0.2em]">
           Navigation
@@ -67,7 +66,6 @@ export function AppSidebar() {
           );
         })}
       </nav>
-
       <div className="p-4">
         <Link 
           href="/"
@@ -85,7 +83,7 @@ export function AppSidebar() {
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-white truncate">John Doe</p>
-              <p className="text-xs text-charcoal-500 truncate">john@bidforge.com</p>
+              <p className="text-xs truncate text-[#f0f1f2]">john@bidforge.com</p>
             </div>
             <LogOut className="h-4 w-4 text-charcoal-500 group-hover:text-gold-500 transition-colors" />
           </div>
