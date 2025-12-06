@@ -121,38 +121,42 @@ export function DropZone({ onUpload, onDelete, files: initialFiles = [] }: DropZ
       <ScrollArea className="flex-1 -mx-2 px-2">
         <div className="space-y-2">
           {allFiles.map((file) => (
-            <div key={file.id} className="group flex items-start gap-3 p-3 rounded-md border border-border bg-card hover:shadow-sm transition-all">
-              <div className="mt-1">
-                {getFileIcon(file.type)}
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between mb-1">
-                  <p className="text-sm font-medium truncate pr-2" title={file.name}>{file.name}</p>
-                  {file.status === 'completed' && <CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0" />}
-                  {file.status === 'error' && <AlertCircle className="h-4 w-4 text-destructive flex-shrink-0" />}
+            <div key={file.id} className="p-3 rounded-md border border-border bg-card hover:shadow-sm transition-all">
+              <div className="flex items-start gap-3">
+                <div className="mt-1">
+                  {getFileIcon(file.type)}
                 </div>
-                <div className="flex items-center justify-between text-xs text-muted-foreground mb-1.5">
-                  <span>{file.size}</span>
-                  <span className="capitalize">{file.status === 'processing' ? 'Ingesting...' : file.status}</span>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between mb-1">
+                    <p className="text-sm font-medium truncate pr-2" title={file.name}>{file.name}</p>
+                    {file.status === 'completed' && <CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0" />}
+                    {file.status === 'error' && <AlertCircle className="h-4 w-4 text-destructive flex-shrink-0" />}
+                  </div>
+                  <div className="flex items-center justify-between text-xs text-muted-foreground">
+                    <span>{file.size}</span>
+                    <span className="capitalize">{file.status === 'processing' ? 'Ingesting...' : file.status}</span>
+                  </div>
+                  {file.status !== 'completed' && file.status !== 'error' && (
+                    <Progress value={file.progress} className="h-1 mt-1.5" />
+                  )}
                 </div>
-                {file.status !== 'completed' && file.status !== 'error' && (
-                  <Progress value={file.progress} className="h-1" />
-                )}
               </div>
               {file.status === 'completed' && onDelete && (
-                <Button 
-                  variant="destructive" 
-                  size="sm" 
-                  className="h-7 px-2 flex-shrink-0"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onDelete(file.id);
-                  }}
-                  data-testid={`button-delete-document-${file.id}`}
-                >
-                  <Trash2 className="h-3 w-3 mr-1" />
-                  Delete
-                </Button>
+                <div className="mt-2 pt-2 border-t border-border">
+                  <Button 
+                    variant="destructive" 
+                    size="sm" 
+                    className="w-full h-7"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onDelete(file.id);
+                    }}
+                    data-testid={`button-delete-document-${file.id}`}
+                  >
+                    <Trash2 className="h-3 w-3 mr-1" />
+                    Delete File
+                  </Button>
+                </div>
               )}
             </div>
           ))}
