@@ -8,6 +8,8 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2, Mail, Lock, LogIn } from "lucide-react";
 import { login } from "@/lib/auth";
 
+import _1764979718 from "@assets/1764979718.png";
+
 export default function Login() {
   const [, setLocation] = useLocation();
   const [email, setEmail] = useState("");
@@ -37,7 +39,7 @@ export default function Login() {
         <CardHeader className="text-center">
           <div className="mx-auto mb-4">
             <img 
-              src="/attached_assets/bidforge_ai_premium_logo.png" 
+              src={_1764979718} 
               alt="BidForge AI" 
               className="h-16 w-auto mx-auto"
             />
