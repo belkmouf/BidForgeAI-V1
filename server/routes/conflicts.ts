@@ -141,13 +141,14 @@ router.patch(
 
       const updated = await conflictDetectionService.updateConflictStatus(
         parseInt(conflictId, 10),
+        projectId,
         validatedBody.status,
         req.user?.userId,
         validatedBody.resolution
       );
 
       if (!updated) {
-        return res.status(404).json({ error: 'Conflict not found' });
+        return res.status(404).json({ error: 'Conflict not found or does not belong to this project' });
       }
 
       res.json({ message: 'Conflict updated', conflict: updated });
@@ -167,7 +168,15 @@ router.post(
   requirePermission(PERMISSIONS.ANALYSIS_RUN),
   async (req: AuthRequest, res: Response) => {
     try {
-      const { conflictId } = req.params;
+      const { projectId, conflictId } = req.params;
+      const companyId = req.user?.companyId ?? null;
+      
+      // Verify project belongs to user's company
+      const project = await storage.getProject(projectId, companyId);
+      if (!project) {
+        return res.status(404).json({ error: 'Project not found' });
+      }
+      
       const { resolution } = req.body;
 
       if (!resolution || typeof resolution !== 'string') {
@@ -176,13 +185,14 @@ router.post(
 
       const updated = await conflictDetectionService.updateConflictStatus(
         parseInt(conflictId, 10),
+        projectId,
         'resolved',
         req.user?.userId,
         resolution
       );
 
       if (!updated) {
-        return res.status(404).json({ error: 'Conflict not found' });
+        return res.status(404).json({ error: 'Conflict not found or does not belong to this project' });
       }
 
       res.json({ message: 'Conflict resolved', conflict: updated });
@@ -199,18 +209,27 @@ router.post(
   requirePermission(PERMISSIONS.ANALYSIS_RUN),
   async (req: AuthRequest, res: Response) => {
     try {
-      const { conflictId } = req.params;
+      const { projectId, conflictId } = req.params;
+      const companyId = req.user?.companyId ?? null;
+      
+      // Verify project belongs to user's company
+      const project = await storage.getProject(projectId, companyId);
+      if (!project) {
+        return res.status(404).json({ error: 'Project not found' });
+      }
+      
       const { reason } = req.body;
 
       const updated = await conflictDetectionService.updateConflictStatus(
         parseInt(conflictId, 10),
+        projectId,
         'dismissed',
         req.user?.userId,
         reason
       );
 
       if (!updated) {
-        return res.status(404).json({ error: 'Conflict not found' });
+        return res.status(404).json({ error: 'Conflict not found or does not belong to this project' });
       }
 
       res.json({ message: 'Conflict dismissed', conflict: updated });

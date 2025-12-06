@@ -586,6 +586,7 @@ Respond in JSON format:
 
   async updateConflictStatus(
     conflictId: number, 
+    projectId: string,
     status: string, 
     userId?: number,
     resolution?: string
@@ -603,10 +604,14 @@ Respond in JSON format:
       }
     }
 
+    // Only update if conflict belongs to the specified project (multi-tenant security)
     const [updated] = await db
       .update(documentConflicts)
       .set(updateData)
-      .where(eq(documentConflicts.id, conflictId))
+      .where(and(
+        eq(documentConflicts.id, conflictId),
+        eq(documentConflicts.projectId, projectId)
+      ))
       .returning();
 
     return updated || null;
