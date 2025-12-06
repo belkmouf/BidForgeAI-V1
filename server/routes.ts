@@ -45,6 +45,7 @@ import {
   sanitizeFeedback,
   InputSanitizationError 
 } from './lib/sanitize';
+import { generateBidTemplate, wrapContentInTemplate, type BidData, type TemplateOptions } from './lib/templates/bid-template-generator';
 import multer from "multer";
 import { z } from "zod";
 
@@ -390,6 +391,73 @@ export async function registerRoutes(
       res.json({ html, model });
     } catch (error: any) {
       console.error('Refinement error:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // ==================== BID TEMPLATES ====================
+
+  const bidTemplateSchema = z.object({
+    projectName: z.string(),
+    clientName: z.string(),
+    projectDescription: z.string().optional(),
+    scope: z.string().optional(),
+    timeline: z.string().optional(),
+    pricing: z.object({
+      items: z.array(z.object({
+        description: z.string(),
+        amount: z.number(),
+      })),
+      subtotal: z.number(),
+      contingency: z.number().optional(),
+      total: z.number(),
+    }).optional(),
+    options: z.object({
+      includeValuePropositions: z.boolean().optional(),
+      includeTerms: z.boolean().optional(),
+      includeCertifications: z.boolean().optional(),
+      includeInsurance: z.boolean().optional(),
+    }).optional(),
+  });
+
+  app.post("/api/templates/generate", authenticateToken, async (req: AuthRequest, res) => {
+    try {
+      const data = bidTemplateSchema.parse(req.body);
+      
+      const bidData: BidData = {
+        projectName: data.projectName,
+        clientName: data.clientName,
+        projectDescription: data.projectDescription,
+        scope: data.scope,
+        timeline: data.timeline,
+        pricing: data.pricing,
+      };
+      
+      const html = generateBidTemplate(bidData, data.options || {});
+      
+      res.json({ html });
+    } catch (error: any) {
+      console.error('Template generation error:', error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: 'Invalid template data', details: error.errors });
+      }
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/templates/wrap", authenticateToken, async (req: AuthRequest, res) => {
+    try {
+      const { content, projectName, clientName, options } = req.body;
+      
+      if (!content || !projectName || !clientName) {
+        return res.status(400).json({ error: 'Content, projectName, and clientName are required' });
+      }
+      
+      const html = wrapContentInTemplate(content, projectName, clientName, options || {});
+      
+      res.json({ html });
+    } catch (error: any) {
+      console.error('Template wrap error:', error);
       res.status(500).json({ error: error.message });
     }
   });
