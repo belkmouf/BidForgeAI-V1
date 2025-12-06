@@ -1,6 +1,10 @@
 import OpenAI from 'openai';
 
-const openaiApiKey = process.env.OPENAI_API_KEY || process.env.AI_INTEGRATIONS_OPENAI_API_KEY;
+const userOpenAIKey = process.env.OPENAI_API_KEY;
+const integrationOpenAIKey = process.env.AI_INTEGRATIONS_OPENAI_API_KEY;
+const integrationBaseUrl = process.env.AI_INTEGRATIONS_OPENAI_BASE_URL;
+
+const openaiApiKey = userOpenAIKey || integrationOpenAIKey;
 
 if (!openaiApiKey) {
   throw new Error('OPENAI_API_KEY is not set');
@@ -8,7 +12,7 @@ if (!openaiApiKey) {
 
 export const openai = new OpenAI({
   apiKey: openaiApiKey,
-  baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
+  baseURL: userOpenAIKey ? undefined : integrationBaseUrl,
 });
 
 const embeddingsClient = new OpenAI({

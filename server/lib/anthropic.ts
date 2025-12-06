@@ -1,6 +1,10 @@
 import Anthropic from '@anthropic-ai/sdk';
 
-const anthropicApiKey = process.env.ANTHROPIC_API_KEY || process.env.AI_INTEGRATIONS_ANTHROPIC_API_KEY;
+const userAnthropicKey = process.env.ANTHROPIC_API_KEY;
+const integrationAnthropicKey = process.env.AI_INTEGRATIONS_ANTHROPIC_API_KEY;
+const integrationBaseUrl = process.env.AI_INTEGRATIONS_ANTHROPIC_BASE_URL;
+
+const anthropicApiKey = userAnthropicKey || integrationAnthropicKey;
 
 if (!anthropicApiKey) {
   throw new Error('ANTHROPIC_API_KEY is not set');
@@ -8,7 +12,7 @@ if (!anthropicApiKey) {
 
 export const anthropic = new Anthropic({
   apiKey: anthropicApiKey,
-  baseURL: process.env.AI_INTEGRATIONS_ANTHROPIC_BASE_URL,
+  baseURL: userAnthropicKey ? undefined : integrationBaseUrl,
 });
 
 export async function generateBidWithAnthropic(params: {

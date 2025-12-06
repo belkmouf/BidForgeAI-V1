@@ -1,13 +1,19 @@
 import { GoogleGenAI } from '@google/genai';
 
-if (!process.env.AI_INTEGRATIONS_GEMINI_API_KEY) {
-  throw new Error('AI_INTEGRATIONS_GEMINI_API_KEY is not set');
+const userGeminiKey = process.env.GEMINI_API_KEY;
+const integrationGeminiKey = process.env.AI_INTEGRATIONS_GEMINI_API_KEY;
+const integrationBaseUrl = process.env.AI_INTEGRATIONS_GEMINI_BASE_URL;
+
+const geminiApiKey = userGeminiKey || integrationGeminiKey;
+
+if (!geminiApiKey) {
+  throw new Error('GEMINI_API_KEY is not set');
 }
 
 export const gemini = new GoogleGenAI({
-  apiKey: process.env.AI_INTEGRATIONS_GEMINI_API_KEY,
-  httpOptions: {
-    baseUrl: process.env.AI_INTEGRATIONS_GEMINI_BASE_URL,
+  apiKey: geminiApiKey,
+  httpOptions: userGeminiKey ? undefined : {
+    baseUrl: integrationBaseUrl,
   },
 });
 
