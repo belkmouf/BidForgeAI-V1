@@ -16,9 +16,10 @@ interface FileItem {
 interface DropZoneProps {
   files?: FileItem[];
   onUpload?: (file: File) => void;
+  onDelete?: (documentId: number) => void;
 }
 
-export function DropZone({ onUpload, files: initialFiles = [] }: DropZoneProps) {
+export function DropZone({ onUpload, onDelete, files: initialFiles = [] }: DropZoneProps) {
   const [uploadingFiles, setUploadingFiles] = useState<Array<{
     id: number;
     name: string;
@@ -138,9 +139,17 @@ export function DropZone({ onUpload, files: initialFiles = [] }: DropZoneProps) 
                   <Progress value={file.progress} className="h-1" />
                 )}
               </div>
-              <Button variant="ghost" size="icon" className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity -mr-1">
-                <X className="h-3 w-3" />
-              </Button>
+              {file.status === 'completed' && onDelete && (
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity -mr-1 hover:bg-destructive/10 hover:text-destructive"
+                  onClick={() => onDelete(file.id)}
+                  data-testid={`button-delete-document-${file.id}`}
+                >
+                  <X className="h-3 w-3" />
+                </Button>
+              )}
             </div>
           ))}
           {allFiles.length === 0 && (

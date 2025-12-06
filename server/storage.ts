@@ -34,6 +34,7 @@ export interface IStorage {
   getDocument(id: number): Promise<Document | undefined>;
   listDocumentsByProject(projectId: string): Promise<Document[]>;
   updateDocumentProcessed(id: number, isProcessed: boolean): Promise<void>;
+  deleteDocument(id: number): Promise<boolean>;
   
   // Document Chunks
   createDocumentChunk(chunk: InsertDocumentChunk): Promise<DocumentChunk>;
@@ -131,6 +132,21 @@ export class DatabaseStorage implements IStorage {
       .update(documents)
       .set({ isProcessed })
       .where(eq(documents.id, id));
+  }
+
+  async deleteDocument(id: number): Promise<boolean> {
+    // First delete associated chunks (cascade should handle this, but being explicit)
+    await db
+      .delete(documentChunks)
+      .where(eq(documentChunks.documentId, id));
+    
+    // Then delete the document
+    const result = await db
+      .delete(documents)
+      .where(eq(documents.id, id))
+      .returning();
+    
+    return result.length > 0;
   }
 
   // Document Chunks

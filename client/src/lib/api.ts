@@ -61,6 +61,14 @@ export async function listDocuments(projectId: string) {
   return res.json() as Promise<Document[]>;
 }
 
+export async function deleteDocument(documentId: number) {
+  const res = await apiRequest(`${API_BASE}/documents/${documentId}`, {
+    method: 'DELETE',
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json() as Promise<{ message: string }>;
+}
+
 // AI Model type
 export type AIModel = 'openai' | 'anthropic' | 'gemini' | 'deepseek';
 

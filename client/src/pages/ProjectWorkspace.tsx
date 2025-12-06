@@ -10,7 +10,7 @@ import { ChevronLeft, Save, Share2, Eye, ShieldCheck, AlertTriangle } from 'luci
 import { Link } from 'wouter';
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { toast } from '@/hooks/use-toast';
-import { getProject, listDocuments, uploadDocument, generateBid, refineBid, type AIModel } from '@/lib/api';
+import { getProject, listDocuments, uploadDocument, deleteDocument, generateBid, refineBid, type AIModel } from '@/lib/api';
 import type { Project, Document } from '@shared/schema';
 
 const initialEditorContent = '<h1>Welcome to BidForge AI</h1><p>Use the Generate panel to create your first bid draft, or start typing to manually build your proposal.</p>';
@@ -104,6 +104,25 @@ export default function ProjectWorkspace() {
       toast({
         title: "Upload Failed",
         description: error.message || "Failed to upload file",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDeleteDocument = async (documentId: number) => {
+    try {
+      await deleteDocument(documentId);
+      // Reload documents list after successful deletion
+      const docsData = await listDocuments(projectId);
+      setDocuments(docsData);
+      toast({
+        title: "Document Deleted",
+        description: "The document and its data have been removed.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Delete Failed",
+        description: error.message || "Failed to delete document",
         variant: "destructive",
       });
     }
@@ -210,6 +229,7 @@ export default function ProjectWorkspace() {
                       id: doc.id.toString()
                     }))}
                     onUpload={handleFileUpload}
+                    onDelete={handleDeleteDocument}
                   />
                 </div>
               </div>

@@ -231,6 +231,34 @@ export async function registerRoutes(
     }
   });
 
+  // Delete a document (requires authentication)
+  app.delete("/api/documents/:documentId", authenticateToken, async (req: AuthRequest, res) => {
+    try {
+      const documentId = parseInt(req.params.documentId, 10);
+      if (isNaN(documentId)) {
+        return res.status(400).json({ error: "Invalid document ID" });
+      }
+
+      // Verify document exists
+      const document = await storage.getDocument(documentId);
+      if (!document) {
+        return res.status(404).json({ error: "Document not found" });
+      }
+
+      // Delete the document and its chunks
+      const deleted = await storage.deleteDocument(documentId);
+      
+      if (deleted) {
+        res.json({ message: "Document deleted successfully" });
+      } else {
+        res.status(500).json({ error: "Failed to delete document" });
+      }
+    } catch (error: any) {
+      console.error('Delete document error:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // ==================== BID GENERATION ====================
 
   // Generate a bid using RAG (requires authentication + AI input sanitization)
