@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { Upload, File, X, CheckCircle2, AlertCircle, FileText, FileArchive, Mail } from 'lucide-react';
+import { Upload, File, Trash2, CheckCircle2, AlertCircle, FileText, FileArchive, Mail } from 'lucide-react';
 import { useDropzone } from 'react-dropzone';
 import { cn } from '@/lib/utils';
 import { Progress } from '@/components/ui/progress';
@@ -141,16 +141,17 @@ export function DropZone({ onUpload, onDelete, files: initialFiles = [] }: DropZ
               </div>
               {file.status === 'completed' && onDelete && (
                 <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  className="h-6 w-6 text-muted-foreground hover:bg-destructive/10 hover:text-destructive flex-shrink-0"
+                  variant="destructive" 
+                  size="sm" 
+                  className="h-7 px-2 flex-shrink-0"
                   onClick={(e) => {
                     e.stopPropagation();
                     onDelete(file.id);
                   }}
                   data-testid={`button-delete-document-${file.id}`}
                 >
-                  <X className="h-4 w-4" />
+                  <Trash2 className="h-3 w-3 mr-1" />
+                  Delete
                 </Button>
               )}
             </div>
