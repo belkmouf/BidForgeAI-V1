@@ -80,9 +80,7 @@ export function AppSidebar() {
         
         <div className="border-t border-charcoal-700 pt-4">
           <div className="flex items-center gap-3 px-3 py-2 hover:bg-charcoal-800 cursor-pointer transition-colors group">
-            <div className="h-9 w-9 bg-gradient-to-br from-teal-600 to-teal-700 flex items-center justify-center text-white font-display font-bold text-sm">
-              JD
-            </div>
+            <div className="h-9 w-9 bg-gradient-to-br from-teal-600 to-teal-700 flex items-center justify-center text-white font-display font-bold text-sm">BM</div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-white truncate">Belkacem Mouffok</p>
               <p className="text-xs truncate text-[#f0f1f2]">Belkacem@bidforge.com</p>
