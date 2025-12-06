@@ -43,6 +43,14 @@ export interface IStorage {
   createDocumentChunk(chunk: InsertDocumentChunk): Promise<DocumentChunk>;
   searchSimilarChunks(embedding: number[], projectId: string, companyId: number | null, limit: number): Promise<Array<DocumentChunk & { distance: number }>>;
   searchChunksByKeywords(query: string, projectId: string, companyId: number | null, limit: number): Promise<Array<DocumentChunk & { rank: number }>>;
+  searchHybrid(
+    query: string, 
+    embedding: number[], 
+    projectId: string, 
+    companyId: number | null, 
+    limit: number,
+    options?: { vectorWeight?: number; textWeight?: number }
+  ): Promise<Array<DocumentChunk & { score: number; vectorScore: number; textScore: number }>>;
   
   // Dashboard Stats (company-scoped)
   getDashboardStats(companyId: number | null): Promise<{
@@ -324,6 +332,84 @@ export class DatabaseStorage implements IStorage {
       chunkIndex: row.chunk_index,
       companyId: row.company_id,
       rank: parseInt(row.rank) || 0,
+    }));
+  }
+
+  async searchHybrid(
+    query: string,
+    embedding: number[],
+    projectId: string,
+    companyId: number | null,
+    limit: number = 10,
+    options: { vectorWeight?: number; textWeight?: number } = {}
+  ): Promise<Array<DocumentChunk & { score: number; vectorScore: number; textScore: number }>> {
+    const vectorWeight = options.vectorWeight ?? 0.7;
+    const textWeight = options.textWeight ?? 0.3;
+    
+    const embeddingStr = `[${embedding.join(',')}]`;
+    
+    const sanitizedQuery = query
+      .replace(/[^\w\s]/g, ' ')
+      .trim();
+    
+    const companyCondition = companyId !== null 
+      ? sql`p.company_id = ${companyId}`
+      : sql`p.company_id IS NULL`;
+    
+    const results = await db.execute(sql`
+      WITH vector_search AS (
+        SELECT 
+          dc.id,
+          dc.document_id,
+          dc.content,
+          dc.chunk_index,
+          dc.company_id,
+          GREATEST(0, LEAST(1, 1 - (dc.embedding <=> ${embeddingStr}::vector))) AS vector_score
+        FROM document_chunks dc
+        JOIN documents d ON dc.document_id = d.id
+        JOIN projects p ON d.project_id = p.id
+        WHERE ${companyCondition}
+          AND (p.id = ${projectId} OR p.status = 'Closed-Won')
+          AND dc.embedding IS NOT NULL
+      ),
+      text_search AS (
+        SELECT 
+          dc.id,
+          CASE 
+            WHEN ${sanitizedQuery} = '' THEN 0
+            ELSE LEAST(1, GREATEST(0, ts_rank_cd(to_tsvector('english', dc.content), plainto_tsquery('english', ${sanitizedQuery}))))
+          END AS text_score
+        FROM document_chunks dc
+        JOIN documents d ON dc.document_id = d.id
+        JOIN projects p ON d.project_id = p.id
+        WHERE ${companyCondition}
+          AND (p.id = ${projectId} OR p.status = 'Closed-Won')
+      )
+      SELECT 
+        vs.id,
+        vs.document_id,
+        vs.content,
+        vs.chunk_index,
+        vs.company_id,
+        vs.vector_score,
+        COALESCE(ts.text_score, 0) AS text_score,
+        GREATEST(0, vs.vector_score * ${vectorWeight} + COALESCE(ts.text_score, 0) * ${textWeight}) AS combined_score
+      FROM vector_search vs
+      LEFT JOIN text_search ts ON vs.id = ts.id
+      ORDER BY combined_score DESC
+      LIMIT ${limit}
+    `);
+
+    return results.rows.map((row: any) => ({
+      id: row.id,
+      documentId: row.document_id,
+      content: row.content,
+      embedding: null,
+      chunkIndex: row.chunk_index,
+      companyId: row.company_id,
+      score: parseFloat(row.combined_score) || 0,
+      vectorScore: parseFloat(row.vector_score) || 0,
+      textScore: parseFloat(row.text_score) || 0,
     }));
   }
 

@@ -4,6 +4,7 @@ import * as os from 'os';
 import AdmZip from 'adm-zip';
 import { pool } from '../db';
 import { generateEmbedding } from './openai.js';
+import { RecursiveCharacterTextSplitter } from '@langchain/textsplitters';
 
 // PDF parsing - use dynamic import to avoid ESM/CJS issues
 async function parsePdf(buffer: Buffer): Promise<{ text: string }> {
@@ -229,7 +230,7 @@ export class IngestionService {
     filename: string,
     content: string
   ): Promise<ProcessedFile> {
-    const chunks = this.chunkText(content);
+    const chunks = await this.chunkTextSemantic(content);
     
     // Use a transaction to ensure atomic document + chunk creation
     const client = await pool.connect();
@@ -302,7 +303,27 @@ export class IngestionService {
     };
   }
 
-  private chunkText(text: string): string[] {
+  private async chunkTextSemantic(text: string): Promise<string[]> {
+    const cleanText = text.replace(/\s+/g, ' ').trim();
+    
+    if (!cleanText || cleanText.length < 50) return [];
+
+    try {
+      const splitter = new RecursiveCharacterTextSplitter({
+        chunkSize: CHUNK_SIZE,
+        chunkOverlap: CHUNK_OVERLAP,
+        separators: ['\n\n', '\n', '. ', '! ', '? ', '; ', ', ', ' ', ''],
+      });
+      
+      const chunks = await splitter.splitText(cleanText);
+      return chunks.filter(chunk => chunk.trim().length > 50);
+    } catch (error) {
+      console.warn('Semantic chunking failed, falling back to simple chunking:', error);
+      return this.chunkTextSimple(cleanText);
+    }
+  }
+
+  private chunkTextSimple(text: string): string[] {
     const chunks: string[] = [];
     const cleanText = text.replace(/\s+/g, ' ').trim();
     
@@ -316,6 +337,10 @@ export class IngestionService {
     }
 
     return chunks;
+  }
+
+  private chunkText(text: string): string[] {
+    return this.chunkTextSimple(text);
   }
 
   private createTempDir(): string {
