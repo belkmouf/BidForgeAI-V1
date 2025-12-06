@@ -85,7 +85,7 @@ export function AppSidebar() {
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-white truncate">John Doe</p>
-              <p className="text-xs truncate text-[#f0f1f2]">john@bidforge.com</p>
+              <p className="text-xs truncate text-[#f0f1f2]">Belkacem@bidforge.com</p>
             </div>
             <LogOut className="h-4 w-4 text-charcoal-500 group-hover:text-gold-500 transition-colors" />
           </div>
