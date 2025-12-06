@@ -56,12 +56,12 @@ export function AppSidebar() {
                 "flex items-center gap-3 px-3 py-3 transition-all duration-300 group",
                 isActive 
                   ? "bg-teal-700/20 text-teal-400 border-l-2 border-teal-500 -ml-px" 
-                  : "text-charcoal-400 hover:bg-charcoal-800 hover:text-white"
+                  : "text-white/80 hover:bg-charcoal-800 hover:text-white"
               )}
             >
               <item.icon className={cn(
                 "h-5 w-5 transition-colors", 
-                isActive ? "text-teal-400" : "text-charcoal-500 group-hover:text-teal-500"
+                isActive ? "text-teal-400" : "text-white/70 group-hover:text-teal-500"
               )} />
               <span className="text-sm font-medium">{item.label}</span>
             </Link>
@@ -71,10 +71,10 @@ export function AppSidebar() {
       <div className="p-4">
         <Link 
           href="/"
-          className="flex items-center gap-3 px-3 py-3 text-charcoal-400 hover:text-gold-400 hover:bg-charcoal-800 transition-all duration-300 mb-4"
+          className="flex items-center gap-3 px-3 py-3 text-white/80 hover:text-gold-400 hover:bg-charcoal-800 transition-all duration-300 mb-4"
           data-testid="link-landing"
         >
-          <Home className="h-5 w-5" />
+          <Home className="h-5 w-5 text-white/70" />
           <span className="text-sm font-medium">Back to Home</span>
         </Link>
         
@@ -85,7 +85,7 @@ export function AppSidebar() {
               <p className="text-sm font-medium text-white truncate">Belkacem Mouffok</p>
               <p className="text-xs truncate text-[#f0f1f2]">Belkacem@bidforge.com</p>
             </div>
-            <LogOut className="h-4 w-4 text-charcoal-500 group-hover:text-gold-500 transition-colors" />
+            <LogOut className="h-4 w-4 text-white/70 group-hover:text-gold-500 transition-colors" />
           </div>
         </div>
       </div>
