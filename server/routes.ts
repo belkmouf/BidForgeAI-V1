@@ -4,7 +4,7 @@ import { storage } from "./storage";
 import { insertProjectSchema, insertDocumentSchema } from "@shared/schema";
 import { generateBidContent, refineBidContent } from "./lib/openai";
 import { generateBidWithAnthropic, refineBidWithAnthropic } from "./lib/anthropic";
-import { generateBidWithGemini, refineBidWithGemini, generateEmbeddingWithGemini } from "./lib/gemini";
+import { generateBidWithGemini, refineBidWithGemini } from "./lib/gemini";
 import { generateBidWithDeepSeek, refineBidWithDeepSeek } from "./lib/deepseek";
 import { ingestionService } from "./lib/ingestion";
 import { 
@@ -322,22 +322,19 @@ export async function registerRoutes(
         throw error;
       }
 
-      // Generate embedding for the user's instructions (query) using Gemini
-      console.log('Generating query embedding for:', sanitizedInstructions.substring(0, 100) + '...');
-      const queryEmbedding = await generateEmbeddingWithGemini(sanitizedInstructions);
+      // Get all documents from this project to build context
+      console.log('Loading project documents for context...');
+      const documents = await storage.getProjectDocuments(projectId);
       
-      // Retrieve semantically similar chunks using vector search (company-scoped)
-      console.log('Searching for similar chunks using vector similarity...');
-      const relevantChunks = await storage.searchSimilarChunks(queryEmbedding, projectId, companyId, 10);
+      // Build context from document content (simplified - no embedding search)
+      const context = documents
+        .filter(doc => doc.content && !doc.content.startsWith('[PDF content could not be extracted'))
+        .map((doc, i) => `[Document ${i + 1}: ${doc.filename}]\n${doc.content?.substring(0, 5000) || ''}`)
+        .join('\n\n---\n\n');
 
-      // Build context from retrieved chunks
-      const context = relevantChunks
-        .map((chunk, i) => `[Chunk ${i + 1} - Similarity: ${(1 - chunk.distance).toFixed(3)}]: ${chunk.content}`)
-        .join('\n\n');
-
-      const contextOrDefault = context || 'No relevant context found from previous documents.';
+      const contextOrDefault = context || 'No document content available. Please provide project details in your instructions.';
       
-      console.log(`Found ${relevantChunks.length} relevant chunks for bid generation`);
+      console.log(`Using ${documents.length} documents for bid generation context`);
 
       const generationParams = {
         instructions: sanitizedInstructions,
@@ -364,11 +361,8 @@ export async function registerRoutes(
         res.json({
           comparison: true,
           results,
-          chunksUsed: relevantChunks.length,
-          searchMethod: 'vector_similarity',
-          avgSimilarity: relevantChunks.length > 0 
-            ? (relevantChunks.reduce((sum, c) => sum + (1 - c.distance), 0) / relevantChunks.length).toFixed(3)
-            : 0,
+          documentsUsed: documents.length,
+          searchMethod: 'document_content',
         });
       } else {
         // Single model generation (original behavior)
@@ -377,12 +371,9 @@ export async function registerRoutes(
 
         res.json({
           html,
-          chunksUsed: relevantChunks.length,
+          documentsUsed: documents.length,
           model: selectedModel,
-          searchMethod: 'vector_similarity',
-          avgSimilarity: relevantChunks.length > 0 
-            ? (relevantChunks.reduce((sum, c) => sum + (1 - c.distance), 0) / relevantChunks.length).toFixed(3)
-            : 0,
+          searchMethod: 'document_content',
         });
       }
     } catch (error: any) {
