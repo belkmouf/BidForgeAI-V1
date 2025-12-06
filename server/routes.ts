@@ -303,9 +303,9 @@ export async function registerRoutes(
       console.log('Generating query embedding for:', sanitizedInstructions.substring(0, 100) + '...');
       const queryEmbedding = await generateEmbedding(sanitizedInstructions);
       
-      // Retrieve semantically similar chunks using vector search
+      // Retrieve semantically similar chunks using vector search (company-scoped)
       console.log('Searching for similar chunks using vector similarity...');
-      const relevantChunks = await storage.searchSimilarChunks(queryEmbedding, projectId, 10);
+      const relevantChunks = await storage.searchSimilarChunks(queryEmbedding, projectId, companyId, 10);
 
       // Build context from retrieved chunks
       const context = relevantChunks
@@ -396,10 +396,11 @@ export async function registerRoutes(
 
   // ==================== DASHBOARD ====================
 
-  // Get dashboard statistics (requires authentication)
+  // Get dashboard statistics (requires authentication, company-scoped)
   app.get("/api/dashboard/stats", authenticateToken, async (req: AuthRequest, res) => {
     try {
-      const stats = await storage.getDashboardStats();
+      const companyId = req.user?.companyId ?? null;
+      const stats = await storage.getDashboardStats(companyId);
       res.json(stats);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
@@ -411,12 +412,13 @@ export async function registerRoutes(
   // Seed vendor database on startup
   seedVendorDatabase().catch(console.error);
 
-  // Run RFP analysis on a project (requires authentication)
+  // Run RFP analysis on a project (requires authentication, company-scoped)
   app.post("/api/projects/:id/analyze", authenticateToken, async (req: AuthRequest, res) => {
     try {
       const projectId = req.params.id;
+      const companyId = req.user?.companyId ?? null;
       
-      const project = await storage.getProject(projectId);
+      const project = await storage.getProject(projectId, companyId);
       if (!project) {
         return res.status(404).json({ error: "Project not found" });
       }
@@ -691,11 +693,12 @@ export async function registerRoutes(
     format: z.enum(['whatsapp', 'email']),
   });
 
-  app.post("/api/projects/:id/generate-missing-docs-message", async (req, res) => {
+  app.post("/api/projects/:id/generate-missing-docs-message", authenticateToken, async (req: AuthRequest, res) => {
     try {
       const { missingDocuments, format } = generateMissingDocsMessageSchema.parse(req.body);
+      const companyId = req.user?.companyId ?? null;
       
-      const project = await storage.getProject(req.params.id);
+      const project = await storage.getProject(req.params.id, companyId);
       if (!project) {
         return res.status(404).json({ error: "Project not found" });
       }
@@ -719,11 +722,12 @@ export async function registerRoutes(
     message: z.string().min(1),
   });
 
-  app.post("/api/projects/:id/send-missing-docs-whatsapp", async (req, res) => {
+  app.post("/api/projects/:id/send-missing-docs-whatsapp", authenticateToken, async (req: AuthRequest, res) => {
     try {
       const { to, message } = sendMissingDocsWhatsAppSchema.parse(req.body);
+      const companyId = req.user?.companyId ?? null;
       
-      const project = await storage.getProject(req.params.id);
+      const project = await storage.getProject(req.params.id, companyId);
       if (!project) {
         return res.status(404).json({ error: "Project not found" });
       }

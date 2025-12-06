@@ -205,6 +205,7 @@ export class DatabaseStorage implements IStorage {
         dc.content,
         dc.embedding,
         dc.chunk_index,
+        dc.company_id,
         dc.embedding <=> ${embeddingStr}::vector AS distance
       FROM document_chunks dc
       JOIN documents d ON dc.document_id = d.id
@@ -225,6 +226,7 @@ export class DatabaseStorage implements IStorage {
       content: row.content,
       embedding: row.embedding,
       chunkIndex: row.chunk_index,
+      companyId: row.company_id,
       distance: parseFloat(row.distance),
     }));
   }
@@ -255,6 +257,7 @@ export class DatabaseStorage implements IStorage {
           dc.document_id,
           dc.content,
           dc.chunk_index,
+          dc.company_id,
           0 as rank
         FROM document_chunks dc
         JOIN documents d ON dc.document_id = d.id
@@ -275,6 +278,7 @@ export class DatabaseStorage implements IStorage {
         content: row.content,
         embedding: null,
         chunkIndex: row.chunk_index,
+        companyId: row.company_id,
         rank: 0,
       }));
     }
@@ -289,6 +293,7 @@ export class DatabaseStorage implements IStorage {
         dc.document_id,
         dc.content,
         dc.chunk_index,
+        dc.company_id,
         (
           SELECT COUNT(*) 
           FROM unnest(string_to_array(lower(dc.content), ' ')) word
@@ -314,6 +319,7 @@ export class DatabaseStorage implements IStorage {
       content: row.content,
       embedding: null,
       chunkIndex: row.chunk_index,
+      companyId: row.company_id,
       rank: parseInt(row.rank) || 0,
     }));
   }
