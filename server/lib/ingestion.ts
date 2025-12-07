@@ -6,18 +6,15 @@ import { pool } from '../db';
 import { generateEmbedding } from './openai.js';
 import { RecursiveCharacterTextSplitter } from '@langchain/textsplitters';
 
-// PDF parsing - use dynamic import to avoid ESM/CJS issues
+// PDF parsing - use pdf-parse with PDFParse class
 async function parsePdf(buffer: Buffer): Promise<{ text: string }> {
   try {
-    const pdfParseModule = await import('pdf-parse');
-    const pdfParse = pdfParseModule.PDFParse || pdfParseModule.default || pdfParseModule;
-    
-    if (typeof pdfParse !== 'function') {
-      throw new Error('pdf-parse module not callable');
-    }
-    
-    const result = await pdfParse(buffer);
-    return { text: result.text || '' };
+    const { PDFParse } = await import('pdf-parse');
+    const parser = new PDFParse({ data: buffer });
+    const textResult = await parser.getText();
+    // getText returns a TextResult object, extract the text property
+    const text = typeof textResult === 'string' ? textResult : (textResult as any).text || String(textResult);
+    return { text: text || '' };
   } catch (error: any) {
     console.error('PDF parse error:', error);
     return { text: `[PDF content could not be extracted: ${error.message}]` };
