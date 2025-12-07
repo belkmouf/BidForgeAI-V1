@@ -9,7 +9,13 @@ import { RecursiveCharacterTextSplitter } from '@langchain/textsplitters';
 // PDF parsing - use dynamic import to avoid ESM/CJS issues
 async function parsePdf(buffer: Buffer): Promise<{ text: string }> {
   try {
-    const pdfParse = (await import('pdf-parse')).default;
+    const pdfParseModule = await import('pdf-parse');
+    const pdfParse = pdfParseModule.PDFParse || pdfParseModule.default || pdfParseModule;
+    
+    if (typeof pdfParse !== 'function') {
+      throw new Error('pdf-parse module not callable');
+    }
+    
     const result = await pdfParse(buffer);
     return { text: result.text || '' };
   } catch (error: any) {
