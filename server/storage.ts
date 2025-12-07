@@ -744,6 +744,8 @@ export class DatabaseStorage implements IStorage {
         name: users.name,
         role: users.role,
         isActive: users.isActive,
+        onboardingStatus: users.onboardingStatus,
+        brandingProfile: users.brandingProfile,
         createdAt: users.createdAt,
         updatedAt: users.updatedAt,
         lastLoginAt: users.lastLoginAt,

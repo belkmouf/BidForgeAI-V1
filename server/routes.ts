@@ -1386,5 +1386,68 @@ export async function registerRoutes(
     }
   });
 
+  // ==================== ONBOARDING ROUTES ====================
+
+  // Get onboarding status
+  app.get("/api/onboarding/status", authenticateToken, async (req: AuthRequest, res) => {
+    try {
+      if (!req.user?.id) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+
+      const status = await storage.getUserOnboardingStatus(req.user.id);
+      if (!status) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      res.json(status);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Complete onboarding with branding profile
+  app.post("/api/onboarding", authenticateToken, async (req: AuthRequest, res) => {
+    try {
+      if (!req.user?.id) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+
+      const brandingSchema = z.object({
+        companyName: z.string().min(2, "Company name must be at least 2 characters").max(100),
+        websiteUrl: z.string().url().optional().or(z.literal("")),
+        primaryColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/, "Invalid hex color"),
+        logoUrl: z.string().url().optional().or(z.literal("")),
+        aboutUs: z.string().max(1000).optional(),
+      });
+
+      const validatedData = brandingSchema.parse(req.body);
+
+      const user = await storage.completeOnboarding(req.user.id, {
+        companyName: validatedData.companyName,
+        websiteUrl: validatedData.websiteUrl || undefined,
+        primaryColor: validatedData.primaryColor,
+        logoUrl: validatedData.logoUrl || undefined,
+        aboutUs: validatedData.aboutUs || undefined,
+      });
+
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      res.json({ 
+        success: true, 
+        message: "Onboarding completed successfully",
+        onboardingStatus: user.onboardingStatus,
+        brandingProfile: user.brandingProfile
+      });
+    } catch (error: any) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Validation failed", details: error.errors });
+      }
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   return httpServer;
 }
