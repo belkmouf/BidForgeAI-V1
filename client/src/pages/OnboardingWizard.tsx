@@ -12,7 +12,7 @@ import bidForgeLogo from '@assets/generated_images/bidforge_ai_premium_logo.png'
 
 export default function OnboardingWizard() {
   const [, setLocation] = useLocation();
-  const { user, accessToken } = useAuthStore();
+  const { user, accessToken, updateUser } = useAuthStore();
   
   const [companyName, setCompanyName] = useState(user?.companyName || '');
   const [websiteUrl, setWebsiteUrl] = useState('');
@@ -48,6 +48,7 @@ export default function OnboardingWizard() {
       if (!res.ok) {
         setError(data.error || data.details?.[0]?.message || 'Failed to complete setup');
       } else {
+        updateUser({ onboardingStatus: 'complete' });
         setLocation('/dashboard');
       }
     } catch {
