@@ -2,6 +2,8 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
 import AdmZip from 'adm-zip';
+import MsgReaderModule from '@kenjiuno/msgreader';
+const MsgReader = (MsgReaderModule as any).default || MsgReaderModule;
 import { pool } from '../db';
 import { generateEmbedding } from './openai.js';
 import { RecursiveCharacterTextSplitter } from '@langchain/textsplitters';
@@ -150,73 +152,80 @@ export class IngestionService {
     const results: ProcessedFile[] = [];
     
     try {
-      const textContent = this.extractMsgText(buffer);
+      const msgReader = new MsgReader(buffer);
+      const msgData = msgReader.getFileData();
+      
+      // Build email content from parsed MSG data
+      const emailParts: string[] = [];
+      
+      if (msgData.subject) {
+        emailParts.push(`Subject: ${msgData.subject}`);
+      }
+      if (msgData.senderName || msgData.senderEmail) {
+        emailParts.push(`From: ${msgData.senderName || ''} <${msgData.senderEmail || ''}>`);
+      }
+      if (msgData.recipients && msgData.recipients.length > 0) {
+        const recipientList = msgData.recipients.map((r: any) => 
+          `${r.name || ''} <${r.email || ''}>`
+        ).join(', ');
+        emailParts.push(`To: ${recipientList}`);
+      }
+      if (msgData.messageDeliveryTime) {
+        emailParts.push(`Date: ${msgData.messageDeliveryTime}`);
+      }
+      
+      emailParts.push(''); // Empty line before body
+      
+      // Get email body - prefer plain text, fall back to HTML
+      if (msgData.body) {
+        emailParts.push(msgData.body);
+      } else if (msgData.bodyHtml) {
+        // Strip HTML tags for plain text extraction
+        const plainText = msgData.bodyHtml.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+        emailParts.push(plainText);
+      }
+      
+      const textContent = emailParts.join('\n');
       
       if (textContent.trim()) {
         const result = await this.createDocumentWithChunks(projectId, filename, textContent);
         results.push(result);
+        console.log(`MSG parsed: "${msgData.subject || filename}" - ${textContent.length} chars`);
       }
       
-      const attachments = this.extractMsgAttachments(buffer);
-      for (const attachment of attachments) {
-        try {
-          const attachmentResults = await this.processFile(
-            attachment.data,
-            attachment.filename,
-            projectId
-          );
-          results.push(...attachmentResults);
-        } catch (error) {
-          console.error(`Failed to process MSG attachment ${attachment.filename}:`, error);
+      // Process attachments
+      if (msgData.attachments && msgData.attachments.length > 0) {
+        console.log(`MSG has ${msgData.attachments.length} attachment(s)`);
+        
+        for (const att of msgData.attachments) {
+          try {
+            const attachmentData = msgReader.getAttachment(att);
+            if (attachmentData && attachmentData.content) {
+              const attachmentBuffer = Buffer.from(attachmentData.content);
+              const attachmentFilename = att.fileName || att.name || `attachment_${results.length}.bin`;
+              
+              console.log(`Processing MSG attachment: ${attachmentFilename}`);
+              
+              const attachmentResults = await this.processFile(
+                attachmentBuffer,
+                attachmentFilename,
+                projectId
+              );
+              results.push(...attachmentResults);
+            }
+          } catch (error) {
+            console.error(`Failed to process MSG attachment ${att.fileName || att.name}:`, error);
+          }
         }
       }
     } catch (error) {
       console.error(`MSG processing error for ${filename}:`, error);
+      // Fallback to basic text extraction
       const result = await this.processText(buffer, filename, projectId);
       results.push(result);
     }
 
     return results;
-  }
-
-  private extractMsgText(buffer: Buffer): string {
-    try {
-      const content = buffer.toString('utf-8');
-      const textMatch = content.match(/[\x20-\x7E\n\r\t]{50,}/g);
-      if (textMatch) {
-        return textMatch.join('\n').substring(0, 50000);
-      }
-      return content.substring(0, 10000);
-    } catch {
-      return '';
-    }
-  }
-
-  private extractMsgAttachments(buffer: Buffer): Array<{ filename: string; data: Buffer }> {
-    const attachments: Array<{ filename: string; data: Buffer }> = [];
-    
-    try {
-      const content = buffer.toString('binary');
-      
-      const pdfStartPattern = '%PDF-';
-      let pdfStart = content.indexOf(pdfStartPattern);
-      
-      while (pdfStart !== -1) {
-        const pdfEnd = content.indexOf('%%EOF', pdfStart);
-        if (pdfEnd !== -1) {
-          const pdfData = Buffer.from(content.substring(pdfStart, pdfEnd + 5), 'binary');
-          attachments.push({
-            filename: `attachment_${attachments.length + 1}.pdf`,
-            data: pdfData
-          });
-        }
-        pdfStart = content.indexOf(pdfStartPattern, pdfStart + 1);
-      }
-    } catch (error) {
-      console.error('Error extracting MSG attachments:', error);
-    }
-    
-    return attachments;
   }
 
   private async processText(
