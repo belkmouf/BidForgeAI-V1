@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Sparkles, Wand2, Loader2 } from 'lucide-react';
+import { Sparkles, Wand2, Loader2, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Card } from '@/components/ui/card';
@@ -7,15 +7,32 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import type { AIModel } from '@/lib/api';
 
+const DEFAULT_INSTRUCTIONS = `Generate a comprehensive construction bid response that includes:
+
+1. Executive Summary - Highlight our key strengths and value proposition
+2. Company Qualifications - Our experience, certifications, and relevant past projects
+3. Technical Approach - Methodology, equipment, and materials we'll use
+4. Project Timeline - Detailed schedule with milestones
+5. Safety Plan - Our safety protocols and track record
+6. Quality Assurance - How we ensure high-quality deliverables
+7. Pricing Structure - Cost breakdown with line items
+8. Terms & Conditions - Payment terms, warranties, and guarantees
+
+Focus on addressing all requirements from the RFP documents and emphasize our competitive advantages.`;
+
 interface GeneratePanelProps {
   onGenerate: (instructions: string, tone?: string, model?: AIModel) => void;
   isGenerating: boolean;
 }
 
 export function GeneratePanel({ onGenerate, isGenerating }: GeneratePanelProps) {
-  const [instructions, setInstructions] = useState('');
+  const [instructions, setInstructions] = useState(DEFAULT_INSTRUCTIONS);
   const [tone, setTone] = useState('professional');
   const [model, setModel] = useState<AIModel>('anthropic');
+
+  const handleReset = () => {
+    setInstructions(DEFAULT_INSTRUCTIONS);
+  };
 
   const handleGenerate = () => {
     if (!instructions) return;
@@ -62,14 +79,31 @@ export function GeneratePanel({ onGenerate, isGenerating }: GeneratePanelProps) 
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="instructions">Instructions</Label>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="instructions">Instructions</Label>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-6 px-2 text-xs text-muted-foreground hover:text-foreground"
+                onClick={handleReset}
+                data-testid="button-reset-instructions"
+              >
+                <RotateCcw className="h-3 w-3 mr-1" />
+                Reset
+              </Button>
+            </div>
             <Textarea
               id="instructions"
-              placeholder="E.g., Draft an executive summary emphasizing our safety record and previous experience with similar high-rise renovations..."
-              className="min-h-[120px] resize-none"
+              placeholder="Enter your bid generation instructions..."
+              className="min-h-[200px] resize-y text-sm"
               value={instructions}
               onChange={(e) => setInstructions(e.target.value)}
+              data-testid="textarea-instructions"
             />
+            <p className="text-xs text-muted-foreground">
+              Modify the instructions above to customize what the AI generates. Click Reset to restore defaults.
+            </p>
           </div>
 
           <Button 
