@@ -40,6 +40,15 @@ export const insertCompanySchema = z.object({
 });
 
 // Users Table
+// Branding Profile Type
+export type BrandingProfile = {
+  companyName?: string;
+  websiteUrl?: string;
+  primaryColor?: string;
+  logoUrl?: string;
+  aboutUs?: string;
+};
+
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
   companyId: integer("company_id").references(() => companies.id, { onDelete: "cascade" }),
@@ -48,6 +57,8 @@ export const users = pgTable("users", {
   name: varchar("name", { length: 255 }),
   role: text("role").default("user").notNull(),
   isActive: boolean("is_active").default(true).notNull(),
+  onboardingStatus: varchar("onboarding_status", { length: 20 }).default("pending").notNull(),
+  brandingProfile: jsonb("branding_profile").$type<BrandingProfile>().default({}),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
   lastLoginAt: timestamp("last_login_at"),

@@ -30,7 +30,8 @@ import {
   type User,
   type Company,
   type CompanyInvite,
-  type UserRole
+  type UserRole,
+  type BrandingProfile
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, sql, and, isNull, or } from "drizzle-orm";
@@ -93,6 +94,10 @@ export interface IStorage {
   getBid(id: number, companyId: number | null): Promise<Bid | undefined>;
   listBidsByProject(projectId: string, companyId: number | null): Promise<Bid[]>;
   getLatestBidForProject(projectId: string, companyId: number | null): Promise<Bid | undefined>;
+  
+  // Onboarding
+  completeOnboarding(userId: number, brandingProfile: BrandingProfile): Promise<User | undefined>;
+  getUserOnboardingStatus(userId: number): Promise<{ status: string; brandingProfile: BrandingProfile | null } | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -847,6 +852,36 @@ export class DatabaseStorage implements IStorage {
         eq(companyInvites.status, 'pending')
       ));
     return !!existing;
+  }
+
+  // Onboarding methods
+  async completeOnboarding(userId: number, brandingProfile: BrandingProfile): Promise<User | undefined> {
+    const [user] = await db
+      .update(users)
+      .set({
+        onboardingStatus: 'complete',
+        brandingProfile,
+        updatedAt: new Date()
+      })
+      .where(eq(users.id, userId))
+      .returning();
+    return user || undefined;
+  }
+
+  async getUserOnboardingStatus(userId: number): Promise<{ status: string; brandingProfile: BrandingProfile | null } | undefined> {
+    const [user] = await db
+      .select({
+        status: users.onboardingStatus,
+        brandingProfile: users.brandingProfile
+      })
+      .from(users)
+      .where(eq(users.id, userId));
+    
+    if (!user) return undefined;
+    return {
+      status: user.status,
+      brandingProfile: user.brandingProfile || null
+    };
   }
 }
 
