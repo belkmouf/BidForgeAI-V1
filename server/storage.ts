@@ -2,6 +2,7 @@ import {
   projects, 
   documents, 
   documentChunks,
+  bids,
   rfpAnalyses,
   analysisAlerts,
   vendorDatabase,
@@ -12,6 +13,8 @@ import {
   type InsertDocument,
   type DocumentChunk,
   type InsertDocumentChunk,
+  type Bid,
+  type InsertBid,
   type ProjectStatus,
   type RFPAnalysis,
   type InsertRFPAnalysis,
@@ -77,6 +80,12 @@ export interface IStorage {
   
   // Analysis Helpers
   getDocumentChunksForProject(projectId: string, limit?: number): Promise<Array<{ content: string; filename: string }>>;
+  
+  // Bids (company-scoped)
+  createBid(bid: InsertBid): Promise<Bid>;
+  getBid(id: number, companyId: number | null): Promise<Bid | undefined>;
+  listBidsByProject(projectId: string, companyId: number | null): Promise<Bid[]>;
+  getLatestBidForProject(projectId: string, companyId: number | null): Promise<Bid | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -616,6 +625,81 @@ export class DatabaseStorage implements IStorage {
       .from(decisionLogs)
       .where(and(...conditions))
       .orderBy(desc(decisionLogs.createdAt));
+  }
+
+  // Bids - uses transaction for atomic version increment and isLatest management
+  async createBid(bid: InsertBid): Promise<Bid> {
+    return await db.transaction(async (tx) => {
+      // Mark any existing bids for this project as not latest
+      if (bid.projectId) {
+        await tx
+          .update(bids)
+          .set({ isLatest: false })
+          .where(eq(bids.projectId, bid.projectId));
+      }
+      
+      // Get the next version number within the transaction
+      const existingBids = await tx
+        .select({ maxVersion: sql<number>`COALESCE(MAX(${bids.version}), 0)` })
+        .from(bids)
+        .where(eq(bids.projectId, bid.projectId));
+      
+      const nextVersion = (existingBids[0]?.maxVersion || 0) + 1;
+      
+      const [created] = await tx
+        .insert(bids)
+        .values({ ...bid, version: nextVersion, isLatest: true })
+        .returning();
+      return created;
+    });
+  }
+
+  async getBid(id: number, companyId: number | null): Promise<Bid | undefined> {
+    const conditions = [eq(bids.id, id)];
+    if (companyId !== null) {
+      conditions.push(eq(bids.companyId, companyId));
+    } else {
+      conditions.push(isNull(bids.companyId));
+    }
+    
+    const [bid] = await db
+      .select()
+      .from(bids)
+      .where(and(...conditions));
+    return bid || undefined;
+  }
+
+  async listBidsByProject(projectId: string, companyId: number | null): Promise<Bid[]> {
+    const conditions = [eq(bids.projectId, projectId)];
+    if (companyId !== null) {
+      conditions.push(eq(bids.companyId, companyId));
+    } else {
+      conditions.push(isNull(bids.companyId));
+    }
+    
+    return await db
+      .select()
+      .from(bids)
+      .where(and(...conditions))
+      .orderBy(desc(bids.version));
+  }
+
+  async getLatestBidForProject(projectId: string, companyId: number | null): Promise<Bid | undefined> {
+    const conditions = [
+      eq(bids.projectId, projectId),
+      eq(bids.isLatest, true)
+    ];
+    if (companyId !== null) {
+      conditions.push(eq(bids.companyId, companyId));
+    } else {
+      conditions.push(isNull(bids.companyId));
+    }
+    
+    const [bid] = await db
+      .select()
+      .from(bids)
+      .where(and(...conditions));
+    return bid || undefined;
   }
 }
 

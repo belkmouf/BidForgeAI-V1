@@ -111,6 +111,35 @@ export const documentChunks = pgTable("document_chunks", {
   chunkIndex: integer("chunk_index").notNull(),
 });
 
+// Generated Bids Table
+export const bids = pgTable("bids", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  projectId: varchar("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  companyId: integer("company_id").references(() => companies.id, { onDelete: "cascade" }),
+  userId: integer("user_id").references(() => users.id, { onDelete: "set null" }),
+  
+  content: text("content").notNull(),
+  instructions: text("instructions"),
+  tone: text("tone").default("professional"),
+  
+  model: text("model").notNull(),
+  searchMethod: text("search_method").notNull(),
+  chunksUsed: integer("chunks_used").default(0),
+  
+  version: integer("version").default(1).notNull(),
+  isLatest: boolean("is_latest").default(true).notNull(),
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export type Bid = typeof bids.$inferSelect;
+export type InsertBid = typeof bids.$inferInsert;
+
+export const insertBidSchema = createInsertSchema(bids).omit({
+  id: true,
+  createdAt: true,
+});
+
 // RFP Analysis Table
 export const rfpAnalyses = pgTable("rfp_analyses", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),

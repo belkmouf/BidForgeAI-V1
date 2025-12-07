@@ -33,7 +33,9 @@ The backend is Express.js with TypeScript, using Drizzle ORM for type-safe datab
 
 **Data Storage:**
 - PostgreSQL schema includes `Projects`, `Documents`, and `Document Chunks` tables with UUIDs, foreign keys, and vector embeddings.
+- `Bids` table stores generated bid responses with relationships to projects, companies, and users, featuring automatic version numbering with `isLatest` flag.
 - Additional tables for `rfp_analyses`, `analysis_alerts`, `vendor_database`, `document_conflicts`, `conflict_detection_runs`, `win_probability_predictions`, `bid_outcomes`, and `project_features` support specific functionalities.
+- Transactional bid creation ensures atomic version increment and prevents conflicts in multi-model comparison.
 
 ### System Design Choices
 
