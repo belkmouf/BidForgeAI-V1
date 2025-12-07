@@ -2,9 +2,7 @@
 
 ## Overview
 
-BidForge AI is a construction bidding automation system that streamlines the proposal generation process for construction companies. The application ingests RFQ documents (PDFs, emails, ZIP files), uses Retrieval-Augmented Generation (RAG) with vector search to find relevant context from current and historical "Closed-Won" projects, and generates professional HTML bid responses using AI. Users can iteratively refine bids through an AI-powered chat interface.
-
-The system is designed as a full-stack web application with a React frontend and Express/Node.js backend, leveraging PostgreSQL with pgvector for semantic search capabilities.
+BidForge AI is a construction bidding automation system designed to streamline the proposal generation process for construction companies. It ingests RFQ documents, leverages Retrieval-Augmented Generation (RAG) with vector search from current and historical "Closed-Won" projects, and generates professional HTML bid responses using AI. The system supports iterative bid refinement via an AI-powered chat interface. It is a full-stack web application with a React frontend, an Express/Node.js backend, and uses PostgreSQL with pgvector for semantic search. The project aims to automate and enhance the efficiency and quality of construction bidding, offering significant market potential for companies seeking a competitive edge.
 
 ## User Preferences
 
@@ -12,307 +10,50 @@ Preferred communication style: Simple, everyday language.
 
 ## System Architecture
 
-### Frontend Architecture
+### UI/UX Decisions
 
-**Framework & Build System**
-- React 18 with TypeScript using Vite as the build tool
-- Wouter for lightweight client-side routing
-- TanStack Query (React Query) for server state management and API data fetching
-- Single-page application (SPA) architecture with client-side routing
+The frontend uses React 18 with TypeScript and Vite, featuring a single-page application architecture with Wouter for routing and TanStack Query for server state. The UI is built with Shadcn UI (New York style), Radix UI primitives, and Tailwind CSS v4, incorporating a custom design system inspired by "Somerstone" with a specific color palette (Charcoal, Deep Teal, Antique Gold) and font hierarchy (Syne, Inter, Fraunces). It includes GSAP for animations. Key features include a dashboard with Recharts, a project workspace with drag-and-drop file upload, resizable panels, and an AI generation panel with multi-model selection and chat-based refinement. A Tiptap editor is used for rich text bid document editing.
 
-**UI Component System**
-- Shadcn UI component library (New York style variant) with Radix UI primitives
-- Tailwind CSS v4 for styling with custom design tokens
-- Lucide React for iconography
-- GSAP for scroll-based and entrance animations
+### Technical Implementations
 
-**Version 2 Design System (Somerstone-Inspired)**
-- Gulf Executive color palette: Charcoal (#1a1a1a), Deep Teal (#0d7377), Antique Gold (#b8995a)
-- Three-font hierarchy: Syne (display/headlines), Inter (body text), Fraunces (accents)
-- Premium styling with refined spacing, card hover effects, and sophisticated color usage
-- Landing page at "/" with Hero, Features, Testimonials, CTA sections
-- Dashboard moved to "/dashboard" route
+The backend is Express.js with TypeScript, using Drizzle ORM for type-safe database interactions with Neon serverless PostgreSQL. It features a RESTful API, Multer for file uploads, and Zod for schema validation. AI integration supports multiple providers (OpenAI, Anthropic, Google Gemini, DeepSeek) with a unified interface for bid generation and refinement, including multi-model parallel comparison. The RAG implementation uses OpenAI's text-embedding-3-small model with pgvector for hybrid search (vector similarity + full-text search) and LangChain's `RecursiveCharacterTextSplitter` for semantic chunking, incorporating context from current and historical projects.
 
-**Rich Text Editing**
-- Tiptap editor for WYSIWYG bid document editing
-- Support for tables, headings, lists, and rich formatting
-- Extensions for placeholder text and table functionality
+### Feature Specifications
 
-**Key Frontend Features**
-- Dashboard with project pipeline visualization using Recharts
-- Project workspace with drag-and-drop file upload
-- Resizable panel layout for split-screen editing
-- AI generation panel with model selection (OpenAI, Anthropic, Gemini)
-- Iterative refinement through chat interface
+**Core Features:**
+- **RFP Analysis & Risk Assessment:** AI-powered analysis of RFQ documents providing scores for Quality, Clarity, Doability, and Vendor Risk, along with an overall risk level, missing document detection, and actionable recommendations. Includes a feature to request missing documents via WhatsApp or Email.
+- **AI Agent System:** Utilizes LangChain/LangGraph for a multi-agent pipeline (Intake, Analysis, Decision, Generation, Review) for workflow orchestration, supporting conditional routing, automatic retries, and risk-based early termination.
+- **Conflict Detection:** AI-powered semantic conflict detection using OpenAI embeddings and numeric conflict detection via regex, identifying contradictions in bid documents with severity scoring.
+- **Win Probability ML System:** Extracts 8 predictive features from project data (e.g., Project Type, Client Relationship, Competitiveness) to calculate bid win probability using a weighted statistical scoring model, providing confidence scores and actionable recommendations.
 
-### Backend Architecture
+**Authentication & Authorization:**
+- JWT-based authentication with bcrypt hashing, access and refresh tokens.
+- Role-Based Access Control (RBAC) with four roles (Admin, Manager, User, Viewer) and granular permissions managed via `users`, `sessions`, `roles`, and `user_roles` tables.
+- Security features include Helmet.js, rate limiting, CORS, and request body size limits.
 
-**Server Framework**
-- Express.js with TypeScript running on Node.js
-- HTTP server with middleware for JSON parsing and URL encoding
-- Custom request logging with timestamp formatting
-- Development mode with Vite middleware for HMR
-- Production mode serving static built assets
+**Data Storage:**
+- PostgreSQL schema includes `Projects`, `Documents`, and `Document Chunks` tables with UUIDs, foreign keys, and vector embeddings.
+- Additional tables for `rfp_analyses`, `analysis_alerts`, `vendor_database`, `document_conflicts`, `conflict_detection_runs`, `win_probability_predictions`, `bid_outcomes`, and `project_features` support specific functionalities.
 
-**API Design**
-- RESTful API endpoints under `/api` prefix
-- Multipart form data handling with Multer for file uploads (50MB limit)
-- Zod schema validation for request payloads
-- Error handling with structured JSON responses
+### System Design Choices
 
-**Database Layer**
-- Drizzle ORM for type-safe database queries
-- Neon serverless PostgreSQL with WebSocket support
-- Schema-first design with TypeScript type generation
-- Migration management via Drizzle Kit
+The system is built for scalability and extensibility, with clear separation of concerns between frontend and backend. The use of Drizzle ORM and a schema-first approach ensures type safety and robust database management. The AI integration strategy supports multiple LLM providers, allowing flexibility and comparison. Hybrid search combining vector and full-text search optimizes RAG performance. The agent-based architecture with LangGraph enables complex workflow automation and iterative processing.
 
-**AI Integration Strategy**
-- Multiple AI provider support: OpenAI (GPT-4o), Anthropic (Claude Sonnet 4.5), Google Gemini (2.5 Flash), DeepSeek
-- Separate service modules for each AI provider
-- Unified interface for bid generation and refinement
-- User-selectable model at runtime
-- Multi-model comparison: Request multiple AI providers in parallel for side-by-side draft comparison
-- API accepts `models: ['openai', 'anthropic', 'gemini', 'deepseek']` array for parallel generation
+## External Dependencies
 
-**RAG Implementation**
-- Vector embeddings using OpenAI's text-embedding-3-small model (1536 dimensions)
-- pgvector extension for similarity search
-- Document chunking strategy for efficient retrieval
-- Context aggregation from current project documents and historical winning bids
+**AI Services:**
+- OpenAI API (GPT-4o, text-embedding-3-small)
+- Anthropic API (Claude Sonnet 4.5)
+- Google Gemini API (Gemini 2.5 Flash)
+- DeepSeek API
 
-### Data Storage Solutions
+**Database:**
+- Neon serverless PostgreSQL (compatible with pgvector extension)
 
-**Database Schema**
+**Integrations:**
+- Meta WhatsApp Business API (for sending messages)
 
-1. **Projects Table**
-   - UUID primary key with auto-generation
-   - Status tracking: Active, Submitted, Closed-Won, Closed-Lost
-   - JSONB metadata field for flexible attributes
-   - Client name and project name fields
-
-2. **Documents Table**
-   - Auto-incrementing integer ID
-   - Foreign key reference to projects with cascade delete
-   - Text content storage and processing status flag
-   - Upload timestamp tracking
-
-3. **Document Chunks Table**
-   - Auto-incrementing integer ID
-   - Foreign key reference to documents with cascade delete
-   - Text content with vector embeddings (1536 dimensions)
-   - Chunk index for ordering
-
-**Storage Layer Abstraction**
-- Interface-based design (`IStorage`) for testability
-- `DatabaseStorage` implementation using Drizzle ORM
-- Methods for CRUD operations on projects, documents, and chunks
-- Similarity search using cosine distance with pgvector
-- Dashboard statistics aggregation (pipeline counts, win rate)
-
-### RFP Analysis & Risk Assessment Module
-
-**Analysis Features**
-- AI-powered RFP document analysis using OpenAI GPT-4o
-- Four key scores: Quality (0-100), Clarity (0-100), Doability (0-100), Vendor Risk (0-100)
-- Overall risk level assessment: Low, Medium, High, Critical
-- Vendor payment history tracking from internal database
-- Missing documents detection with request functionality
-- Red flags and opportunities identification
-- Actionable recommendations with priority and time estimates
-
-**Missing Documents Request Feature**
-- WhatsApp and Email buttons to request missing documents from vendors
-- AI-generated professional messages tailored for each channel
-- Editable message preview before sending
-- WhatsApp messages sent directly via Meta Business API
-- Email opens in user's default email client with pre-filled content
-
-**Database Tables**
-- `rfp_analyses` - Stores analysis results with scores and findings
-- `analysis_alerts` - Tracks actionable alerts with resolution status
-- `vendor_database` - Payment history and ratings for known vendors
-
-### WhatsApp Integration
-
-**Meta WhatsApp Business API**
-- Official WhatsApp Node.js SDK for Cloud API
-- Send text messages, documents, and template messages
-- Receive messages via webhook with signature verification
-- Configuration page at `/whatsapp` route
-- Missing documents request integration from Analysis module
-
-**Required Environment Variables:**
-- `WA_PHONE_NUMBER_ID` - Phone number ID from Meta Developer Console
-- `CLOUD_API_ACCESS_TOKEN` - API access token
-- `WEBHOOK_VERIFY_TOKEN` - Token for webhook verification (default: bidforge_webhook_token)
-- `WA_APP_SECRET` - App secret for webhook signature verification
-
-### Authentication and Authorization
-
-**JWT-Based Authentication**
-- Secure user registration and login with bcrypt password hashing
-- JWT access tokens (24h expiry) and refresh tokens (7d expiry)
-- Password validation requirements (8+ chars, uppercase, lowercase, number)
-- Token-based API authentication via Authorization header
-
-**Database Tables**
-- `users` - User accounts with email, password hash, name, role, timestamps
-- `sessions` - Refresh token storage with expiration tracking
-- `roles` - Role definitions with permission arrays (RBAC)
-- `user_roles` - Junction table for user-role assignments (supports project-specific roles)
-
-**Role-Based Access Control (RBAC)**
-- Four user roles: Admin, Manager, User, Viewer
-- Permission-based middleware for route protection
-- Granular permissions for projects, documents, analysis, generation, and user management
-- Admin role has full system access
-
-**Security Features**
-- Helmet.js for security headers
-- Rate limiting: 1000 requests/15min (API), 20 requests/15min (auth)
-- CORS with configurable allowed origins
-- Request body size limits (10MB)
-
-**Frontend Authentication**
-- Login and Register pages at `/login` and `/register`
-- Zustand store for auth state management with localStorage persistence
-- Protected routes redirecting to login when not authenticated
-- User profile management in Settings page with password change
-
-**API Endpoints**
-- `POST /api/auth/register` - User registration
-- `POST /api/auth/login` - User login
-- `POST /api/auth/refresh` - Refresh access token
-- `GET /api/auth/me` - Get current user
-- `PATCH /api/auth/profile` - Update user profile
-- `POST /api/auth/change-password` - Change password
-- `POST /api/auth/logout` - Logout (client-side token removal)
-
-### AI Agent System (LangChain/LangGraph)
-
-**Agent Orchestration Framework**
-- LangChain ecosystem for AI agent development
-- LangGraph StateGraph for workflow orchestration
-- Multi-agent pipeline: Intake → Analysis → Decision → Generation → Review
-- Conditional routing based on analysis results (risk/doability thresholds)
-
-**Agent Architecture**
-- `BaseAgent` abstract class with execution wrapping and logging
-- `AgentRegistry` for agent registration and lookup
-- `BidWorkflowAnnotation` for typed state management with reducers
-- Zod schemas for all agent inputs/outputs
-
-**Individual Agents**
-1. **IntakeAgent** - Loads and validates project documents from database
-2. **AnalysisAgent** - AI-powered RFQ analysis with scoring (quality, clarity, doability, vendor risk)
-3. **DecisionAgent** - Strategic bid approach decisions (aggressive/balanced/conservative)
-4. **GenerationAgent** - Professional HTML bid proposal generation
-5. **ReviewAgent** - Quality assessment with pass/fail and retry logic
-
-**Workflow Features**
-- Automatic retry on review failure (max 3 attempts)
-- Risk-based early termination (Critical risk or low doability)
-- Streaming support for real-time progress updates
-- Configurable thresholds via OrchestratorConfig
-
-**Files**
-- `server/agents/base-agent.ts` - Abstract agent class and registry
-- `server/agents/state.ts` - Workflow state schemas and annotations
-- `server/agents/orchestrator.ts` - LangGraph StateGraph configuration
-- `server/agents/index.ts` - Agent exports and initialization
-
-### Conflict Detection System
-
-**Semantic Conflict Detection**
-- AI-powered detection of contradictory statements in bid documents
-- Uses OpenAI embeddings for semantic similarity analysis
-- Cosine similarity threshold of 0.85 for conflict identification
-- Lazy initialization to avoid API key errors at startup
-
-**Numeric Conflict Detection**
-- Regex-based extraction of numbers, dates, percentages, and currencies
-- Context-aware grouping of values for conflict detection
-- 1% threshold for numeric value conflicts
-- Severity scoring based on conflict magnitude
-
-**Database Tables**
-- `document_conflicts` - Stores detected conflicts with source/target locations
-- `conflict_detection_runs` - Tracks detection run history with statistics
-
-**API Endpoints**
-- `POST /api/conflicts/detect/:projectId` - Run conflict detection
-- `GET /api/conflicts/:projectId` - Get conflicts with filtering
-- `GET /api/conflicts/:projectId/stats` - Get conflict statistics
-- `PATCH /api/conflicts/:conflictId/status` - Update conflict status
-
-**Frontend Components**
-- `ConflictDetection.tsx` - Detection controls and results display
-- `ProjectConflicts.tsx` - Full-page conflict management view
-- Route: `/projects/:id/conflicts`
-
-### Win Probability ML System
-
-**Feature Engineering**
-- Extracts 8 key predictive features from project data:
-  - Project Type Score - Alignment with company expertise
-  - Client Relationship Score - Historical relationship strength
-  - Competitiveness Score - Competitive positioning
-  - Team Capacity Score - Resource availability
-  - Timeline Score - Deadline feasibility
-  - Complexity Score - Project complexity assessment
-  - Requirements Clarity Score - RFP clarity level
-  - Budget Alignment Score - Budget-scope fit
-- Historical win rate integration from past bids with same client
-
-**Statistical Scoring Model**
-- Weighted feature scoring with configurable weights
-- Sigmoid transformation for probability output
-- Confidence scoring based on data quality and historical data
-- Risk and strength factor identification
-- Actionable recommendations generation
-
-**Database Tables**
-- `win_probability_predictions` - Stores predictions with feature scores
-- `bid_outcomes` - Records actual bid outcomes for model feedback
-- `project_features` - Cached extracted features per project
-
-**API Endpoints**
-- `POST /api/win-probability/predict/:projectId` - Generate new prediction
-- `GET /api/win-probability/prediction/:projectId` - Get latest prediction
-- `GET /api/win-probability/history/:projectId` - Get prediction history
-- `GET /api/win-probability/features/:projectId` - Get extracted features
-- `POST /api/win-probability/outcome/:projectId` - Record bid outcome
-- `GET /api/win-probability/metrics` - Get model performance metrics
-- `GET /api/win-probability/stats` - Get aggregate statistics
-
-**Frontend Components**
-- `WinProbability.tsx` - Probability display with feature breakdown
-- Integrated into ProjectAnalysis page
-
-### External Dependencies
-
-**AI Services**
-- OpenAI API for GPT-4o completions and text embeddings
-- Anthropic API for Claude Sonnet 4.5 completions
-- Google Gemini API for Gemini 2.5 Flash completions
-- All three providers configurable via environment variables with custom base URLs
-
-**Database**
-- Neon serverless PostgreSQL (or compatible PostgreSQL service)
-- Requires pgvector extension for vector similarity search
-- Connection via `DATABASE_URL` environment variable
-
-**Development Tools**
-- Replit-specific plugins for Vite (cartographer, dev banner, runtime error modal, meta images)
-- ESBuild for server-side bundling with selective dependency bundling
-
-**File Processing**
-- Multer for multipart form uploads
-- In-memory storage strategy for uploaded files
-- Support for PDF, MSG, and ZIP file formats (processing implementation pending)
-
-**Build & Deployment**
-- Separate build processes for client (Vite) and server (ESBuild)
-- Production deployment serves static assets from Express
-- Client built to `dist/public`, server built to `dist/index.cjs`
-- Environment-based configuration (NODE_ENV, REPL_ID)
+**Development Tools:**
+- Vite (frontend build)
+- ESBuild (backend bundling)
+- Multer (file uploads)

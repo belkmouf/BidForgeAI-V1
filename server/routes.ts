@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertProjectSchema, insertDocumentSchema } from "@shared/schema";
-import { generateBidContent, refineBidContent } from "./lib/openai";
+import { generateBidContent, refineBidContent, generateEmbedding } from "./lib/openai";
 import { generateBidWithAnthropic, refineBidWithAnthropic } from "./lib/anthropic";
 import { generateBidWithGemini, refineBidWithGemini } from "./lib/gemini";
 import { generateBidWithDeepSeek, refineBidWithDeepSeek } from "./lib/deepseek";
@@ -322,19 +322,56 @@ export async function registerRoutes(
         throw error;
       }
 
-      // Get all documents from this project to build context
-      console.log('Loading project documents for context...');
-      const documents = await storage.listDocumentsByProject(projectId);
+      // Use RAG with hybrid search to find most relevant document chunks
+      console.log('Performing RAG search for relevant document context...');
       
-      // Build context from document content (simplified - no embedding search)
-      const context = documents
-        .filter((doc: { content: string | null }) => doc.content && !doc.content.startsWith('[PDF content could not be extracted'))
-        .map((doc: { filename: string; content: string | null }, i: number) => `[Document ${i + 1}: ${doc.filename}]\n${doc.content?.substring(0, 5000) || ''}`)
-        .join('\n\n---\n\n');
+      let context = '';
+      let searchMethod = 'hybrid_rag';
+      let chunksUsed = 0;
+      
+      try {
+        // Generate embedding for the user's instructions to find semantically similar content
+        const queryEmbedding = await generateEmbedding(sanitizedInstructions);
+        
+        // Hybrid search: combines vector similarity (70%) + full-text search (30%)
+        // Searches both current project AND historical "Closed-Won" projects
+        const relevantChunks = await storage.searchHybrid(
+          sanitizedInstructions,
+          queryEmbedding,
+          projectId,
+          companyId,
+          20, // Get top 20 most relevant chunks
+          { vectorWeight: 0.7, textWeight: 0.3 }
+        );
+        
+        chunksUsed = relevantChunks.length;
+        console.log(`Found ${chunksUsed} relevant chunks via hybrid RAG search`);
+        
+        if (relevantChunks.length > 0) {
+          // Build context from the most relevant chunks
+          context = relevantChunks
+            .map((chunk, i) => {
+              const scoreInfo = `[Relevance: ${(chunk.score * 100).toFixed(1)}%]`;
+              return `--- Relevant Section ${i + 1} ${scoreInfo} ---\n${chunk.content}`;
+            })
+            .join('\n\n');
+        }
+      } catch (embeddingError: any) {
+        // Fallback to direct document content if embedding fails
+        console.warn('RAG search failed, falling back to direct document content:', embeddingError.message);
+        searchMethod = 'document_content_fallback';
+        
+        const documents = await storage.listDocumentsByProject(projectId);
+        context = documents
+          .filter((doc: { content: string | null }) => doc.content && !doc.content.startsWith('[PDF content could not be extracted'))
+          .map((doc: { filename: string; content: string | null }, i: number) => `[Document ${i + 1}: ${doc.filename}]\n${doc.content?.substring(0, 5000) || ''}`)
+          .join('\n\n---\n\n');
+        chunksUsed = documents.length;
+      }
 
       const contextOrDefault = context || 'No document content available. Please provide project details in your instructions.';
       
-      console.log(`Using ${documents.length} documents for bid generation context`);
+      console.log(`Using ${chunksUsed} chunks/documents for bid generation via ${searchMethod}`);
 
       const generationParams = {
         instructions: sanitizedInstructions,
@@ -361,8 +398,8 @@ export async function registerRoutes(
         res.json({
           comparison: true,
           results,
-          documentsUsed: documents.length,
-          searchMethod: 'document_content',
+          chunksUsed,
+          searchMethod,
         });
       } else {
         // Single model generation (original behavior)
@@ -371,9 +408,9 @@ export async function registerRoutes(
 
         res.json({
           html,
-          documentsUsed: documents.length,
+          chunksUsed,
           model: selectedModel,
-          searchMethod: 'document_content',
+          searchMethod,
         });
       }
     } catch (error: any) {
