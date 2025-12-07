@@ -40,6 +40,14 @@ The backend is Express.js with TypeScript, using Drizzle ORM for type-safe datab
 - Accept Invite page (`/invite/:code`) for invited users to create accounts within existing companies.
 - Company-scoped data isolation: users only see their company's data (projects, bids, team members).
 
+**Company Branding Onboarding:**
+- New users are directed to a branding setup wizard (`/setup/branding`) before accessing the dashboard.
+- Split-screen layout: form on the left, live preview on the right showing how branding will appear in bid documents.
+- Branding profile includes: company name, website URL, primary brand color (color picker), logo URL, and about us description.
+- Onboarding status tracked in users table (`onboardingStatus`: pending/complete) with branding data stored as JSONB.
+- Route guards enforce onboarding completion for new registrations while existing users continue with normal access.
+- Auth responses include onboardingStatus for client-side route protection.
+
 **Data Storage:**
 - PostgreSQL schema includes `Projects`, `Documents`, and `Document Chunks` tables with UUIDs, foreign keys, and vector embeddings.
 - `Bids` table stores generated bid responses with relationships to projects, companies, and users, featuring automatic version numbering with `isLatest` flag.
