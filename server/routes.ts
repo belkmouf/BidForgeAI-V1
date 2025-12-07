@@ -86,6 +86,12 @@ export async function registerRoutes(
   app: Express
 ): Promise<Server> {
   
+  // ==================== STATIC FILES ====================
+  // Serve uploaded logos
+  const path = await import('path');
+  const express = await import('express');
+  app.use('/uploads', express.default.static(path.join(process.cwd(), 'uploads')));
+  
   // ==================== AUTHENTICATION ====================
   app.use('/api/auth', authRoutes);
   
@@ -1453,6 +1459,46 @@ export async function registerRoutes(
         return res.status(400).json({ error: "Validation failed", details: error.errors });
       }
       res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Upload company logo
+  app.post("/api/upload/logo", authenticateToken, upload.single('file'), async (req: AuthRequest, res) => {
+    try {
+      if (!req.user?.userId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+
+      if (!req.file) {
+        return res.status(400).json({ error: "No file uploaded" });
+      }
+
+      const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml'];
+      if (!allowedTypes.includes(req.file.mimetype)) {
+        return res.status(400).json({ error: "Invalid file type. Please upload an image (JPEG, PNG, GIF, WebP, or SVG)" });
+      }
+
+      if (req.file.size > 5 * 1024 * 1024) {
+        return res.status(400).json({ error: "File too large. Maximum size is 5MB" });
+      }
+
+      const filename = `logo_${req.user.userId}_${Date.now()}.${req.file.originalname.split('.').pop()}`;
+      const filepath = `uploads/logos/${filename}`;
+      
+      const fs = await import('fs/promises');
+      const path = await import('path');
+      
+      const uploadsDir = path.join(process.cwd(), 'uploads', 'logos');
+      await fs.mkdir(uploadsDir, { recursive: true });
+      
+      await fs.writeFile(path.join(uploadsDir, filename), req.file.buffer);
+      
+      const url = `/${filepath}`;
+      
+      res.json({ url, filename });
+    } catch (error: any) {
+      console.error('Logo upload error:', error);
+      res.status(500).json({ error: "Failed to upload logo" });
     }
   });
 

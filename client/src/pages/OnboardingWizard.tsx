@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useLocation } from 'wouter';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2, Building2, Globe, Palette, Image, FileText, CheckCircle } from 'lucide-react';
+import { Loader2, Building2, Globe, Palette, Image, FileText, CheckCircle, Upload, ExternalLink } from 'lucide-react';
 import { useAuthStore } from '@/lib/auth';
 import bidForgeLogo from '@assets/generated_images/bidforge_ai_premium_logo.png';
 
@@ -21,6 +21,51 @@ export default function OnboardingWizard() {
   const [aboutUs, setAboutUs] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isUploadingLogo, setIsUploadingLogo] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      setError('Please select an image file');
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      setError('Logo file must be less than 5MB');
+      return;
+    }
+
+    setIsUploadingLogo(true);
+    setError('');
+
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const res = await fetch('/api/upload/logo', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+        },
+        body: formData,
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.error || 'Failed to upload logo');
+      } else {
+        setLogoUrl(data.url);
+      }
+    } catch {
+      setError('Failed to upload logo. Please try again.');
+    } finally {
+      setIsUploadingLogo(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -144,19 +189,58 @@ export default function OnboardingWizard() {
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="logoUrl" className="text-slate-700 flex items-center gap-2">
+                <Label className="text-slate-700 flex items-center gap-2">
                   <Image className="h-4 w-4" />
-                  Logo URL
+                  Company Logo
                 </Label>
-                <Input
-                  id="logoUrl"
-                  type="url"
-                  placeholder="https://example.com/logo.png"
-                  value={logoUrl}
-                  onChange={(e) => setLogoUrl(e.target.value)}
-                  className="bg-slate-50 border-slate-300 text-slate-900 placeholder:text-slate-400"
-                  data-testid="input-logo-url"
-                />
+                <div className="flex gap-2">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleLogoUpload}
+                    className="hidden"
+                    data-testid="input-logo-file"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={isUploadingLogo}
+                    className="flex-1 bg-slate-50 border-slate-300 text-slate-700 hover:bg-slate-100"
+                    data-testid="button-upload-logo"
+                  >
+                    {isUploadingLogo ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Uploading...
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="mr-2 h-4 w-4" />
+                        Upload Logo
+                      </>
+                    )}
+                  </Button>
+                  {logoUrl && (
+                    <div className="flex items-center gap-2 px-3 py-2 bg-green-50 border border-green-200 rounded-md">
+                      <CheckCircle className="h-4 w-4 text-green-600" />
+                      <span className="text-sm text-green-700">Uploaded</span>
+                    </div>
+                  )}
+                </div>
+                <div className="flex items-center gap-2 text-sm text-slate-500">
+                  <span>or enter URL:</span>
+                  <Input
+                    id="logoUrl"
+                    type="url"
+                    placeholder="https://example.com/logo.png"
+                    value={logoUrl}
+                    onChange={(e) => setLogoUrl(e.target.value)}
+                    className="flex-1 bg-slate-50 border-slate-300 text-slate-900 placeholder:text-slate-400 h-8 text-sm"
+                    data-testid="input-logo-url"
+                  />
+                </div>
               </div>
               
               <div className="space-y-2">
@@ -224,7 +308,15 @@ export default function OnboardingWizard() {
               <div>
                 <h1 className="text-xl font-bold text-slate-800">{companyName || 'Company Name'}</h1>
                 {websiteUrl && (
-                  <p className="text-sm text-slate-500">{websiteUrl}</p>
+                  <a 
+                    href={websiteUrl} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-sm text-deep-teal hover:underline flex items-center gap-1"
+                  >
+                    {websiteUrl}
+                    <ExternalLink className="h-3 w-3" />
+                  </a>
                 )}
               </div>
               
