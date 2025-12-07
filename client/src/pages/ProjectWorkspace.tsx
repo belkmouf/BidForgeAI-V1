@@ -160,6 +160,37 @@ export default function ProjectWorkspace() {
     }
   };
 
+  const handlePreviewPDF = () => {
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+      printWindow.document.write(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>${project?.name || 'Bid'} - Preview</title>
+          <style>
+            body { font-family: 'Times New Roman', serif; line-height: 1.6; max-width: 800px; margin: 40px auto; padding: 20px; }
+            h1 { color: #1a1a1a; border-bottom: 2px solid #333; padding-bottom: 10px; }
+            h2 { color: #333; margin-top: 24px; }
+            table { width: 100%; border-collapse: collapse; margin: 16px 0; }
+            th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+            th { background-color: #f5f5f5; }
+            @media print { body { margin: 0; } }
+          </style>
+        </head>
+        <body>
+          ${editorContent}
+        </body>
+        </html>
+      `);
+      printWindow.document.close();
+      toast({
+        title: "Preview Opened",
+        description: "Use your browser's print function to save as PDF.",
+      });
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex h-screen items-center justify-center bg-background">
@@ -220,7 +251,7 @@ export default function ProjectWorkspace() {
                 Conflicts
               </Button>
             </Link>
-            <Button variant="outline" size="sm" className="gap-2 h-8">
+            <Button variant="outline" size="sm" className="gap-2 h-8" onClick={handlePreviewPDF} data-testid="button-preview-pdf">
               <Eye className="h-3.5 w-3.5" />
               Preview PDF
             </Button>
