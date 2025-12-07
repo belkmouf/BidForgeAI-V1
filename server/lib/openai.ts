@@ -2,29 +2,44 @@ import OpenAI from 'openai';
 
 const integrationOpenAIKey = process.env.AI_INTEGRATIONS_OPENAI_API_KEY;
 const integrationBaseUrl = process.env.AI_INTEGRATIONS_OPENAI_BASE_URL;
+const directOpenAIKey = process.env.OPENAI_API_KEY;
 
 if (!integrationOpenAIKey) {
   throw new Error('AI_INTEGRATIONS_OPENAI_API_KEY is not set');
 }
 
+// Client for chat completions (uses Replit's AI integration proxy)
 export const openai = new OpenAI({
   apiKey: integrationOpenAIKey,
   baseURL: integrationBaseUrl,
 });
 
+// Client for embeddings - needs direct OpenAI API access
+// Replit's AI integration proxy doesn't support the /embeddings endpoint
+// Falls back to using the integration key with direct API if no separate key is provided
 const embeddingsClient = new OpenAI({
-  apiKey: integrationOpenAIKey,
-  baseURL: integrationBaseUrl,
+  apiKey: directOpenAIKey || integrationOpenAIKey,
+  // Use direct OpenAI API for embeddings (no baseURL override)
+  // The integration key may or may not work - if it fails, user needs to provide OPENAI_API_KEY
 });
 
 // Generate text embedding using OpenAI (direct API, not proxy)
 export async function generateEmbedding(text: string): Promise<number[]> {
-  const response = await embeddingsClient.embeddings.create({
-    model: 'text-embedding-3-small',
-    input: text,
-  });
-  
-  return response.data[0].embedding;
+  try {
+    const response = await embeddingsClient.embeddings.create({
+      model: 'text-embedding-3-small',
+      input: text,
+    });
+    
+    return response.data[0].embedding;
+  } catch (error: any) {
+    // If embeddings fail, provide clear error about what's needed
+    if (error.status === 401 || error.code === 'invalid_api_key') {
+      console.error('Embeddings failed: The OPENAI_API_KEY secret is required for embeddings. Replit AI Integration keys do not support the embeddings endpoint.');
+      throw new Error('OPENAI_API_KEY required for embeddings. Please add your OpenAI API key as a secret.');
+    }
+    throw error;
+  }
 }
 
 // Generate bid content using OpenAI
