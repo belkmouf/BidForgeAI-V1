@@ -28,7 +28,7 @@ interface GeneratePanelProps {
 export function GeneratePanel({ onGenerate, isGenerating }: GeneratePanelProps) {
   const [instructions, setInstructions] = useState(DEFAULT_INSTRUCTIONS);
   const [tone, setTone] = useState('professional');
-  const [model, setModel] = useState<AIModel>('anthropic');
+  const [model, setModel] = useState<AIModel>('openai');
 
   const handleReset = () => {
     setInstructions(DEFAULT_INSTRUCTIONS);
