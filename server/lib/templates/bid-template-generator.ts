@@ -47,9 +47,9 @@ export async function getCompanyConfig(companyId: number | null): Promise<Compan
   }
 }
 
-export async function getUserBrandingConfig(userId: number | null): Promise<CompanyConfig> {
+export async function getUserBrandingConfig(userId: number | null): Promise<CompanyConfig | null> {
   if (!userId) {
-    return companyConfig;
+    return null;
   }
   
   try {
@@ -70,10 +70,10 @@ export async function getUserBrandingConfig(userId: number | null): Promise<Comp
       };
     }
     
-    return companyConfig;
+    return null;
   } catch (error) {
     console.error('Failed to load user branding config:', error);
-    return companyConfig;
+    return null;
   }
 }
 

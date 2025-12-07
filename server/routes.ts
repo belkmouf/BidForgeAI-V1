@@ -49,7 +49,7 @@ import {
   sanitizeFeedback,
   InputSanitizationError 
 } from './lib/sanitize';
-import { generateBidTemplate, wrapContentInTemplate, getCompanyConfig, type BidData, type TemplateOptions } from './lib/templates/bid-template-generator';
+import { generateBidTemplate, wrapContentInTemplate, getCompanyConfig, getUserBrandingConfig, type BidData, type TemplateOptions } from './lib/templates/bid-template-generator';
 import multer from "multer";
 import { z } from "zod";
 
@@ -389,6 +389,12 @@ export async function registerRoutes(
         tone: sanitizedTone,
       };
 
+      // Get branding config for professional template styling
+      // Prefer user-specific branding if available, otherwise fall back to company config
+      const userId = req.user?.userId ?? null;
+      const userBranding = await getUserBrandingConfig(userId);
+      const companyConfigForTemplate = userBranding || await getCompanyConfig(companyId);
+      
       // Check if multi-model comparison is requested
       if (models && models.length > 1) {
         console.log(`Multi-model comparison requested for: ${models.join(', ')}`);
@@ -397,7 +403,15 @@ export async function registerRoutes(
         const generatedBids = await Promise.all(
           models.map(async (modelName) => {
             try {
-              const html = await generateBidWithModel(modelName, generationParams);
+              const rawHtml = await generateBidWithModel(modelName, generationParams);
+              // Wrap AI-generated content with professional template
+              const html = wrapContentInTemplate(
+                rawHtml,
+                project.name,
+                project.clientName || 'Valued Client',
+                {},
+                companyConfigForTemplate
+              );
               return { model: modelName, html, success: true };
             } catch (error: any) {
               return { model: modelName, html: '', success: false, error: error.message };
@@ -439,7 +453,16 @@ export async function registerRoutes(
       } else {
         // Single model generation (original behavior)
         const selectedModel = models?.[0] || model;
-        const html = await generateBidWithModel(selectedModel, generationParams);
+        const rawHtml = await generateBidWithModel(selectedModel, generationParams);
+        
+        // Wrap AI-generated content with professional template
+        const html = wrapContentInTemplate(
+          rawHtml,
+          project.name,
+          project.clientName || 'Valued Client',
+          {},
+          companyConfigForTemplate
+        );
 
         // Save the generated bid to database
         const savedBid = await storage.createBid({
