@@ -11,7 +11,7 @@ import { ChevronLeft, Save, Share2, Eye, ShieldCheck, AlertTriangle } from 'luci
 import { Link } from 'wouter';
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { toast } from '@/hooks/use-toast';
-import { getProject, listDocuments, uploadDocument, deleteDocument, generateBid, refineBid, type AIModel } from '@/lib/api';
+import { getProject, listDocuments, uploadDocument, deleteDocument, generateBid, refineBid, getLatestBid, type AIModel } from '@/lib/api';
 import type { Project, Document } from '@shared/schema';
 
 const initialEditorContent = '<h1>Welcome to BidForge AI</h1><p>Use the Generate panel to create your first bid draft, or start typing to manually build your proposal.</p>';
@@ -31,12 +31,18 @@ export default function ProjectWorkspace() {
     async function loadProject() {
       if (!projectId) return;
       try {
-        const [projectData, docsData] = await Promise.all([
+        const [projectData, docsData, latestBid] = await Promise.all([
           getProject(projectId),
-          listDocuments(projectId)
+          listDocuments(projectId),
+          getLatestBid(projectId)
         ]);
         setProject(projectData);
         setDocuments(docsData);
+        
+        // Load the latest bid content if available
+        if (latestBid && latestBid.content) {
+          setEditorContent(latestBid.content);
+        }
       } catch (error) {
         console.error('Failed to load project:', error);
         toast({
