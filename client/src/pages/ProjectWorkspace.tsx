@@ -144,6 +144,22 @@ export default function ProjectWorkspace() {
     });
   };
 
+  const handleShare = async () => {
+    const shareUrl = `${window.location.origin}/projects/${projectId}`;
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      toast({
+        title: "Link Copied",
+        description: "Project link copied to clipboard.",
+      });
+    } catch {
+      toast({
+        title: "Share Link",
+        description: shareUrl,
+      });
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex h-screen items-center justify-center bg-background">
@@ -208,7 +224,7 @@ export default function ProjectWorkspace() {
               <Eye className="h-3.5 w-3.5" />
               Preview PDF
             </Button>
-            <Button variant="outline" size="sm" className="gap-2 h-8">
+            <Button variant="outline" size="sm" className="gap-2 h-8" onClick={handleShare} data-testid="button-share">
               <Share2 className="h-3.5 w-3.5" />
               Share
             </Button>
