@@ -8,6 +8,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, Lock, User, Building2, UserCheck, AlertCircle } from "lucide-react";
 import { useAuthStore } from "@/lib/auth";
+import bidForgeLogo from "@assets/generated_images/bidforge_ai_premium_logo.png";
 
 interface InviteDetails {
   email: string;
@@ -157,7 +158,7 @@ export default function AcceptInvite() {
         <CardHeader className="text-center">
           <div className="mx-auto mb-4">
             <img 
-              src="/attached_assets/bidforge_ai_premium_logo.png" 
+              src={bidForgeLogo} 
               alt="BidForge AI" 
               className="h-16 w-auto mx-auto"
             />
