@@ -78,7 +78,11 @@ export function decrypt(encryptedData: string): string {
     throw new Error('Invalid encrypted data format');
   }
   
-  const decipher = createDecipheriv(ALGORITHM, key, iv);
+  if (authTag.length !== AUTH_TAG_LENGTH) {
+    throw new Error('Invalid authentication tag length');
+  }
+  
+  const decipher = createDecipheriv(ALGORITHM, key, iv, { authTagLength: AUTH_TAG_LENGTH });
   decipher.setAuthTag(authTag);
   
   let decrypted = decipher.update(encrypted, 'hex', 'utf8');
