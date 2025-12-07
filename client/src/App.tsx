@@ -21,16 +21,19 @@ import ProjectConflicts from "@/pages/ProjectConflicts";
 import Analytics from "@/pages/Analytics";
 import Admin from "@/pages/Admin";
 import AcceptInvite from "@/pages/AcceptInvite";
+import OnboardingWizard from "@/pages/OnboardingWizard";
 
-function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
-  const { isAuthenticated, isLoading } = useAuthStore();
+function ProtectedRoute({ component: Component, requireOnboarding = true }: { component: React.ComponentType; requireOnboarding?: boolean }) {
+  const { isAuthenticated, isLoading, user } = useAuthStore();
   const [, setLocation] = useLocation();
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
       setLocation("/login");
+    } else if (!isLoading && isAuthenticated && requireOnboarding && user?.onboardingStatus === 'pending') {
+      setLocation("/setup/branding");
     }
-  }, [isAuthenticated, isLoading, setLocation]);
+  }, [isAuthenticated, isLoading, setLocation, user?.onboardingStatus, requireOnboarding]);
 
   if (isLoading) {
     return (
@@ -41,6 +44,37 @@ function ProtectedRoute({ component: Component }: { component: React.ComponentTy
   }
 
   if (!isAuthenticated) {
+    return null;
+  }
+
+  if (requireOnboarding && user?.onboardingStatus === 'pending') {
+    return null;
+  }
+
+  return <Component />;
+}
+
+function OnboardingRoute({ component: Component }: { component: React.ComponentType }) {
+  const { isAuthenticated, isLoading, user } = useAuthStore();
+  const [, setLocation] = useLocation();
+
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated) {
+      setLocation("/login");
+    } else if (!isLoading && isAuthenticated && user?.onboardingStatus === 'complete') {
+      setLocation("/dashboard");
+    }
+  }, [isAuthenticated, isLoading, setLocation, user?.onboardingStatus]);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-charcoal">
+        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-deep-teal"></div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated || user?.onboardingStatus === 'complete') {
     return null;
   }
 
@@ -93,6 +127,9 @@ function Router() {
         {() => <AuthRoute component={Register} />}
       </Route>
       <Route path="/invite/:code" component={AcceptInvite} />
+      <Route path="/setup/branding">
+        {() => <OnboardingRoute component={OnboardingWizard} />}
+      </Route>
       <Route path="/dashboard">
         {() => <ProtectedRoute component={Dashboard} />}
       </Route>

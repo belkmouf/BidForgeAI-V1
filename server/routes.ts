@@ -1350,7 +1350,14 @@ export async function registerRoutes(
       
       res.status(201).json({ 
         message: "Account created successfully",
-        user: { id: newUser.id, email: newUser.email, name: newUser.name, role: newUser.role },
+        user: { 
+          id: newUser.id, 
+          email: newUser.email, 
+          name: newUser.name, 
+          role: newUser.role,
+          companyId: newUser.companyId,
+          onboardingStatus: newUser.onboardingStatus,
+        },
         accessToken,
       });
     } catch (error: any) {
@@ -1391,11 +1398,11 @@ export async function registerRoutes(
   // Get onboarding status
   app.get("/api/onboarding/status", authenticateToken, async (req: AuthRequest, res) => {
     try {
-      if (!req.user?.id) {
+      if (!req.user?.userId) {
         return res.status(401).json({ error: "Not authenticated" });
       }
 
-      const status = await storage.getUserOnboardingStatus(req.user.id);
+      const status = await storage.getUserOnboardingStatus(req.user.userId);
       if (!status) {
         return res.status(404).json({ error: "User not found" });
       }
@@ -1409,7 +1416,7 @@ export async function registerRoutes(
   // Complete onboarding with branding profile
   app.post("/api/onboarding", authenticateToken, async (req: AuthRequest, res) => {
     try {
-      if (!req.user?.id) {
+      if (!req.user?.userId) {
         return res.status(401).json({ error: "Not authenticated" });
       }
 
@@ -1423,7 +1430,7 @@ export async function registerRoutes(
 
       const validatedData = brandingSchema.parse(req.body);
 
-      const user = await storage.completeOnboarding(req.user.id, {
+      const user = await storage.completeOnboarding(req.user.userId, {
         companyName: validatedData.companyName,
         websiteUrl: validatedData.websiteUrl || undefined,
         primaryColor: validatedData.primaryColor,

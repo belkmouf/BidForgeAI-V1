@@ -7,6 +7,7 @@ interface User {
   role: string;
   companyId: number | null;
   companyName: string | null;
+  onboardingStatus?: string;
 }
 
 interface AuthState {
