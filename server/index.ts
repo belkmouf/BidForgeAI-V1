@@ -47,7 +47,7 @@ app.use(cors({
     }
     
     // Allow Replit domains for the webview to work (strict suffix matching)
-    if (originHost.endsWith('.replit.dev') || originHost.endsWith('.repl.co')) {
+    if (originHost.endsWith('.replit.dev') || originHost.endsWith('.repl.co') || originHost.endsWith('.replit.app')) {
       return callback(null, true);
     }
     
