@@ -28,7 +28,7 @@ router.post('/register', async (req, res) => {
       });
     }
 
-    const { email, password, name, role } = validationResult.data;
+    const { email, password, name, companyName } = validationResult.data;
 
     if (!validateEmail(email)) {
       return res.status(400).json({ error: 'Invalid email format' });
@@ -54,13 +54,36 @@ router.post('/register', async (req, res) => {
 
     const passwordHash = await hashPassword(password);
 
+    // Generate a unique slug from company name
+    const companyFullName = companyName || `${name}'s Company`;
+    const baseSlug = companyFullName
+      .toLowerCase()
+      .replace(/[^a-z0-9\s-]/g, '')
+      .replace(/\s+/g, '-')
+      .replace(/-+/g, '-')
+      .slice(0, 90);
+    
+    // Add a random suffix to ensure uniqueness
+    const uniqueSlug = `${baseSlug}-${Date.now().toString(36)}`;
+
+    // Create a new company for the registering user
+    const [newCompany] = await db
+      .insert(companies)
+      .values({
+        name: companyFullName,
+        slug: uniqueSlug,
+      })
+      .returning();
+
+    // Create user as admin of the new company
     const [newUser] = await db
       .insert(users)
       .values({
         email: email.toLowerCase(),
         passwordHash,
         name,
-        role: role || 'user',
+        role: 'admin', // First user is always admin of their company
+        companyId: newCompany.id,
       })
       .returning();
 
@@ -90,6 +113,7 @@ router.post('/register', async (req, res) => {
         name: newUser.name,
         role: newUser.role,
         companyId: newUser.companyId,
+        companyName: newCompany.name,
       },
       accessToken,
       refreshToken,

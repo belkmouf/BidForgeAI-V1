@@ -1,7 +1,11 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
+import * as crypto from "crypto";
 import { storage } from "./storage";
-import { insertProjectSchema, insertDocumentSchema } from "@shared/schema";
+import { insertProjectSchema, insertDocumentSchema, users } from "@shared/schema";
+import { hashPassword, generateAccessToken } from "./lib/auth";
+import { db } from "./db";
+import { eq } from "drizzle-orm";
 import { generateBidContent, refineBidContent, generateEmbedding } from "./lib/openai";
 import { generateBidWithAnthropic, refineBidWithAnthropic } from "./lib/anthropic";
 import { generateBidWithGemini, refineBidWithGemini } from "./lib/gemini";
@@ -1052,6 +1056,333 @@ export async function registerRoutes(
       }
     } catch (error: any) {
       res.status(400).json({ success: false, error: error.message });
+    }
+  });
+
+  // ==================== COMPANY ADMIN ROUTES ====================
+
+  // Get current company info (admin only)
+  app.get("/api/company", authenticateToken, requireRole(['admin']), async (req: AuthRequest, res) => {
+    try {
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ error: "No company associated with this account" });
+      }
+      
+      const company = await storage.getCompany(companyId);
+      if (!company) {
+        return res.status(404).json({ error: "Company not found" });
+      }
+      
+      res.json({ company });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // List company users (admin only)
+  app.get("/api/company/users", authenticateToken, requireRole(['admin']), async (req: AuthRequest, res) => {
+    try {
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ error: "No company associated with this account" });
+      }
+      
+      const users = await storage.listCompanyUsers(companyId);
+      res.json({ users });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Create invitation (admin only)
+  const createInviteSchema = z.object({
+    email: z.string().email(),
+    role: z.enum(['admin', 'manager', 'user', 'viewer']).optional().default('user'),
+  });
+
+  app.post("/api/company/invites", authenticateToken, requireRole(['admin']), async (req: AuthRequest, res) => {
+    try {
+      const companyId = req.user?.companyId;
+      const userId = req.user?.userId;
+      
+      if (!companyId || !userId) {
+        return res.status(400).json({ error: "No company associated with this account" });
+      }
+      
+      const { email, role } = createInviteSchema.parse(req.body);
+      
+      // Check if email already has pending invite
+      const hasExisting = await storage.hasExistingInvite(email, companyId);
+      if (hasExisting) {
+        return res.status(400).json({ error: "An invitation is already pending for this email" });
+      }
+      
+      // Generate unique invite code
+      const inviteCode = crypto.randomBytes(32).toString('hex');
+      
+      // Set expiration to 7 days from now
+      const expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + 7);
+      
+      const invite = await storage.createCompanyInvite({
+        companyId,
+        email,
+        role,
+        inviteCode,
+        invitedBy: userId,
+        expiresAt,
+      });
+      
+      res.status(201).json({ 
+        invite: {
+          id: invite.id,
+          email: invite.email,
+          role: invite.role,
+          inviteCode: invite.inviteCode,
+          expiresAt: invite.expiresAt,
+          createdAt: invite.createdAt,
+        }
+      });
+    } catch (error: any) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: 'Invalid input', details: error.errors });
+      }
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // List pending invitations (admin only)
+  app.get("/api/company/invites", authenticateToken, requireRole(['admin']), async (req: AuthRequest, res) => {
+    try {
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ error: "No company associated with this account" });
+      }
+      
+      const invites = await storage.listCompanyInvites(companyId);
+      res.json({ invites });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Revoke invitation (admin only)
+  app.delete("/api/company/invites/:inviteId", authenticateToken, requireRole(['admin']), async (req: AuthRequest, res) => {
+    try {
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ error: "No company associated with this account" });
+      }
+      
+      const inviteId = parseInt(req.params.inviteId, 10);
+      if (isNaN(inviteId)) {
+        return res.status(400).json({ error: "Invalid invite ID" });
+      }
+      
+      const success = await storage.revokeInvite(inviteId, companyId);
+      if (!success) {
+        return res.status(404).json({ error: "Invitation not found" });
+      }
+      
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Update user role (admin only)
+  const updateRoleSchema = z.object({
+    role: z.enum(['admin', 'manager', 'user', 'viewer']),
+  });
+
+  app.patch("/api/company/users/:userId/role", authenticateToken, requireRole(['admin']), async (req: AuthRequest, res) => {
+    try {
+      const companyId = req.user?.companyId;
+      const currentUserId = req.user?.userId;
+      
+      if (!companyId) {
+        return res.status(400).json({ error: "No company associated with this account" });
+      }
+      
+      const targetUserId = parseInt(req.params.userId, 10);
+      if (isNaN(targetUserId)) {
+        return res.status(400).json({ error: "Invalid user ID" });
+      }
+      
+      // Prevent admin from changing their own role
+      if (targetUserId === currentUserId) {
+        return res.status(400).json({ error: "Cannot change your own role" });
+      }
+      
+      const { role } = updateRoleSchema.parse(req.body);
+      
+      const user = await storage.updateUserRole(targetUserId, companyId, role);
+      if (!user) {
+        return res.status(404).json({ error: "User not found in your company" });
+      }
+      
+      res.json({ user: { id: user.id, email: user.email, name: user.name, role: user.role } });
+    } catch (error: any) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: 'Invalid input', details: error.errors });
+      }
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Deactivate user (admin only)
+  app.post("/api/company/users/:userId/deactivate", authenticateToken, requireRole(['admin']), async (req: AuthRequest, res) => {
+    try {
+      const companyId = req.user?.companyId;
+      const currentUserId = req.user?.userId;
+      
+      if (!companyId) {
+        return res.status(400).json({ error: "No company associated with this account" });
+      }
+      
+      const targetUserId = parseInt(req.params.userId, 10);
+      if (isNaN(targetUserId)) {
+        return res.status(400).json({ error: "Invalid user ID" });
+      }
+      
+      // Prevent admin from deactivating themselves
+      if (targetUserId === currentUserId) {
+        return res.status(400).json({ error: "Cannot deactivate your own account" });
+      }
+      
+      const success = await storage.deactivateUser(targetUserId, companyId);
+      if (!success) {
+        return res.status(404).json({ error: "User not found in your company" });
+      }
+      
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Reactivate user (admin only)
+  app.post("/api/company/users/:userId/reactivate", authenticateToken, requireRole(['admin']), async (req: AuthRequest, res) => {
+    try {
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ error: "No company associated with this account" });
+      }
+      
+      const targetUserId = parseInt(req.params.userId, 10);
+      if (isNaN(targetUserId)) {
+        return res.status(400).json({ error: "Invalid user ID" });
+      }
+      
+      const success = await storage.reactivateUser(targetUserId, companyId);
+      if (!success) {
+        return res.status(404).json({ error: "User not found in your company" });
+      }
+      
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Accept invitation (public route - no auth required)
+  const acceptInviteSchema = z.object({
+    inviteCode: z.string().min(1),
+    password: z.string().min(8),
+    name: z.string().min(1),
+  });
+
+  app.post("/api/invites/accept", async (req, res) => {
+    try {
+      const { inviteCode, password, name } = acceptInviteSchema.parse(req.body);
+      
+      // Get the invite
+      const invite = await storage.getInviteByCode(inviteCode);
+      if (!invite) {
+        return res.status(404).json({ error: "Invitation not found" });
+      }
+      
+      // Check if already accepted
+      if (invite.status !== 'pending') {
+        return res.status(400).json({ error: "This invitation has already been used or revoked" });
+      }
+      
+      // Check if expired
+      if (new Date() > invite.expiresAt) {
+        return res.status(400).json({ error: "This invitation has expired" });
+      }
+      
+      // Check if user already exists
+      const [existingUser] = await db
+        .select()
+        .from(users)
+        .where(eq(users.email, invite.email.toLowerCase()))
+        .limit(1);
+        
+      if (existingUser) {
+        return res.status(400).json({ error: "A user with this email already exists" });
+      }
+      
+      // Create the user with company and role from invite
+      const passwordHash = await hashPassword(password);
+      const [newUser] = await db
+        .insert(users)
+        .values({
+          email: invite.email.toLowerCase(),
+          passwordHash,
+          name,
+          role: invite.role,
+          companyId: invite.companyId,
+        })
+        .returning();
+      
+      // Mark invite as accepted
+      await storage.acceptInvite(inviteCode);
+      
+      // Generate tokens for immediate login
+      const accessToken = generateAccessToken({
+        userId: newUser.id,
+        email: newUser.email,
+        role: newUser.role,
+        companyId: newUser.companyId,
+      });
+      
+      res.status(201).json({ 
+        message: "Account created successfully",
+        user: { id: newUser.id, email: newUser.email, name: newUser.name, role: newUser.role },
+        accessToken,
+      });
+    } catch (error: any) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: 'Invalid input', details: error.errors });
+      }
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get invite details by code (public - for accept page)
+  app.get("/api/invites/:code", async (req, res) => {
+    try {
+      const invite = await storage.getInviteByCode(req.params.code);
+      if (!invite) {
+        return res.status(404).json({ error: "Invitation not found" });
+      }
+      
+      // Get company name
+      const company = await storage.getCompany(invite.companyId);
+      
+      res.json({ 
+        invite: {
+          email: invite.email,
+          role: invite.role,
+          status: invite.status,
+          expiresAt: invite.expiresAt,
+          companyName: company?.name || 'Unknown Company',
+        }
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
     }
   });
 

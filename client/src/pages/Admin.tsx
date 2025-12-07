@@ -47,7 +47,12 @@ import {
   FileText,
   FolderOpen,
   CheckCircle,
-  Clock
+  Clock,
+  Copy,
+  Mail,
+  UserMinus,
+  UserCheck,
+  Building2
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -77,6 +82,32 @@ interface User {
   lastLoginAt: string | null;
 }
 
+interface CompanyUser {
+  id: number;
+  email: string;
+  name: string | null;
+  role: string;
+  isActive: boolean;
+  createdAt: string;
+  lastLoginAt: string | null;
+}
+
+interface CompanyInvite {
+  id: number;
+  email: string;
+  role: string;
+  inviteCode: string;
+  status: string;
+  expiresAt: string;
+  createdAt: string;
+}
+
+interface Company {
+  id: number;
+  name: string;
+  slug: string;
+}
+
 interface SystemStats {
   users: { total: number; active: number; admins: number; managers: number };
   projects: { total: number; active: number; won: number };
@@ -98,6 +129,13 @@ export default function Admin() {
   const [deleteConfirmUser, setDeleteConfirmUser] = useState<User | null>(null);
   const [newUser, setNewUser] = useState({ email: '', password: '', name: '', role: 'user' });
   const [newPassword, setNewPassword] = useState('');
+  
+  // Team tab state
+  const [isInviteOpen, setIsInviteOpen] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [inviteRole, setInviteRole] = useState('user');
+  const [copiedInviteCode, setCopiedInviteCode] = useState<string | null>(null);
+  const [teamMemberToDeactivate, setTeamMemberToDeactivate] = useState<CompanyUser | null>(null);
   
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -162,6 +200,157 @@ export default function Admin() {
     },
     enabled: !!token,
   });
+
+  // Team management queries
+  const { data: companyData } = useQuery<{ company: Company }>({
+    queryKey: ['company'],
+    queryFn: async () => {
+      const res = await fetch('/api/company', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error('Failed to fetch company');
+      return res.json();
+    },
+    enabled: !!token,
+  });
+
+  const { data: teamUsersData = { users: [] }, isLoading: loadingTeamUsers } = useQuery<{ users: CompanyUser[] }>({
+    queryKey: ['company-users'],
+    queryFn: async () => {
+      const res = await fetch('/api/company/users', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error('Failed to fetch team users');
+      return res.json();
+    },
+    enabled: !!token,
+  });
+
+  const { data: invitesData = { invites: [] }, isLoading: loadingInvites } = useQuery<{ invites: CompanyInvite[] }>({
+    queryKey: ['company-invites'],
+    queryFn: async () => {
+      const res = await fetch('/api/company/invites', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error('Failed to fetch invites');
+      return res.json();
+    },
+    enabled: !!token,
+  });
+
+  // Team management mutations
+  const createInviteMutation = useMutation({
+    mutationFn: async (data: { email: string; role: string }) => {
+      const res = await fetch('/api/company/invites', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.error || 'Failed to create invite');
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['company-invites'] });
+      setIsInviteOpen(false);
+      setInviteEmail('');
+      setInviteRole('user');
+      toast({ title: 'Invitation sent successfully' });
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    },
+  });
+
+  const revokeInviteMutation = useMutation({
+    mutationFn: async (inviteId: number) => {
+      const res = await fetch(`/api/company/invites/${inviteId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error('Failed to revoke invite');
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['company-invites'] });
+      toast({ title: 'Invitation revoked' });
+    },
+  });
+
+  const updateTeamRoleMutation = useMutation({
+    mutationFn: async ({ userId, role }: { userId: number; role: string }) => {
+      const res = await fetch(`/api/company/users/${userId}/role`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ role }),
+      });
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.error || 'Failed to update role');
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['company-users'] });
+      toast({ title: 'User role updated' });
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    },
+  });
+
+  const deactivateTeamMemberMutation = useMutation({
+    mutationFn: async (userId: number) => {
+      const res = await fetch(`/api/company/users/${userId}/deactivate`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.error || 'Failed to deactivate user');
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['company-users'] });
+      setTeamMemberToDeactivate(null);
+      toast({ title: 'Team member deactivated' });
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    },
+  });
+
+  const reactivateTeamMemberMutation = useMutation({
+    mutationFn: async (userId: number) => {
+      const res = await fetch(`/api/company/users/${userId}/reactivate`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error('Failed to reactivate user');
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['company-users'] });
+      toast({ title: 'Team member reactivated' });
+    },
+  });
+
+  const copyInviteLink = (inviteCode: string) => {
+    const link = `${window.location.origin}/invite/${inviteCode}`;
+    navigator.clipboard.writeText(link);
+    setCopiedInviteCode(inviteCode);
+    setTimeout(() => setCopiedInviteCode(null), 2000);
+    toast({ title: 'Invite link copied to clipboard' });
+  };
 
   const createUserMutation = useMutation({
     mutationFn: async (userData: typeof newUser) => {
@@ -295,17 +484,319 @@ export default function Admin() {
           />
         </div>
 
-        <Tabs defaultValue="users" className="space-y-6">
+        <Tabs defaultValue="team" className="space-y-6">
           <TabsList className="bg-white shadow-sm border">
+            <TabsTrigger value="team" className="data-[state=active]:bg-[#0d7377] data-[state=active]:text-white">
+              <Building2 className="h-4 w-4 mr-2" />
+              My Team
+            </TabsTrigger>
             <TabsTrigger value="users" className="data-[state=active]:bg-[#0d7377] data-[state=active]:text-white">
               <Users className="h-4 w-4 mr-2" />
-              Users
+              All Users
             </TabsTrigger>
             <TabsTrigger value="settings" className="data-[state=active]:bg-[#0d7377] data-[state=active]:text-white">
               <Settings className="h-4 w-4 mr-2" />
               Settings
             </TabsTrigger>
           </TabsList>
+
+          {/* Team Tab - Company User Management */}
+          <TabsContent value="team" className="space-y-6">
+            {/* Company Info */}
+            {companyData?.company && (
+              <Card className="border-slate-200 bg-white shadow-sm">
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center gap-2 text-slate-800">
+                    <Building2 className="h-5 w-5 text-[#0d7377]" />
+                    {companyData.company.name}
+                  </CardTitle>
+                  <CardDescription className="text-slate-500">
+                    Manage your team members and invitations
+                  </CardDescription>
+                </CardHeader>
+              </Card>
+            )}
+
+            {/* Team Members */}
+            <Card className="border-slate-200 bg-white shadow-sm">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="flex items-center gap-2 text-slate-800">
+                      <Users className="h-5 w-5 text-[#0d7377]" />
+                      Team Members
+                    </CardTitle>
+                    <CardDescription className="text-slate-500">
+                      {teamUsersData.users.length} member{teamUsersData.users.length !== 1 ? 's' : ''}
+                    </CardDescription>
+                  </div>
+                  <Dialog open={isInviteOpen} onOpenChange={setIsInviteOpen}>
+                    <DialogTrigger asChild>
+                      <Button className="gap-2 bg-[#0d7377] hover:bg-[#0d7377]/90" data-testid="button-invite-member">
+                        <Mail className="h-4 w-4" />
+                        Invite Member
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>Invite Team Member</DialogTitle>
+                      </DialogHeader>
+                      <div className="space-y-4 py-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="invite-email">Email Address</Label>
+                          <Input
+                            id="invite-email"
+                            type="email"
+                            value={inviteEmail}
+                            onChange={(e) => setInviteEmail(e.target.value)}
+                            placeholder="colleague@example.com"
+                            data-testid="input-invite-email"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Role</Label>
+                          <Select value={inviteRole} onValueChange={setInviteRole}>
+                            <SelectTrigger data-testid="select-invite-role">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="admin">Admin</SelectItem>
+                              <SelectItem value="manager">Manager</SelectItem>
+                              <SelectItem value="user">User</SelectItem>
+                              <SelectItem value="viewer">Viewer</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                      <DialogFooter>
+                        <Button
+                          onClick={() => createInviteMutation.mutate({ email: inviteEmail, role: inviteRole })}
+                          disabled={!inviteEmail || createInviteMutation.isPending}
+                          data-testid="button-send-invite"
+                        >
+                          {createInviteMutation.isPending ? 'Sending...' : 'Send Invitation'}
+                        </Button>
+                      </DialogFooter>
+                    </DialogContent>
+                  </Dialog>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow className="border-slate-200 hover:bg-transparent">
+                      <TableHead className="text-slate-600">Member</TableHead>
+                      <TableHead className="text-slate-600">Role</TableHead>
+                      <TableHead className="text-slate-600">Status</TableHead>
+                      <TableHead className="text-slate-600">Last Active</TableHead>
+                      <TableHead className="w-12"></TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {loadingTeamUsers ? (
+                      <TableRow>
+                        <TableCell colSpan={5} className="text-center py-8 text-slate-500">
+                          Loading team members...
+                        </TableCell>
+                      </TableRow>
+                    ) : teamUsersData.users.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={5} className="text-center py-8 text-slate-500">
+                          No team members found. Invite someone to get started!
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      teamUsersData.users.map((member) => (
+                        <TableRow key={member.id} className="border-slate-100" data-testid={`team-member-row-${member.id}`}>
+                          <TableCell>
+                            <div>
+                              <p className="font-medium text-slate-800">{member.name || 'Unnamed'}</p>
+                              <p className="text-sm text-slate-500">{member.email}</p>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <Select
+                              value={member.role}
+                              onValueChange={(role) => updateTeamRoleMutation.mutate({ userId: member.id, role })}
+                              disabled={member.id === currentUser?.id}
+                            >
+                              <SelectTrigger className="w-28">
+                                <Badge variant="outline" className={roleColors[member.role]}>
+                                  {member.role}
+                                </Badge>
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="admin">Admin</SelectItem>
+                                <SelectItem value="manager">Manager</SelectItem>
+                                <SelectItem value="user">User</SelectItem>
+                                <SelectItem value="viewer">Viewer</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant={member.isActive ? 'default' : 'secondary'} className={member.isActive ? 'bg-green-500/10 text-green-600 border-green-500/20' : 'bg-gray-500/10 text-gray-500'}>
+                              {member.isActive ? 'Active' : 'Inactive'}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-slate-500">
+                            {member.lastLoginAt 
+                              ? formatDistanceToNow(new Date(member.lastLoginAt), { addSuffix: true })
+                              : 'Never'
+                            }
+                          </TableCell>
+                          <TableCell>
+                            {member.id !== currentUser?.id && (
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" size="icon" className="h-8 w-8">
+                                    <MoreVertical className="h-4 w-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  {member.isActive ? (
+                                    <DropdownMenuItem
+                                      className="text-red-600"
+                                      onClick={() => setTeamMemberToDeactivate(member)}
+                                    >
+                                      <UserMinus className="h-4 w-4 mr-2" />
+                                      Deactivate
+                                    </DropdownMenuItem>
+                                  ) : (
+                                    <DropdownMenuItem
+                                      onClick={() => reactivateTeamMemberMutation.mutate(member.id)}
+                                    >
+                                      <UserCheck className="h-4 w-4 mr-2" />
+                                      Reactivate
+                                    </DropdownMenuItem>
+                                  )}
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+
+            {/* Pending Invitations */}
+            <Card className="border-slate-200 bg-white shadow-sm">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-slate-800">
+                  <Mail className="h-5 w-5 text-[#b8995a]" />
+                  Pending Invitations
+                </CardTitle>
+                <CardDescription className="text-slate-500">
+                  {invitesData.invites.filter(i => i.status === 'pending').length} pending invitation{invitesData.invites.filter(i => i.status === 'pending').length !== 1 ? 's' : ''}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow className="border-slate-200 hover:bg-transparent">
+                      <TableHead className="text-slate-600">Email</TableHead>
+                      <TableHead className="text-slate-600">Role</TableHead>
+                      <TableHead className="text-slate-600">Status</TableHead>
+                      <TableHead className="text-slate-600">Expires</TableHead>
+                      <TableHead className="w-24"></TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {loadingInvites ? (
+                      <TableRow>
+                        <TableCell colSpan={5} className="text-center py-8 text-slate-500">
+                          Loading invitations...
+                        </TableCell>
+                      </TableRow>
+                    ) : invitesData.invites.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={5} className="text-center py-8 text-slate-500">
+                          No pending invitations
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      invitesData.invites.map((invite) => (
+                        <TableRow key={invite.id} className="border-slate-100" data-testid={`invite-row-${invite.id}`}>
+                          <TableCell className="text-slate-800">{invite.email}</TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className={roleColors[invite.role]}>
+                              {invite.role}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant={invite.status === 'pending' ? 'secondary' : 'outline'} className={
+                              invite.status === 'pending' 
+                                ? 'bg-yellow-500/10 text-yellow-600 border-yellow-500/20'
+                                : invite.status === 'accepted'
+                                ? 'bg-green-500/10 text-green-600 border-green-500/20'
+                                : 'bg-red-500/10 text-red-600 border-red-500/20'
+                            }>
+                              {invite.status}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-slate-500">
+                            {formatDistanceToNow(new Date(invite.expiresAt), { addSuffix: true })}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex gap-1">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8"
+                                onClick={() => copyInviteLink(invite.inviteCode)}
+                                title="Copy invite link"
+                              >
+                                {copiedInviteCode === invite.inviteCode ? (
+                                  <CheckCircle className="h-4 w-4 text-green-500" />
+                                ) : (
+                                  <Copy className="h-4 w-4" />
+                                )}
+                              </Button>
+                              {invite.status === 'pending' && (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 text-red-500 hover:text-red-600"
+                                  onClick={() => revokeInviteMutation.mutate(invite.id)}
+                                  title="Revoke invitation"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              )}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+
+            {/* Deactivate Team Member Confirmation */}
+            <AlertDialog open={!!teamMemberToDeactivate} onOpenChange={(open) => !open && setTeamMemberToDeactivate(null)}>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Deactivate Team Member</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Are you sure you want to deactivate {teamMemberToDeactivate?.name || teamMemberToDeactivate?.email}? 
+                    They will no longer be able to access the system.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction
+                    className="bg-red-600 hover:bg-red-700"
+                    onClick={() => teamMemberToDeactivate && deactivateTeamMemberMutation.mutate(teamMemberToDeactivate.id)}
+                  >
+                    Deactivate
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </TabsContent>
 
           <TabsContent value="users" className="space-y-6">
             <Card className="border-slate-200 bg-white shadow-sm">

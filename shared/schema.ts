@@ -80,6 +80,23 @@ export const userRoles = pgTable("user_roles", {
   grantedAt: timestamp("granted_at").defaultNow().notNull(),
 });
 
+// Company Invitations Table
+export const companyInvites = pgTable("company_invites", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+  email: varchar("email", { length: 255 }).notNull(),
+  role: text("role").default("user").notNull(),
+  inviteCode: varchar("invite_code", { length: 64 }).notNull().unique(),
+  invitedBy: integer("invited_by").notNull().references(() => users.id, { onDelete: "cascade" }),
+  status: text("status").default("pending").notNull(), // pending, accepted, expired, revoked
+  expiresAt: timestamp("expires_at").notNull(),
+  acceptedAt: timestamp("accepted_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export type CompanyInvite = typeof companyInvites.$inferSelect;
+export type InsertCompanyInvite = typeof companyInvites.$inferInsert;
+
 // Projects Table
 export const projects = pgTable("projects", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -446,6 +463,7 @@ export const insertUserSchema = z.object({
   password: z.string().min(8, "Password must be at least 8 characters"),
   name: z.string().min(1, "Name is required").optional(),
   role: userRoleEnum.optional().default("user"),
+  companyName: z.string().min(1, "Company name is required").optional(),
 });
 
 export const loginSchema = z.object({
@@ -455,6 +473,21 @@ export const loginSchema = z.object({
 
 export type InsertUserInput = z.infer<typeof insertUserSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
+
+// Company Invite Schemas
+export const createInviteSchema = z.object({
+  email: z.string().email("Invalid email address"),
+  role: userRoleEnum.optional().default("user"),
+});
+
+export const acceptInviteSchema = z.object({
+  inviteCode: z.string().min(1, "Invite code is required"),
+  password: z.string().min(8, "Password must be at least 8 characters"),
+  name: z.string().min(1, "Name is required"),
+});
+
+export type CreateInviteInput = z.infer<typeof createInviteSchema>;
+export type AcceptInviteInput = z.infer<typeof acceptInviteSchema>;
 
 // Conflict Types
 export type DocumentConflict = typeof documentConflicts.$inferSelect;

@@ -20,6 +20,7 @@ import Register from "@/pages/Register";
 import ProjectConflicts from "@/pages/ProjectConflicts";
 import Analytics from "@/pages/Analytics";
 import Admin from "@/pages/Admin";
+import AcceptInvite from "@/pages/AcceptInvite";
 
 function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
   const { isAuthenticated, isLoading } = useAuthStore();
@@ -91,6 +92,7 @@ function Router() {
       <Route path="/register">
         {() => <AuthRoute component={Register} />}
       </Route>
+      <Route path="/invite/:code" component={AcceptInvite} />
       <Route path="/dashboard">
         {() => <ProtectedRoute component={Dashboard} />}
       </Route>

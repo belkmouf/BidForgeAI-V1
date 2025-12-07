@@ -5,12 +5,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Loader2, Mail, Lock, User, UserPlus } from "lucide-react";
+import { Loader2, Mail, Lock, User, UserPlus, Building2 } from "lucide-react";
 import { register } from "@/lib/auth";
 
 export default function Register() {
   const [, setLocation] = useLocation();
   const [name, setName] = useState("");
+  const [companyName, setCompanyName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -33,7 +34,7 @@ export default function Register() {
 
     setIsLoading(true);
 
-    const result = await register(email, password, name);
+    const result = await register(email, password, name, companyName);
     
     if (result.success) {
       setLocation("/dashboard");
@@ -80,6 +81,22 @@ export default function Register() {
                   onChange={(e) => setName(e.target.value)}
                   className="pl-10 bg-slate-50 border-slate-300 text-slate-900 placeholder:text-slate-400"
                   data-testid="input-name"
+                />
+              </div>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="companyName" className="text-slate-700">Company Name</Label>
+              <div className="relative">
+                <Building2 className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
+                <Input
+                  id="companyName"
+                  type="text"
+                  placeholder="Your Company Name"
+                  value={companyName}
+                  onChange={(e) => setCompanyName(e.target.value)}
+                  className="pl-10 bg-slate-50 border-slate-300 text-slate-900 placeholder:text-slate-400"
+                  data-testid="input-company-name"
                 />
               </div>
             </div>

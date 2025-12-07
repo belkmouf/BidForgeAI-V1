@@ -31,6 +31,15 @@ The backend is Express.js with TypeScript, using Drizzle ORM for type-safe datab
 - Role-Based Access Control (RBAC) with four roles (Admin, Manager, User, Viewer) and granular permissions managed via `users`, `sessions`, `roles`, and `user_roles` tables.
 - Security features include Helmet.js, rate limiting, CORS, and request body size limits.
 
+**Multi-Company Admin:**
+- Registration creates a new company with the user as admin automatically.
+- Company admins can invite new team members via email with role assignment.
+- Invitation system with unique invite codes, 7-day expiration, and status tracking (pending/accepted/revoked).
+- Admin UI "My Team" tab for managing company users: view members, change roles, deactivate/reactivate accounts.
+- Pending invitations panel with copy-to-clipboard invite links and revoke functionality.
+- Accept Invite page (`/invite/:code`) for invited users to create accounts within existing companies.
+- Company-scoped data isolation: users only see their company's data (projects, bids, team members).
+
 **Data Storage:**
 - PostgreSQL schema includes `Projects`, `Documents`, and `Document Chunks` tables with UUIDs, foreign keys, and vector embeddings.
 - `Bids` table stores generated bid responses with relationships to projects, companies, and users, featuring automatic version numbering with `isLatest` flag.

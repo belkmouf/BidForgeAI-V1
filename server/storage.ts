@@ -7,6 +7,9 @@ import {
   analysisAlerts,
   vendorDatabase,
   decisionLogs,
+  users,
+  companies,
+  companyInvites,
   type Project, 
   type InsertProject,
   type Document,
@@ -23,7 +26,11 @@ import {
   type Vendor,
   type InsertVendor,
   type DecisionLogRecord,
-  type InsertDecisionLog
+  type InsertDecisionLog,
+  type User,
+  type Company,
+  type CompanyInvite,
+  type UserRole
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, sql, and, isNull, or } from "drizzle-orm";
@@ -700,6 +707,146 @@ export class DatabaseStorage implements IStorage {
       .from(bids)
       .where(and(...conditions));
     return bid || undefined;
+  }
+
+  // ==================== COMPANY ADMIN METHODS ====================
+
+  // Get company by ID
+  async getCompany(companyId: number): Promise<Company | undefined> {
+    const [company] = await db
+      .select()
+      .from(companies)
+      .where(eq(companies.id, companyId));
+    return company || undefined;
+  }
+
+  // Create a new company
+  async createCompany(data: { name: string; slug: string }): Promise<Company> {
+    const [company] = await db
+      .insert(companies)
+      .values(data)
+      .returning();
+    return company;
+  }
+
+  // List users in a company
+  async listCompanyUsers(companyId: number): Promise<Omit<User, 'passwordHash'>[]> {
+    const result = await db
+      .select({
+        id: users.id,
+        companyId: users.companyId,
+        email: users.email,
+        name: users.name,
+        role: users.role,
+        isActive: users.isActive,
+        createdAt: users.createdAt,
+        updatedAt: users.updatedAt,
+        lastLoginAt: users.lastLoginAt,
+      })
+      .from(users)
+      .where(eq(users.companyId, companyId))
+      .orderBy(desc(users.createdAt));
+    return result;
+  }
+
+  // Update user role within company
+  async updateUserRole(userId: number, companyId: number, role: string): Promise<User | undefined> {
+    const [user] = await db
+      .update(users)
+      .set({ role, updatedAt: new Date() })
+      .where(and(eq(users.id, userId), eq(users.companyId, companyId)))
+      .returning();
+    return user || undefined;
+  }
+
+  // Deactivate user (soft delete)
+  async deactivateUser(userId: number, companyId: number): Promise<boolean> {
+    const result = await db
+      .update(users)
+      .set({ isActive: false, updatedAt: new Date() })
+      .where(and(eq(users.id, userId), eq(users.companyId, companyId)));
+    return (result.rowCount ?? 0) > 0;
+  }
+
+  // Reactivate user
+  async reactivateUser(userId: number, companyId: number): Promise<boolean> {
+    const result = await db
+      .update(users)
+      .set({ isActive: true, updatedAt: new Date() })
+      .where(and(eq(users.id, userId), eq(users.companyId, companyId)));
+    return (result.rowCount ?? 0) > 0;
+  }
+
+  // Create company invite
+  async createCompanyInvite(data: {
+    companyId: number;
+    email: string;
+    role: string;
+    inviteCode: string;
+    invitedBy: number;
+    expiresAt: Date;
+  }): Promise<CompanyInvite> {
+    const [invite] = await db
+      .insert(companyInvites)
+      .values(data)
+      .returning();
+    return invite;
+  }
+
+  // Get invite by code
+  async getInviteByCode(inviteCode: string): Promise<CompanyInvite | undefined> {
+    const [invite] = await db
+      .select()
+      .from(companyInvites)
+      .where(eq(companyInvites.inviteCode, inviteCode));
+    return invite || undefined;
+  }
+
+  // List pending invites for a company
+  async listCompanyInvites(companyId: number): Promise<CompanyInvite[]> {
+    return await db
+      .select()
+      .from(companyInvites)
+      .where(and(
+        eq(companyInvites.companyId, companyId),
+        eq(companyInvites.status, 'pending')
+      ))
+      .orderBy(desc(companyInvites.createdAt));
+  }
+
+  // Accept invite (mark as accepted)
+  async acceptInvite(inviteCode: string): Promise<CompanyInvite | undefined> {
+    const [invite] = await db
+      .update(companyInvites)
+      .set({ status: 'accepted', acceptedAt: new Date() })
+      .where(eq(companyInvites.inviteCode, inviteCode))
+      .returning();
+    return invite || undefined;
+  }
+
+  // Revoke invite
+  async revokeInvite(inviteId: number, companyId: number): Promise<boolean> {
+    const result = await db
+      .update(companyInvites)
+      .set({ status: 'revoked' })
+      .where(and(
+        eq(companyInvites.id, inviteId),
+        eq(companyInvites.companyId, companyId)
+      ));
+    return (result.rowCount ?? 0) > 0;
+  }
+
+  // Check if email already has pending invite for company
+  async hasExistingInvite(email: string, companyId: number): Promise<boolean> {
+    const [existing] = await db
+      .select()
+      .from(companyInvites)
+      .where(and(
+        eq(companyInvites.email, email),
+        eq(companyInvites.companyId, companyId),
+        eq(companyInvites.status, 'pending')
+      ));
+    return !!existing;
   }
 }
 
