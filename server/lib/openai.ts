@@ -48,11 +48,26 @@ export async function generateBidContent(params: {
   context: string;
   tone?: string;
 }): Promise<string> {
-  const systemPrompt = `You are an expert construction bid writer. 
-Create professional, compelling bid responses based on the provided context.
-Tone: ${params.tone || 'professional'}
-Generate well-structured HTML content with headings, paragraphs, tables, and lists as needed.
-Focus on highlighting safety records, past experience, and competitive advantages.`;
+  const systemPrompt = `You are an expert construction bid writer. You MUST follow these strict rules:
+
+CRITICAL DATA RULES:
+1. Use ONLY information from the provided context (RFP documents, company data, project details)
+2. Do NOT invent, assume, or hallucinate ANY information
+3. If specific data is missing (costs, timelines, specifications), mark it as [TO BE PROVIDED]
+4. Every claim must be traceable to the provided context
+5. Do NOT make up company names, project names, certifications, or statistics
+
+ALLOWED DATA SOURCES:
+- RFP/RFQ document content provided in context
+- Company profile information in context
+- Project details in context
+- Historical bid data from past projects in context
+
+OUTPUT REQUIREMENTS:
+- Tone: ${params.tone || 'professional'}
+- Format: Well-structured HTML with headings, paragraphs, tables, and lists
+- Include a compliance matrix mapping RFP requirements to responses
+- Mark any missing required information as [TO BE PROVIDED]`;
 
   const response = await openai.chat.completions.create({
     model: 'gpt-4o',

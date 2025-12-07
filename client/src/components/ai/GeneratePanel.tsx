@@ -7,18 +7,31 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import type { AIModel } from '@/lib/api';
 
-const DEFAULT_INSTRUCTIONS = `Generate a comprehensive construction bid response that includes:
+const DEFAULT_INSTRUCTIONS = `IMPORTANT: Generate a bid response using ONLY the following data sources. Do NOT invent, assume, or hallucinate any information:
 
-1. Executive Summary - Highlight our key strengths and value proposition
-2. Company Qualifications - Our experience, certifications, and relevant past projects
-3. Technical Approach - Methodology, equipment, and materials we'll use
-4. Project Timeline - Detailed schedule with milestones
-5. Safety Plan - Our safety protocols and track record
-6. Quality Assurance - How we ensure high-quality deliverables
-7. Pricing Structure - Cost breakdown with line items
-8. Terms & Conditions - Payment terms, warranties, and guarantees
+DATA SOURCES (Use ONLY these):
+- Uploaded RFP/RFQ documents (project requirements, scope, specifications)
+- Company profile information (name, certifications, experience, capabilities)
+- Project details (name, client, location, dates)
+- Historical bid data from similar past projects (if available)
 
-Focus on addressing all requirements from the RFP documents and emphasize our competitive advantages.`;
+STRICT RULES:
+- Extract ALL requirements directly from the uploaded documents
+- Use ONLY company information provided in the system
+- If specific data is missing, mark it as [TO BE PROVIDED] - do NOT make up values
+- Reference actual document content when addressing requirements
+- Do NOT invent project timelines, costs, or specifications not in the source documents
+
+BID STRUCTURE:
+1. Executive Summary - Based on actual project scope from RFP
+2. Company Qualifications - Use only verified company data
+3. Technical Approach - Address specific RFP requirements
+4. Project Timeline - Based on RFP timeline or mark [TO BE PROVIDED]
+5. Safety & Quality Plans - Use company's actual certifications
+6. Pricing - Based on RFP requirements or mark [TO BE PROVIDED]
+7. Compliance Matrix - Map each RFP requirement to our response
+
+Ensure every claim is traceable to source documents or company data.`;
 
 interface GeneratePanelProps {
   onGenerate: (instructions: string, tone?: string, model?: AIModel) => void;
