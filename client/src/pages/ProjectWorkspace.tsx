@@ -5,6 +5,7 @@ import { DropZone } from '@/components/upload/DropZone';
 import { TiptapEditor } from '@/components/editor/TiptapEditor';
 import { GeneratePanel } from '@/components/ai/GeneratePanel';
 import { RefineChat } from '@/components/ai/RefineChat';
+import { BidHistory } from '@/components/bid/BidHistory';
 import { Button } from '@/components/ui/button';
 import { ChevronLeft, Save, Share2, Eye, ShieldCheck, AlertTriangle } from 'lucide-react';
 import { Link } from 'wouter';
@@ -24,6 +25,7 @@ export default function ProjectWorkspace() {
   const [editorContent, setEditorContent] = useState(initialEditorContent);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [bidRefreshTrigger, setBidRefreshTrigger] = useState(0);
 
   useEffect(() => {
     async function loadProject() {
@@ -58,6 +60,7 @@ export default function ProjectWorkspace() {
     try {
       const result = await generateBid(projectId, instructions, tone, modelToUse);
       setEditorContent(result.html);
+      setBidRefreshTrigger(prev => prev + 1);
       toast({
         title: "Bid Generated",
         description: `Generated bid using ${result.chunksUsed} context chunks with ${result.model.toUpperCase()}.`,
@@ -214,13 +217,13 @@ export default function ProjectWorkspace() {
         <div className="flex-1 overflow-hidden">
           <ResizablePanelGroup direction="horizontal">
             
-            {/* Left: Upload Zone */}
+            {/* Left: Upload Zone + Bid History */}
             <ResizablePanel defaultSize={20} minSize={15} maxSize={30} className="bg-muted/20">
-              <div className="h-full p-4 flex flex-col">
-                <h2 className="font-semibold text-sm mb-4 flex items-center gap-2">
-                  Source Documents
-                </h2>
-                <div className="flex-1 overflow-hidden">
+              <div className="h-full p-4 flex flex-col gap-4">
+                <div className="flex-shrink-0">
+                  <h2 className="font-semibold text-sm mb-4 flex items-center gap-2">
+                    Source Documents
+                  </h2>
                   <DropZone 
                     files={documents.filter(doc => doc).map(doc => ({
                       name: doc.filename,
@@ -230,6 +233,13 @@ export default function ProjectWorkspace() {
                     }))}
                     onUpload={handleFileUpload}
                     onDelete={handleDeleteDocument}
+                  />
+                </div>
+                <div className="flex-1 min-h-0 overflow-hidden">
+                  <BidHistory 
+                    projectId={projectId} 
+                    onSelectBid={setEditorContent}
+                    refreshTrigger={bidRefreshTrigger}
                   />
                 </div>
               </div>

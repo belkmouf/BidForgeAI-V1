@@ -1,4 +1,4 @@
-import type { Project, Document } from '@shared/schema';
+import type { Project, Document, Bid } from '@shared/schema';
 import { apiRequest } from './auth';
 
 const API_BASE = '/api';
@@ -89,6 +89,31 @@ export async function refineBid(projectId: string, currentHtml: string, feedback
   });
   if (!res.ok) throw new Error(await res.text());
   return res.json() as Promise<{ html: string; model: AIModel }>;
+}
+
+// Bids API
+export async function listBids(projectId: string) {
+  const res = await apiRequest(`${API_BASE}/projects/${projectId}/bids`);
+  if (!res.ok) throw new Error(await res.text());
+  const data = await res.json();
+  return data.bids as Bid[];
+}
+
+export async function getLatestBid(projectId: string) {
+  const res = await apiRequest(`${API_BASE}/projects/${projectId}/bids/latest`);
+  if (!res.ok) {
+    if (res.status === 404) return null;
+    throw new Error(await res.text());
+  }
+  const data = await res.json();
+  return data.bid as Bid;
+}
+
+export async function getBidById(bidId: number) {
+  const res = await apiRequest(`${API_BASE}/bids/${bidId}`);
+  if (!res.ok) throw new Error(await res.text());
+  const data = await res.json();
+  return data.bid as Bid;
 }
 
 // Dashboard API
