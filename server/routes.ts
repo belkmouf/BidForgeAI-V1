@@ -385,17 +385,44 @@ export async function registerRoutes(
       
       console.log(`Using ${chunksUsed} chunks/documents for bid generation via ${searchMethod}`);
 
-      const generationParams = {
-        instructions: sanitizedInstructions,
-        context: contextOrDefault,
-        tone: sanitizedTone,
-      };
-
-      // Get branding config for professional template styling
+      // Get branding config for professional template styling AND AI context
       // Prefer user-specific branding if available, otherwise fall back to company config
       const userId = req.user?.userId ?? null;
       const userBranding = await getUserBrandingConfig(userId);
       const companyConfigForTemplate = userBranding || await getCompanyConfig(companyId);
+      
+      // Build company profile context for the AI to use
+      // This ensures the AI uses the user's actual company info, not placeholder data
+      const companyProfileContext = `
+--- YOUR COMPANY PROFILE (Use this for all company references) ---
+Company Name: ${companyConfigForTemplate.name}
+Tagline: ${companyConfigForTemplate.tagline}
+Website: ${companyConfigForTemplate.website}
+License Number: ${companyConfigForTemplate.licenseNumber || 'N/A'}
+
+Address: ${companyConfigForTemplate.address}, ${companyConfigForTemplate.city}, ${companyConfigForTemplate.state} ${companyConfigForTemplate.zip}
+
+Contact Representative:
+- Name: ${companyConfigForTemplate.defaultRep.name}
+- Title: ${companyConfigForTemplate.defaultRep.title}
+- Phone: ${companyConfigForTemplate.defaultRep.phone}
+- Email: ${companyConfigForTemplate.defaultRep.email}
+
+IMPORTANT: When referencing "our company" or company contact information in the bid, 
+use ONLY the above company profile information. Do NOT use any other company names 
+or contact details from other sources.
+--- END COMPANY PROFILE ---
+
+`;
+
+      // Combine company profile with document context
+      const fullContext = companyProfileContext + contextOrDefault;
+
+      const generationParams = {
+        instructions: sanitizedInstructions,
+        context: fullContext,
+        tone: sanitizedTone,
+      };
       
       // Check if multi-model comparison is requested
       if (models && models.length > 1) {
