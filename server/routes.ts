@@ -699,13 +699,15 @@ or contact details from other sources.
     try {
       const { content, projectName, clientName, options } = req.body;
       const companyId = req.user?.companyId ?? null;
+      const userId = req.user?.userId ?? null;
       
       if (!content || !projectName || !clientName) {
         return res.status(400).json({ error: 'Content, projectName, and clientName are required' });
       }
       
-      // Load company-specific config
-      const companyConfigData = await getCompanyConfig(companyId);
+      // Load user-specific branding if available, otherwise fall back to company config
+      const userBranding = await getUserBrandingConfig(userId);
+      const companyConfigData = userBranding || await getCompanyConfig(companyId);
       
       const html = wrapContentInTemplate(content, projectName, clientName, options || {}, companyConfigData);
       
