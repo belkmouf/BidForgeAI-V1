@@ -1539,6 +1539,86 @@ or contact details from other sources.
     }
   });
 
+  // Update branding profile (for existing users)
+  app.patch("/api/branding", authenticateToken, async (req: AuthRequest, res) => {
+    try {
+      if (!req.user?.userId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+
+      const brandingSchema = z.object({
+        companyName: z.string().min(2, "Company name must be at least 2 characters").max(100),
+        tagline: z.string().max(200).optional().or(z.literal("")),
+        websiteUrl: z.string().url().optional().or(z.literal("")),
+        primaryColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/, "Invalid hex color"),
+        logoUrl: z.string().optional().or(z.literal("")),
+        aboutUs: z.string().max(1000).optional(),
+        contactName: z.string().max(100).optional().or(z.literal("")),
+        contactTitle: z.string().max(100).optional().or(z.literal("")),
+        contactPhone: z.string().max(50).optional().or(z.literal("")),
+        contactEmail: z.string().email().optional().or(z.literal("")),
+        streetAddress: z.string().max(200).optional().or(z.literal("")),
+        city: z.string().max(100).optional().or(z.literal("")),
+        state: z.string().max(50).optional().or(z.literal("")),
+        zip: z.string().max(20).optional().or(z.literal("")),
+        licenseNumber: z.string().max(50).optional().or(z.literal("")),
+      });
+
+      const validatedData = brandingSchema.parse(req.body);
+
+      const user = await storage.completeOnboarding(req.user.userId, {
+        companyName: validatedData.companyName,
+        tagline: validatedData.tagline || undefined,
+        websiteUrl: validatedData.websiteUrl || undefined,
+        primaryColor: validatedData.primaryColor,
+        logoUrl: validatedData.logoUrl || undefined,
+        aboutUs: validatedData.aboutUs || undefined,
+        contactName: validatedData.contactName || undefined,
+        contactTitle: validatedData.contactTitle || undefined,
+        contactPhone: validatedData.contactPhone || undefined,
+        contactEmail: validatedData.contactEmail || undefined,
+        streetAddress: validatedData.streetAddress || undefined,
+        city: validatedData.city || undefined,
+        state: validatedData.state || undefined,
+        zip: validatedData.zip || undefined,
+        licenseNumber: validatedData.licenseNumber || undefined,
+      });
+
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      res.json({ 
+        success: true, 
+        message: "Branding updated successfully",
+        brandingProfile: user.brandingProfile
+      });
+    } catch (error: any) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Validation failed", details: error.errors });
+      }
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get current branding profile
+  app.get("/api/branding", authenticateToken, async (req: AuthRequest, res) => {
+    try {
+      if (!req.user?.userId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+
+      const status = await storage.getUserOnboardingStatus(req.user.userId);
+      if (!status) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      res.json({ brandingProfile: status.brandingProfile || {} });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // Upload company logo
   app.post("/api/upload/logo", authenticateToken, upload.single('file'), async (req: AuthRequest, res) => {
     try {
