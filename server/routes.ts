@@ -51,6 +51,7 @@ import {
 } from './lib/sanitize';
 import { generateBidTemplate, wrapContentInTemplate, getCompanyConfig, getUserBrandingConfig, type BidData, type TemplateOptions } from './lib/templates/bid-template-generator';
 import { wrapContentInPremiumTemplate } from './lib/templates/gcc-premium-template';
+import { sanitizeModelHtml } from './lib/ai-output';
 import multer from "multer";
 import { z } from "zod";
 
@@ -404,10 +405,11 @@ export async function registerRoutes(
         const generatedBids = await Promise.all(
           models.map(async (modelName) => {
             try {
-              const rawHtml = await generateBidWithModel(modelName, generationParams);
+              const rawOutput = await generateBidWithModel(modelName, generationParams);
+              const cleanedHtml = sanitizeModelHtml(rawOutput);
               // Wrap AI-generated content with premium GCC Gulf template
               const html = wrapContentInPremiumTemplate(
-                rawHtml,
+                cleanedHtml,
                 project.name,
                 project.clientName || 'Valued Client',
                 {},
@@ -454,11 +456,12 @@ export async function registerRoutes(
       } else {
         // Single model generation (original behavior)
         const selectedModel = models?.[0] || model;
-        const rawHtml = await generateBidWithModel(selectedModel, generationParams);
+        const rawOutput = await generateBidWithModel(selectedModel, generationParams);
+        const cleanedHtml = sanitizeModelHtml(rawOutput);
         
         // Wrap AI-generated content with premium GCC Gulf template
         const html = wrapContentInPremiumTemplate(
-          rawHtml,
+          cleanedHtml,
           project.name,
           project.clientName || 'Valued Client',
           {},
@@ -581,22 +584,25 @@ export async function registerRoutes(
       }
 
       // Refine using selected model with sanitized feedback
-      let html: string;
+      let rawOutput: string;
       switch (model) {
         case 'anthropic':
-          html = await refineBidWithAnthropic({ currentHtml, feedback: sanitizedFeedback });
+          rawOutput = await refineBidWithAnthropic({ currentHtml, feedback: sanitizedFeedback });
           break;
         case 'gemini':
-          html = await refineBidWithGemini({ currentHtml, feedback: sanitizedFeedback });
+          rawOutput = await refineBidWithGemini({ currentHtml, feedback: sanitizedFeedback });
           break;
         case 'deepseek':
-          html = await refineBidWithDeepSeek({ currentHtml, feedback: sanitizedFeedback });
+          rawOutput = await refineBidWithDeepSeek({ currentHtml, feedback: sanitizedFeedback });
           break;
         case 'openai':
         default:
-          html = await refineBidContent({ currentHtml, feedback: sanitizedFeedback });
+          rawOutput = await refineBidContent({ currentHtml, feedback: sanitizedFeedback });
           break;
       }
+      
+      // Sanitize AI output to remove any markdown code fences
+      const html = sanitizeModelHtml(rawOutput);
 
       res.json({ html, model });
     } catch (error: any) {
