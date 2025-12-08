@@ -336,7 +336,7 @@ export default function Landing() {
             <div className="md:col-span-2">
               <div className="flex items-center gap-3 mb-4">
                 <img 
-                  src={bidForgeLogo} 
+                  src="attached_assets/1764979718.png" 
                   alt="BidForge AI Logo" 
                   className="h-8 w-8 object-contain"
                 />

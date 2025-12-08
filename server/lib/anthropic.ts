@@ -39,7 +39,8 @@ OUTPUT REQUIREMENTS:
 - Tone: ${params.tone || 'professional'}
 - Format: Well-structured HTML with headings, paragraphs, tables, and lists
 - Include a compliance matrix mapping RFP requirements to responses
-- Mark any missing required information as [TO BE PROVIDED]`;
+- Mark any missing required information as [TO BE PROVIDED]
+- CRITICAL: Output ONLY raw HTML content. Do NOT wrap your response in markdown code blocks (like \`\`\`html or \`\`\`). Start directly with <div> or other HTML tags.`;
 
   const response = await anthropic.messages.create({
     model: 'claude-sonnet-4-5',
@@ -48,7 +49,7 @@ OUTPUT REQUIREMENTS:
     messages: [
       { 
         role: 'user', 
-        content: `User Instructions: ${params.instructions}\n\nRelevant Context from Documents and Past Winning Bids:\n${params.context}\n\nGenerate a complete, professional bid response in HTML format.`
+        content: `User Instructions: ${params.instructions}\n\nRelevant Context from Documents and Past Winning Bids:\n${params.context}\n\nGenerate a complete, professional bid response. Output ONLY raw HTML - do NOT use markdown code blocks.`
       }
     ],
   });
@@ -63,7 +64,8 @@ export async function refineBidWithAnthropic(params: {
 }): Promise<string> {
   const systemPrompt = `You are an expert construction bid writer. 
 Apply the user's feedback to improve the bid response.
-Maintain the HTML structure and professional styling.`;
+Maintain the HTML structure and professional styling.
+CRITICAL: Output ONLY raw HTML content. Do NOT wrap your response in markdown code blocks (like \`\`\`html or \`\`\`).`;
 
   const response = await anthropic.messages.create({
     model: 'claude-sonnet-4-5',
@@ -72,7 +74,7 @@ Maintain the HTML structure and professional styling.`;
     messages: [
       { 
         role: 'user', 
-        content: `Current Bid HTML:\n${params.currentHtml}\n\nUser Feedback: ${params.feedback}\n\nApply the feedback and return the updated complete HTML.`
+        content: `Current Bid HTML:\n${params.currentHtml}\n\nUser Feedback: ${params.feedback}\n\nApply the feedback and return the updated complete HTML. Output ONLY raw HTML - do NOT use markdown code blocks.`
       }
     ],
   });
