@@ -352,6 +352,13 @@ export function generateGCCPremiumTemplate(
       display: flex;
       justify-content: space-between;
       align-items: center;
+      gap: 20px;
+    }
+
+    .company-branding {
+      flex: 1;
+      min-width: 0;
+      max-width: 60%;
     }
 
     .company-branding h1 {
@@ -367,6 +374,8 @@ export function generateGCCPremiumTemplate(
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
       background-clip: text;
+      word-wrap: break-word;
+      overflow-wrap: break-word;
     }
 
     .company-tagline {
