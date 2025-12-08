@@ -1458,20 +1458,40 @@ export async function registerRoutes(
 
       const brandingSchema = z.object({
         companyName: z.string().min(2, "Company name must be at least 2 characters").max(100),
+        tagline: z.string().max(200).optional().or(z.literal("")),
         websiteUrl: z.string().url().optional().or(z.literal("")),
         primaryColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/, "Invalid hex color"),
         logoUrl: z.string().url().optional().or(z.literal("")),
         aboutUs: z.string().max(1000).optional(),
+        contactName: z.string().max(100).optional().or(z.literal("")),
+        contactTitle: z.string().max(100).optional().or(z.literal("")),
+        contactPhone: z.string().max(50).optional().or(z.literal("")),
+        contactEmail: z.string().email().optional().or(z.literal("")),
+        streetAddress: z.string().max(200).optional().or(z.literal("")),
+        city: z.string().max(100).optional().or(z.literal("")),
+        state: z.string().max(50).optional().or(z.literal("")),
+        zip: z.string().max(20).optional().or(z.literal("")),
+        licenseNumber: z.string().max(50).optional().or(z.literal("")),
       });
 
       const validatedData = brandingSchema.parse(req.body);
 
       const user = await storage.completeOnboarding(req.user.userId, {
         companyName: validatedData.companyName,
+        tagline: validatedData.tagline || undefined,
         websiteUrl: validatedData.websiteUrl || undefined,
         primaryColor: validatedData.primaryColor,
         logoUrl: validatedData.logoUrl || undefined,
         aboutUs: validatedData.aboutUs || undefined,
+        contactName: validatedData.contactName || undefined,
+        contactTitle: validatedData.contactTitle || undefined,
+        contactPhone: validatedData.contactPhone || undefined,
+        contactEmail: validatedData.contactEmail || undefined,
+        streetAddress: validatedData.streetAddress || undefined,
+        city: validatedData.city || undefined,
+        state: validatedData.state || undefined,
+        zip: validatedData.zip || undefined,
+        licenseNumber: validatedData.licenseNumber || undefined,
       });
 
       if (!user) {

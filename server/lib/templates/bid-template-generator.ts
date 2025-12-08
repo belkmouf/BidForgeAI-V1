@@ -61,12 +61,27 @@ export async function getUserBrandingConfig(userId: number | null): Promise<Comp
     
     if (user?.brandingProfile && typeof user.brandingProfile === 'object') {
       const branding = user.brandingProfile as Record<string, any>;
+      
+      const hasValue = (val: any) => val && typeof val === 'string' && val.trim().length > 0;
+      
       return {
         ...companyConfig,
-        name: branding.companyName || companyConfig.name,
-        primaryColor: branding.primaryColor || companyConfig.primaryColor,
-        logoUrl: branding.logoUrl || companyConfig.logoUrl,
-        website: branding.websiteUrl || companyConfig.website,
+        name: hasValue(branding.companyName) ? branding.companyName : companyConfig.name,
+        tagline: hasValue(branding.tagline) ? branding.tagline : (hasValue(branding.aboutUs) ? branding.aboutUs.substring(0, 100) : companyConfig.tagline),
+        primaryColor: hasValue(branding.primaryColor) ? branding.primaryColor : companyConfig.primaryColor,
+        logoUrl: hasValue(branding.logoUrl) ? branding.logoUrl : companyConfig.logoUrl,
+        website: hasValue(branding.websiteUrl) ? branding.websiteUrl : companyConfig.website,
+        address: hasValue(branding.streetAddress) ? branding.streetAddress : companyConfig.address,
+        city: hasValue(branding.city) ? branding.city : companyConfig.city,
+        state: hasValue(branding.state) ? branding.state : companyConfig.state,
+        zip: hasValue(branding.zip) ? branding.zip : companyConfig.zip,
+        licenseNumber: hasValue(branding.licenseNumber) ? branding.licenseNumber : companyConfig.licenseNumber,
+        defaultRep: {
+          name: hasValue(branding.contactName) ? branding.contactName : companyConfig.defaultRep.name,
+          title: hasValue(branding.contactTitle) ? branding.contactTitle : companyConfig.defaultRep.title,
+          phone: hasValue(branding.contactPhone) ? branding.contactPhone : companyConfig.defaultRep.phone,
+          email: hasValue(branding.contactEmail) ? branding.contactEmail : companyConfig.defaultRep.email,
+        },
       };
     }
     

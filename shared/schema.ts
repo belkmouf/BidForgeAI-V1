@@ -43,10 +43,20 @@ export const insertCompanySchema = z.object({
 // Branding Profile Type
 export type BrandingProfile = {
   companyName?: string;
+  tagline?: string;
   websiteUrl?: string;
   primaryColor?: string;
   logoUrl?: string;
   aboutUs?: string;
+  contactName?: string;
+  contactTitle?: string;
+  contactPhone?: string;
+  contactEmail?: string;
+  streetAddress?: string;
+  city?: string;
+  state?: string;
+  zip?: string;
+  licenseNumber?: string;
 };
 
 export const users = pgTable("users", {
