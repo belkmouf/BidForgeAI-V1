@@ -18,6 +18,22 @@ BidForge AI streamlines the proposal generation process for construction compani
 - **Rich Text Editor** - Tiptap-based editor for refining generated bids with real-time preview
 - **AI Chat Refinement** - Iteratively improve bids through natural language conversation
 
+### AI Agent System
+
+BidForge uses a multi-agent pipeline powered by LangChain/LangGraph for intelligent workflow orchestration:
+
+- **Intake Agent** - Receives and validates incoming RFQ documents, extracts metadata
+- **Analysis Agent** - Performs deep analysis of requirements, identifies key deliverables and constraints
+- **Decision Agent** - Evaluates bid viability, calculates risk scores, determines go/no-go recommendations
+- **Generation Agent** - Creates professional bid content using RAG context and company branding
+- **Review Agent** - Quality checks generated content, ensures compliance with RFQ requirements
+
+The agent system supports:
+- Conditional routing based on document complexity and risk levels
+- Automatic retries with exponential backoff for resilience
+- Risk-based early termination to save resources on low-probability bids
+- State persistence for long-running workflows
+
 ### Risk & Analysis
 
 - **RFP Analysis & Risk Assessment** - AI-powered scoring for Quality, Clarity, Doability, and Vendor Risk with actionable recommendations
@@ -122,6 +138,7 @@ The app will be available at `http://localhost:5000`
 │   │   └── hooks/         # Custom React hooks
 ├── server/                 # Express backend
 │   ├── lib/               # Business logic
+│   │   ├── agents/        # LangGraph agent definitions
 │   │   ├── templates/     # Bid document templates
 │   │   ├── analysis.ts    # RFP analysis
 │   │   ├── openai.ts      # OpenAI integration
@@ -129,6 +146,7 @@ The app will be available at `http://localhost:5000`
 │   │   ├── gemini.ts      # Google Gemini integration
 │   │   └── ingestion.ts   # Document processing
 │   ├── routes/            # API route handlers
+│   │   └── agents.ts      # Agent pipeline endpoints
 │   ├── middleware/        # Auth, RBAC middleware
 │   └── storage.ts         # Database operations
 ├── shared/                 # Shared types & schemas
@@ -168,6 +186,10 @@ The app will be available at `http://localhost:5000`
 - `POST /api/projects/:id/analyze` - Run RFP analysis
 - `GET /api/conflicts/:projectId` - Get conflict detection results
 - `GET /api/win-probability/:projectId` - Get win probability
+
+### AI Agents
+- `POST /api/agents/process` - Run full agent pipeline on a project
+- `GET /api/agents/status/:runId` - Get agent run status and results
 
 ## Contributing
 
