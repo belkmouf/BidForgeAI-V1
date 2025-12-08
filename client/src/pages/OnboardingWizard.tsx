@@ -130,8 +130,8 @@ export default function OnboardingWizard() {
 
   return (
     <div className="min-h-screen flex bg-gradient-to-br from-slate-100 to-slate-200">
-      <div className="flex-1 flex items-center justify-center p-8 overflow-y-auto">
-        <Card className="w-full max-w-2xl bg-white border-deep-teal/30 shadow-xl my-8">
+      <div className="flex-1 p-8 overflow-y-auto">
+        <Card className="w-full max-w-2xl mx-auto bg-white border-deep-teal/30 shadow-xl mb-8">
           <CardHeader className="text-center">
             <div className="mx-auto mb-4">
               <img 
@@ -465,7 +465,7 @@ export default function OnboardingWizard() {
 
               <Button 
                 type="submit" 
-                className="w-full bg-deep-teal hover:bg-deep-teal/90 text-white mt-6"
+                className="w-full bg-deep-teal hover:bg-deep-teal/90 text-white mt-6 py-6 text-lg"
                 disabled={isLoading || !companyName || !primaryColor}
                 data-testid="button-complete-setup"
               >
