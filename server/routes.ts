@@ -50,6 +50,7 @@ import {
   InputSanitizationError 
 } from './lib/sanitize';
 import { generateBidTemplate, wrapContentInTemplate, getCompanyConfig, getUserBrandingConfig, type BidData, type TemplateOptions } from './lib/templates/bid-template-generator';
+import { wrapContentInPremiumTemplate } from './lib/templates/gcc-premium-template';
 import multer from "multer";
 import { z } from "zod";
 
@@ -404,8 +405,8 @@ export async function registerRoutes(
           models.map(async (modelName) => {
             try {
               const rawHtml = await generateBidWithModel(modelName, generationParams);
-              // Wrap AI-generated content with professional template
-              const html = wrapContentInTemplate(
+              // Wrap AI-generated content with premium GCC Gulf template
+              const html = wrapContentInPremiumTemplate(
                 rawHtml,
                 project.name,
                 project.clientName || 'Valued Client',
@@ -455,8 +456,8 @@ export async function registerRoutes(
         const selectedModel = models?.[0] || model;
         const rawHtml = await generateBidWithModel(selectedModel, generationParams);
         
-        // Wrap AI-generated content with professional template
-        const html = wrapContentInTemplate(
+        // Wrap AI-generated content with premium GCC Gulf template
+        const html = wrapContentInPremiumTemplate(
           rawHtml,
           project.name,
           project.clientName || 'Valued Client',
