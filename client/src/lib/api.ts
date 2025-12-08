@@ -79,7 +79,7 @@ export async function generateBid(projectId: string, instructions: string, tone?
     body: JSON.stringify({ instructions, tone, model: model || 'anthropic' }),
   });
   if (!res.ok) throw new Error(await res.text());
-  return res.json() as Promise<{ html: string; chunksUsed: number; model: AIModel }>;
+  return res.json() as Promise<{ html: string; rawContent?: string; chunksUsed: number; model: AIModel }>;
 }
 
 export async function refineBid(projectId: string, currentHtml: string, feedback: string, model?: AIModel) {
@@ -88,7 +88,7 @@ export async function refineBid(projectId: string, currentHtml: string, feedback
     body: JSON.stringify({ currentHtml, feedback, model: model || 'anthropic' }),
   });
   if (!res.ok) throw new Error(await res.text());
-  return res.json() as Promise<{ html: string; model: AIModel }>;
+  return res.json() as Promise<{ html: string; rawContent?: string; model: AIModel }>;
 }
 
 // Bids API
@@ -114,6 +114,16 @@ export async function getBidById(bidId: number) {
   if (!res.ok) throw new Error(await res.text());
   const data = await res.json();
   return data.bid as Bid;
+}
+
+// Template API
+export async function wrapInTemplate(content: string, projectName: string, clientName: string, options?: object) {
+  const res = await apiRequest(`${API_BASE}/templates/wrap`, {
+    method: 'POST',
+    body: JSON.stringify({ content, projectName, clientName, options }),
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json() as Promise<{ html: string }>;
 }
 
 // Dashboard API

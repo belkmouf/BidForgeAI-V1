@@ -442,7 +442,7 @@ or contact details from other sources.
                 {},
                 companyConfigForTemplate
               );
-              return { model: modelName, html, success: true };
+              return { model: modelName, html, rawContent: cleanedHtml, success: true };
             } catch (error: any) {
               return { model: modelName, html: '', success: false, error: error.message };
             }
@@ -459,6 +459,7 @@ or contact details from other sources.
                 companyId: companyId,
                 userId: req.user?.userId,
                 content: genResult.html,
+                rawContent: genResult.rawContent,
                 instructions: sanitizedInstructions,
                 tone: sanitizedTone,
                 model: genResult.model,
@@ -501,6 +502,7 @@ or contact details from other sources.
           companyId: companyId,
           userId: req.user?.userId,
           content: html,
+          rawContent: cleanedHtml,
           instructions: sanitizedInstructions,
           tone: sanitizedTone,
           model: selectedModel,
@@ -513,6 +515,7 @@ or contact details from other sources.
         res.json({
           bid: savedBid,
           html,
+          rawContent: cleanedHtml,
           chunksUsed,
           model: selectedModel,
           searchMethod,
@@ -629,9 +632,9 @@ or contact details from other sources.
       }
       
       // Sanitize AI output to remove any markdown code fences
-      const html = sanitizeModelHtml(rawOutput);
+      const cleanedHtml = sanitizeModelHtml(rawOutput);
 
-      res.json({ html, model });
+      res.json({ html: cleanedHtml, rawContent: cleanedHtml, model });
     } catch (error: any) {
       console.error('Refinement error:', error);
       res.status(500).json({ error: error.message });

@@ -119,7 +119,7 @@ export function BidHistory({ projectId, onSelectBid, refreshTrigger }: BidHistor
                 <div
                   key={bid.id}
                   className="p-3 rounded-lg border bg-card hover:bg-accent/50 cursor-pointer transition-colors group"
-                  onClick={() => onSelectBid(bid.content)}
+                  onClick={() => onSelectBid(bid.rawContent || bid.content)}
                   data-testid={`bid-history-item-${bid.id}`}
                 >
                   <div className="flex items-start justify-between gap-2">

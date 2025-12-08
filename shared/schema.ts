@@ -157,6 +157,7 @@ export const bids = pgTable("bids", {
   userId: integer("user_id").references(() => users.id, { onDelete: "set null" }),
   
   content: text("content").notNull(),
+  rawContent: text("raw_content"),
   instructions: text("instructions"),
   tone: text("tone").default("professional"),
   

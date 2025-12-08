@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRoute } from 'wouter';
 import { AppSidebar } from '@/components/layout/AppSidebar';
 import { DropZone } from '@/components/upload/DropZone';
@@ -7,11 +7,12 @@ import { GeneratePanel } from '@/components/ai/GeneratePanel';
 import { RefineChat } from '@/components/ai/RefineChat';
 import { BidHistory } from '@/components/bid/BidHistory';
 import { Button } from '@/components/ui/button';
-import { ChevronLeft, Save, Share2, Eye, ShieldCheck, AlertTriangle } from 'lucide-react';
+import { ChevronLeft, Save, Share2, Eye, Edit3, ShieldCheck, AlertTriangle, Loader2 } from 'lucide-react';
 import { Link } from 'wouter';
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from '@/hooks/use-toast';
-import { getProject, listDocuments, uploadDocument, deleteDocument, generateBid, refineBid, getLatestBid, type AIModel } from '@/lib/api';
+import { getProject, listDocuments, uploadDocument, deleteDocument, generateBid, refineBid, getLatestBid, wrapInTemplate, type AIModel } from '@/lib/api';
 import type { Project, Document } from '@shared/schema';
 
 const initialEditorContent = '<h1>Welcome to BidForge AI</h1><p>Use the Generate panel to create your first bid draft, or start typing to manually build your proposal.</p>';
@@ -26,6 +27,9 @@ export default function ProjectWorkspace() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [bidRefreshTrigger, setBidRefreshTrigger] = useState(0);
+  const [viewMode, setViewMode] = useState<'edit' | 'preview'>('edit');
+  const [previewHtml, setPreviewHtml] = useState<string>('');
+  const [isLoadingPreview, setIsLoadingPreview] = useState(false);
 
   useEffect(() => {
     async function loadProject() {
@@ -39,9 +43,9 @@ export default function ProjectWorkspace() {
         setProject(projectData);
         setDocuments(docsData);
         
-        // Load the latest bid content if available
-        if (latestBid && latestBid.content) {
-          setEditorContent(latestBid.content);
+        // Load the latest bid content if available (use rawContent for editor)
+        if (latestBid) {
+          setEditorContent(latestBid.rawContent || latestBid.content);
         }
       } catch (error) {
         console.error('Failed to load project:', error);
@@ -65,7 +69,7 @@ export default function ProjectWorkspace() {
     setSelectedModel(modelToUse);
     try {
       const result = await generateBid(projectId, instructions, tone, modelToUse);
-      setEditorContent(result.html);
+      setEditorContent(result.rawContent || result.html);
       setBidRefreshTrigger(prev => prev + 1);
       toast({
         title: "Bid Generated",
@@ -85,7 +89,7 @@ export default function ProjectWorkspace() {
   const handleRefine = async (feedback: string) => {
     try {
       const result = await refineBid(projectId, editorContent, feedback, selectedModel);
-      setEditorContent(result.html);
+      setEditorContent(result.rawContent || result.html);
       toast({
         title: "Bid Refined",
         description: `Your bid has been updated using ${result.model.toUpperCase()}.`,
@@ -143,6 +147,30 @@ export default function ProjectWorkspace() {
       description: "Project saved successfully.",
     });
   };
+
+  const handleViewModeChange = useCallback(async (mode: 'edit' | 'preview') => {
+    setViewMode(mode);
+    if (mode === 'preview' && project) {
+      setIsLoadingPreview(true);
+      try {
+        const result = await wrapInTemplate(
+          editorContent,
+          project.name,
+          project.clientName || 'Valued Client'
+        );
+        setPreviewHtml(result.html);
+      } catch (error: any) {
+        toast({
+          title: "Preview Failed",
+          description: error.message || "Failed to generate preview",
+          variant: "destructive",
+        });
+        setViewMode('edit');
+      } finally {
+        setIsLoadingPreview(false);
+      }
+    }
+  }, [editorContent, project]);
 
   const handleShare = async () => {
     const shareUrl = `${window.location.origin}/projects/${projectId}`;
@@ -300,12 +328,42 @@ export default function ProjectWorkspace() {
 
             <ResizableHandle />
 
-            {/* Center: Editor */}
+            {/* Center: Editor / Preview */}
             <ResizablePanel defaultSize={55} minSize={30}>
               <div className="h-full flex flex-col bg-muted/10">
-                 <div className="flex-1 p-6 overflow-hidden">
-                   <TiptapEditor content={editorContent} onChange={setEditorContent} />
-                 </div>
+                <div className="flex items-center justify-between px-6 pt-4 pb-2">
+                  <Tabs value={viewMode} onValueChange={(v) => handleViewModeChange(v as 'edit' | 'preview')}>
+                    <TabsList className="h-8">
+                      <TabsTrigger value="edit" className="text-xs gap-1.5 px-3" data-testid="tab-edit">
+                        <Edit3 className="h-3.5 w-3.5" />
+                        Edit
+                      </TabsTrigger>
+                      <TabsTrigger value="preview" className="text-xs gap-1.5 px-3" data-testid="tab-preview">
+                        <Eye className="h-3.5 w-3.5" />
+                        Preview
+                      </TabsTrigger>
+                    </TabsList>
+                  </Tabs>
+                </div>
+                <div className="flex-1 px-6 pb-6 overflow-hidden">
+                  {viewMode === 'edit' ? (
+                    <TiptapEditor content={editorContent} onChange={setEditorContent} />
+                  ) : isLoadingPreview ? (
+                    <div className="h-full flex items-center justify-center bg-white rounded-lg border">
+                      <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                        <Loader2 className="h-8 w-8 animate-spin" />
+                        <span className="text-sm">Generating preview...</span>
+                      </div>
+                    </div>
+                  ) : (
+                    <iframe
+                      srcDoc={previewHtml}
+                      className="w-full h-full border rounded-lg bg-white"
+                      title="Bid Preview"
+                      data-testid="iframe-bid-preview"
+                    />
+                  )}
+                </div>
               </div>
             </ResizablePanel>
 
