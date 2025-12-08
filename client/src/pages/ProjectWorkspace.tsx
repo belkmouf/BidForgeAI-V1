@@ -174,13 +174,46 @@ export default function ProjectWorkspace() {
 
   const handleShare = async () => {
     const shareUrl = `${window.location.origin}/projects/${projectId}`;
-    try {
-      await navigator.clipboard.writeText(shareUrl);
+    
+    const copyToClipboard = async (text: string): Promise<boolean> => {
+      // Try modern clipboard API first
+      if (navigator.clipboard && window.isSecureContext) {
+        try {
+          await navigator.clipboard.writeText(text);
+          return true;
+        } catch {
+          // Fall through to legacy method
+        }
+      }
+      
+      // Legacy fallback using textarea
+      const textArea = document.createElement('textarea');
+      textArea.value = text;
+      textArea.style.position = 'fixed';
+      textArea.style.left = '-999999px';
+      textArea.style.top = '-999999px';
+      document.body.appendChild(textArea);
+      textArea.focus();
+      textArea.select();
+      
+      try {
+        const success = document.execCommand('copy');
+        document.body.removeChild(textArea);
+        return success;
+      } catch {
+        document.body.removeChild(textArea);
+        return false;
+      }
+    };
+    
+    const copied = await copyToClipboard(shareUrl);
+    
+    if (copied) {
       toast({
         title: "Link Copied",
         description: "Project link copied to clipboard.",
       });
-    } catch {
+    } else {
       toast({
         title: "Share Link",
         description: shareUrl,
