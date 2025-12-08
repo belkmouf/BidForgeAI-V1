@@ -130,23 +130,24 @@ export default function OnboardingWizard() {
 
   return (
     <div className="min-h-screen flex bg-gradient-to-br from-slate-100 to-slate-200">
-      <div className="flex-1 p-8 overflow-y-auto">
-        <Card className="w-full max-w-2xl mx-auto bg-white border-deep-teal/30 shadow-xl mb-8">
-          <CardHeader className="text-center">
-            <div className="mx-auto mb-4">
-              <img 
-                src={bidForgeLogo} 
-                alt="BidForge AI" 
-                className="h-12 w-auto mx-auto"
-              />
-            </div>
-            <CardTitle className="text-2xl font-syne text-slate-800">Set Up Your Company</CardTitle>
-            <CardDescription className="text-slate-500">
-              Customize your branding for professional bid documents
-            </CardDescription>
-          </CardHeader>
-          <form onSubmit={handleSubmit}>
-            <CardContent className="space-y-6">
+      <div className="flex-1 flex flex-col h-screen">
+        <div className="flex-1 overflow-y-auto p-8">
+          <Card className="w-full max-w-2xl mx-auto bg-white border-deep-teal/30 shadow-xl">
+            <CardHeader className="text-center">
+              <div className="mx-auto mb-4">
+                <img 
+                  src={bidForgeLogo} 
+                  alt="BidForge AI" 
+                  className="h-12 w-auto mx-auto"
+                />
+              </div>
+              <CardTitle className="text-2xl font-syne text-slate-800">Set Up Your Company</CardTitle>
+              <CardDescription className="text-slate-500">
+                Customize your branding for professional bid documents
+              </CardDescription>
+            </CardHeader>
+            <form onSubmit={handleSubmit}>
+              <CardContent className="space-y-6">
               {error && (
                 <Alert variant="destructive" className="bg-red-900/20 border-red-500/50">
                   <AlertDescription data-testid="error-message">{error}</AlertDescription>
@@ -484,9 +485,10 @@ export default function OnboardingWizard() {
             </CardContent>
           </form>
         </Card>
+        </div>
       </div>
 
-      <div className="hidden lg:flex flex-1 items-center justify-center bg-slate-800 p-8">
+      <div className="hidden lg:flex flex-1 items-center justify-center bg-slate-800 p-8 overflow-y-auto">
         <div className="w-full max-w-md">
           <h3 className="text-white text-lg font-semibold mb-4 text-center">Live Preview</h3>
           <div 
