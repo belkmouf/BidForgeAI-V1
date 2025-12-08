@@ -95,6 +95,10 @@ export interface IStorage {
   listBidsByProject(projectId: string, companyId: number | null): Promise<Bid[]>;
   getLatestBidForProject(projectId: string, companyId: number | null): Promise<Bid | undefined>;
   
+  // Public sharing
+  generateShareToken(bidId: number, companyId: number | null): Promise<{ shareToken: string; bid: Bid } | undefined>;
+  getBidByShareToken(token: string): Promise<{ bid: Bid; project: Project } | undefined>;
+  
   // Onboarding
   completeOnboarding(userId: number, brandingProfile: BrandingProfile): Promise<User | undefined>;
   getUserOnboardingStatus(userId: number): Promise<{ status: string; brandingProfile: BrandingProfile | null } | undefined>;
@@ -712,6 +716,49 @@ export class DatabaseStorage implements IStorage {
       .from(bids)
       .where(and(...conditions));
     return bid || undefined;
+  }
+
+  async generateShareToken(bidId: number, companyId: number | null): Promise<{ shareToken: string; bid: Bid } | undefined> {
+    const conditions = [eq(bids.id, bidId)];
+    if (companyId !== null) {
+      conditions.push(eq(bids.companyId, companyId));
+    } else {
+      conditions.push(isNull(bids.companyId));
+    }
+    
+    const [existingBid] = await db
+      .select()
+      .from(bids)
+      .where(and(...conditions));
+    
+    if (!existingBid) return undefined;
+    
+    if (existingBid.shareToken) {
+      return { shareToken: existingBid.shareToken, bid: existingBid };
+    }
+    
+    const crypto = await import('crypto');
+    const shareToken = crypto.randomBytes(32).toString('hex');
+    
+    const [updatedBid] = await db
+      .update(bids)
+      .set({ shareToken })
+      .where(eq(bids.id, bidId))
+      .returning();
+    
+    return { shareToken, bid: updatedBid };
+  }
+
+  async getBidByShareToken(token: string): Promise<{ bid: Bid; project: Project } | undefined> {
+    const [result] = await db
+      .select()
+      .from(bids)
+      .innerJoin(projects, eq(bids.projectId, projects.id))
+      .where(eq(bids.shareToken, token));
+    
+    if (!result) return undefined;
+    
+    return { bid: result.bids, project: result.projects };
   }
 
   // ==================== COMPANY ADMIN METHODS ====================

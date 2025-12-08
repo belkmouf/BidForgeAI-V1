@@ -79,7 +79,7 @@ export async function generateBid(projectId: string, instructions: string, tone?
     body: JSON.stringify({ instructions, tone, model: model || 'anthropic' }),
   });
   if (!res.ok) throw new Error(await res.text());
-  return res.json() as Promise<{ html: string; rawContent?: string; chunksUsed: number; model: AIModel }>;
+  return res.json() as Promise<{ html: string; rawContent?: string; chunksUsed: number; model: AIModel; bid?: { id: number } }>;
 }
 
 export async function refineBid(projectId: string, currentHtml: string, feedback: string, model?: AIModel) {
@@ -135,4 +135,19 @@ export async function getDashboardStats() {
     winRate: number;
     totalProjects: number;
   }>;
+}
+
+// Public Sharing API
+export async function generateShareLink(bidId: number) {
+  const res = await apiRequest(`${API_BASE}/bids/${bidId}/share`, {
+    method: 'POST',
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json() as Promise<{ shareUrl: string; shareToken: string }>;
+}
+
+export async function getPublicBid(token: string) {
+  const res = await fetch(`${API_BASE}/public/bids/${token}`);
+  if (!res.ok) throw new Error(await res.text());
+  return res.json() as Promise<{ bid: Bid; projectName: string; clientName: string }>;
 }

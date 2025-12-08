@@ -168,6 +168,8 @@ export const bids = pgTable("bids", {
   version: integer("version").default(1).notNull(),
   isLatest: boolean("is_latest").default(true).notNull(),
   
+  shareToken: varchar("share_token", { length: 64 }).unique(),
+  
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

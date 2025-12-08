@@ -1624,6 +1624,57 @@ or contact details from other sources.
     }
   });
 
+  // ==================== PUBLIC SHARING ====================
+
+  // Generate share token for a bid (requires authentication)
+  app.post("/api/bids/:bidId/share", authenticateToken, async (req: AuthRequest, res) => {
+    try {
+      const bidId = parseInt(req.params.bidId, 10);
+      const companyId = req.user?.companyId ?? null;
+
+      if (isNaN(bidId)) {
+        return res.status(400).json({ error: "Invalid bid ID" });
+      }
+
+      const result = await storage.generateShareToken(bidId, companyId);
+      if (!result) {
+        return res.status(404).json({ error: "Bid not found" });
+      }
+
+      const shareUrl = `/share/${result.shareToken}`;
+      res.json({ shareUrl, shareToken: result.shareToken });
+    } catch (error: any) {
+      console.error('Error generating share token:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get public bid by share token (NO authentication required)
+  app.get("/api/public/bids/:token", async (req, res) => {
+    try {
+      const token = req.params.token;
+      
+      if (!token || token.length !== 64) {
+        return res.status(400).json({ error: "Invalid share token" });
+      }
+
+      const result = await storage.getBidByShareToken(token);
+      if (!result) {
+        return res.status(404).json({ error: "Bid not found or share link has expired" });
+      }
+
+      const { shareToken, ...safeBid } = result.bid;
+      res.json({ 
+        bid: safeBid, 
+        projectName: result.project.name,
+        clientName: result.project.clientName
+      });
+    } catch (error: any) {
+      console.error('Error fetching public bid:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // Upload company logo
   app.post("/api/upload/logo", authenticateToken, upload.single('file'), async (req: AuthRequest, res) => {
     try {

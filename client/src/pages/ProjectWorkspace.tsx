@@ -12,7 +12,7 @@ import { Link } from 'wouter';
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from '@/hooks/use-toast';
-import { getProject, listDocuments, uploadDocument, deleteDocument, generateBid, refineBid, getLatestBid, wrapInTemplate, type AIModel } from '@/lib/api';
+import { getProject, listDocuments, uploadDocument, deleteDocument, generateBid, refineBid, getLatestBid, wrapInTemplate, generateShareLink, type AIModel } from '@/lib/api';
 import type { Project, Document } from '@shared/schema';
 
 const initialEditorContent = '<h1>Welcome to BidForge AI</h1><p>Use the Generate panel to create your first bid draft, or start typing to manually build your proposal.</p>';
@@ -30,6 +30,8 @@ export default function ProjectWorkspace() {
   const [viewMode, setViewMode] = useState<'edit' | 'preview'>('edit');
   const [previewHtml, setPreviewHtml] = useState<string>('');
   const [isLoadingPreview, setIsLoadingPreview] = useState(false);
+  const [currentBidId, setCurrentBidId] = useState<number | null>(null);
+  const [isSharing, setIsSharing] = useState(false);
 
   useEffect(() => {
     async function loadProject() {
@@ -46,6 +48,7 @@ export default function ProjectWorkspace() {
         // Load the latest bid content if available (use rawContent for editor)
         if (latestBid) {
           setEditorContent(latestBid.rawContent || latestBid.content);
+          setCurrentBidId(latestBid.id);
         }
       } catch (error) {
         console.error('Failed to load project:', error);
@@ -71,6 +74,9 @@ export default function ProjectWorkspace() {
       const result = await generateBid(projectId, instructions, tone, modelToUse);
       setEditorContent(result.rawContent || result.html);
       setBidRefreshTrigger(prev => prev + 1);
+      if (result.bid?.id) {
+        setCurrentBidId(result.bid.id);
+      }
       toast({
         title: "Bid Generated",
         description: `Generated bid using ${result.chunksUsed} context chunks with ${result.model.toUpperCase()}.`,
@@ -173,10 +179,18 @@ export default function ProjectWorkspace() {
   }, [editorContent, project]);
 
   const handleShare = async () => {
-    const shareUrl = `${window.location.origin}/projects/${projectId}`;
+    if (!currentBidId) {
+      toast({
+        title: "No Bid to Share",
+        description: "Generate a bid first before sharing.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsSharing(true);
     
     const copyToClipboard = async (text: string): Promise<boolean> => {
-      // Try modern clipboard API first
       if (navigator.clipboard && window.isSecureContext) {
         try {
           await navigator.clipboard.writeText(text);
@@ -186,7 +200,6 @@ export default function ProjectWorkspace() {
         }
       }
       
-      // Legacy fallback using textarea
       const textArea = document.createElement('textarea');
       textArea.value = text;
       textArea.style.position = 'fixed';
@@ -206,18 +219,30 @@ export default function ProjectWorkspace() {
       }
     };
     
-    const copied = await copyToClipboard(shareUrl);
-    
-    if (copied) {
+    try {
+      const result = await generateShareLink(currentBidId);
+      const fullUrl = `${window.location.origin}${result.shareUrl}`;
+      const copied = await copyToClipboard(fullUrl);
+      
+      if (copied) {
+        toast({
+          title: "Public Link Copied",
+          description: "Anyone with this link can view the bid (no login required).",
+        });
+      } else {
+        toast({
+          title: "Share Link",
+          description: fullUrl,
+        });
+      }
+    } catch (error: any) {
       toast({
-        title: "Link Copied",
-        description: "Project link copied to clipboard.",
+        title: "Share Failed",
+        description: error.message || "Failed to generate share link",
+        variant: "destructive",
       });
-    } else {
-      toast({
-        title: "Share Link",
-        description: shareUrl,
-      });
+    } finally {
+      setIsSharing(false);
     }
   };
 
@@ -313,9 +338,9 @@ export default function ProjectWorkspace() {
               <Eye className="h-3.5 w-3.5" />
               Preview PDF
             </Button>
-            <Button variant="outline" size="sm" className="gap-2 h-8" onClick={handleShare} data-testid="button-share">
-              <Share2 className="h-3.5 w-3.5" />
-              Share
+            <Button variant="outline" size="sm" className="gap-2 h-8" onClick={handleShare} disabled={isSharing || !currentBidId} data-testid="button-share">
+              {isSharing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Share2 className="h-3.5 w-3.5" />}
+              {isSharing ? 'Sharing...' : 'Share'}
             </Button>
             <Button size="sm" className="gap-2 h-8" onClick={handleSave}>
               <Save className="h-3.5 w-3.5" />
@@ -349,7 +374,10 @@ export default function ProjectWorkspace() {
                 <div className="flex-1 min-h-0 overflow-hidden">
                   <BidHistory 
                     projectId={projectId} 
-                    onSelectBid={setEditorContent}
+                    onSelectBid={(content, bidId) => {
+                      setEditorContent(content);
+                      if (bidId) setCurrentBidId(bidId);
+                    }}
                     refreshTrigger={bidRefreshTrigger}
                   />
                 </div>

@@ -22,6 +22,7 @@ import Analytics from "@/pages/Analytics";
 import Admin from "@/pages/Admin";
 import AcceptInvite from "@/pages/AcceptInvite";
 import OnboardingWizard from "@/pages/OnboardingWizard";
+import PublicBidView from "@/pages/PublicBidView";
 
 function ProtectedRoute({ component: Component, requireOnboarding = true }: { component: React.ComponentType; requireOnboarding?: boolean }) {
   const { isAuthenticated, isLoading, user } = useAuthStore();
@@ -127,6 +128,7 @@ function Router() {
         {() => <AuthRoute component={Register} />}
       </Route>
       <Route path="/invite/:code" component={AcceptInvite} />
+      <Route path="/share/:token" component={PublicBidView} />
       <Route path="/setup/branding">
         {() => <OnboardingRoute component={OnboardingWizard} />}
       </Route>

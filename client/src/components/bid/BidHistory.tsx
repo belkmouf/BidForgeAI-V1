@@ -9,7 +9,7 @@ import type { Bid } from '@shared/schema';
 
 interface BidHistoryProps {
   projectId: string;
-  onSelectBid: (content: string) => void;
+  onSelectBid: (content: string, bidId?: number) => void;
   refreshTrigger?: number;
 }
 
@@ -119,7 +119,7 @@ export function BidHistory({ projectId, onSelectBid, refreshTrigger }: BidHistor
                 <div
                   key={bid.id}
                   className="p-3 rounded-lg border bg-card hover:bg-accent/50 cursor-pointer transition-colors group"
-                  onClick={() => onSelectBid(bid.rawContent || bid.content)}
+                  onClick={() => onSelectBid(bid.rawContent || bid.content, bid.id)}
                   data-testid={`bid-history-item-${bid.id}`}
                 >
                   <div className="flex items-start justify-between gap-2">
