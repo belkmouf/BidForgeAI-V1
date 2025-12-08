@@ -353,20 +353,22 @@ export function generateGCCPremiumTemplate(
       justify-content: space-between;
       align-items: center;
       gap: 20px;
+      overflow: hidden;
     }
 
     .company-branding {
       flex: 1;
       min-width: 0;
-      max-width: 60%;
+      max-width: 55%;
+      overflow: hidden;
     }
 
     .company-branding h1 {
       color: var(--white);
       font-family: var(--font-display);
-      font-size: 42px;
+      font-size: clamp(24px, 4vw, 42px);
       font-weight: 800;
-      letter-spacing: 2px;
+      letter-spacing: 1px;
       margin-bottom: 8px;
       text-shadow: 0 4px 20px rgba(212, 175, 55, 0.4);
       animation: fadeInUp 0.8s ease;
@@ -376,6 +378,8 @@ export function generateGCCPremiumTemplate(
       background-clip: text;
       word-wrap: break-word;
       overflow-wrap: break-word;
+      word-break: break-word;
+      hyphens: auto;
     }
 
     .company-tagline {
@@ -386,12 +390,17 @@ export function generateGCCPremiumTemplate(
       font-weight: 600;
       animation: fadeInUp 0.8s ease 0.2s backwards;
       text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+      word-wrap: break-word;
+      overflow-wrap: break-word;
     }
 
     .proposal-meta {
       text-align: right;
       color: rgba(255, 255, 255, 0.95);
       animation: fadeInUp 0.8s ease 0.4s backwards;
+      flex-shrink: 0;
+      min-width: 180px;
+      max-width: 40%;
     }
 
     .proposal-meta .meta-title {
