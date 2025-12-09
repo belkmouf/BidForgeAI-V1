@@ -252,6 +252,9 @@ export class IngestionService {
       const result = await mammoth.extractRawText({ buffer });
       text = result.value || '';
       
+      // Remove null bytes and other problematic characters for PostgreSQL
+      text = text.replace(/\x00/g, '');
+      
       if (result.messages && result.messages.length > 0) {
         console.log(`DOCX parsing messages for ${filename}:`, result.messages);
       }
