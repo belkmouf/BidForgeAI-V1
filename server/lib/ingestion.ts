@@ -273,7 +273,9 @@ export class IngestionService {
     filename: string,
     content: string
   ): Promise<ProcessedFile> {
-    const chunks = await this.chunkTextSemantic(content);
+    // Sanitize content: remove null bytes that PostgreSQL cannot store in text columns
+    const sanitizedContent = content.replace(/\x00/g, '');
+    const chunks = await this.chunkTextSemantic(sanitizedContent);
     
     // Use a transaction to ensure atomic document + chunk creation
     const client = await pool.connect();
@@ -287,7 +289,7 @@ export class IngestionService {
         `INSERT INTO documents (project_id, filename, content, is_processed) 
          VALUES ($1, $2, $3, $4) 
          RETURNING id`,
-        [projectId, filename, content.substring(0, 10000), false]
+        [projectId, filename, sanitizedContent.substring(0, 10000), false]
       );
       documentId = docResult.rows[0].id;
 
@@ -295,9 +297,12 @@ export class IngestionService {
       console.log(`Generating embeddings for ${chunks.length} chunks from ${filename}...`);
       
       for (let i = 0; i < chunks.length; i++) {
+        // Ensure each chunk is also sanitized (remove any null bytes)
+        const sanitizedChunk = chunks[i].replace(/\x00/g, '');
+        
         try {
           // Generate embedding for this chunk
-          const embedding = await generateEmbedding(chunks[i]);
+          const embedding = await generateEmbedding(sanitizedChunk);
           
           // Convert embedding array to PostgreSQL vector format
           const embeddingStr = `[${embedding.join(',')}]`;
@@ -305,7 +310,7 @@ export class IngestionService {
           await client.query(
             `INSERT INTO document_chunks (document_id, content, chunk_index, embedding) 
              VALUES ($1, $2, $3, $4::vector)`,
-            [documentId, chunks[i], i, embeddingStr]
+            [documentId, sanitizedChunk, i, embeddingStr]
           );
           
           // Log progress for large documents
@@ -318,7 +323,7 @@ export class IngestionService {
           await client.query(
             `INSERT INTO document_chunks (document_id, content, chunk_index) 
              VALUES ($1, $2, $3)`,
-            [documentId, chunks[i], i]
+            [documentId, sanitizedChunk, i]
           );
         }
       }
