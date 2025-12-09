@@ -466,7 +466,7 @@ export default function OnboardingWizard() {
 
               <Button 
                 type="submit" 
-                className="w-full bg-deep-teal hover:bg-deep-teal/90 text-white mt-6 py-6 text-lg"
+                className="w-full bg-teal-700 hover:bg-teal-800 text-white mt-8 py-6 text-lg font-semibold shadow-lg"
                 disabled={isLoading || !companyName || !primaryColor}
                 data-testid="button-complete-setup"
               >
@@ -485,6 +485,7 @@ export default function OnboardingWizard() {
             </CardContent>
           </form>
         </Card>
+        <div className="h-16"></div>
         </div>
       </div>
 
