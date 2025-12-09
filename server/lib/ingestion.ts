@@ -4,6 +4,7 @@ import * as os from 'os';
 import AdmZip from 'adm-zip';
 import MsgReaderModule from '@kenjiuno/msgreader';
 const MsgReader = (MsgReaderModule as any).default || MsgReaderModule;
+import mammoth from 'mammoth';
 import { pool } from '../db';
 import { generateEmbedding } from './openai.js';
 import { RecursiveCharacterTextSplitter } from '@langchain/textsplitters';
@@ -53,7 +54,10 @@ export class IngestionService {
       } else if (ext === '.msg') {
         const msgResults = await this.processMsg(buffer, filename, projectId);
         results.push(...msgResults);
-      } else if (ext === '.txt' || ext === '.doc' || ext === '.docx') {
+      } else if (ext === '.docx') {
+        const result = await this.processDocx(buffer, filename, projectId);
+        results.push(result);
+      } else if (ext === '.txt' || ext === '.doc') {
         const result = await this.processText(buffer, filename, projectId);
         results.push(result);
       } else {
@@ -234,6 +238,30 @@ export class IngestionService {
     projectId: string
   ): Promise<ProcessedFile> {
     const text = buffer.toString('utf-8', 0, Math.min(buffer.length, 50000));
+    return this.createDocumentWithChunks(projectId, filename, text);
+  }
+
+  private async processDocx(
+    buffer: Buffer,
+    filename: string,
+    projectId: string
+  ): Promise<ProcessedFile> {
+    let text = '';
+    
+    try {
+      const result = await mammoth.extractRawText({ buffer });
+      text = result.value || '';
+      
+      if (result.messages && result.messages.length > 0) {
+        console.log(`DOCX parsing messages for ${filename}:`, result.messages);
+      }
+      
+      console.log(`DOCX parsed: ${filename} - ${text.length} characters extracted`);
+    } catch (error: any) {
+      console.error(`DOCX parsing error for ${filename}:`, error);
+      text = `[DOCX content could not be extracted: ${error.message}]`;
+    }
+    
     return this.createDocumentWithChunks(projectId, filename, text);
   }
 
