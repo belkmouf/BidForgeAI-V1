@@ -294,18 +294,20 @@ export default function OnboardingWizard() {
                       </div>
                     )}
                   </div>
-                  <div className="flex items-center gap-2 text-sm text-slate-500">
-                    <span>or enter URL:</span>
-                    <Input
-                      id="logoUrl"
-                      type="url"
-                      placeholder="https://example.com/logo.png"
-                      value={logoUrl}
-                      onChange={(e) => setLogoUrl(e.target.value)}
-                      className="flex-1 bg-slate-50 border-slate-300 text-slate-900 placeholder:text-slate-400 h-8 text-sm"
-                      data-testid="input-logo-url"
-                    />
-                  </div>
+                  {!logoUrl && (
+                    <div className="flex items-center gap-2 text-sm text-slate-500">
+                      <span>or enter URL:</span>
+                      <Input
+                        id="logoUrl"
+                        type="url"
+                        placeholder="https://example.com/logo.png"
+                        value={logoUrl}
+                        onChange={(e) => setLogoUrl(e.target.value)}
+                        className="flex-1 bg-slate-50 border-slate-300 text-slate-900 placeholder:text-slate-400 h-8 text-sm"
+                        data-testid="input-logo-url"
+                      />
+                    </div>
+                  )}
                 </div>
                 
                 <div className="space-y-2">
