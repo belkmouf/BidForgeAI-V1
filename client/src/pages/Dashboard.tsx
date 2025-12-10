@@ -249,21 +249,6 @@ export default function Dashboard() {
                   </div>
                 </CardContent>
               </Card>
-              
-              <Card className="bg-primary text-primary-foreground overflow-hidden relative border-none">
-                <div className="absolute -right-6 -top-6 h-32 w-32 bg-white/10 rounded-full blur-2xl pointer-events-none" />
-                <CardHeader>
-                  <CardTitle className="text-lg">Pro Tip</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm opacity-90 mb-4">
-                    Including safety certifications in your executive summary increases win probability by 15%.
-                  </p>
-                  <Button variant="secondary" size="sm" className="w-full text-primary font-semibold bg-white hover:bg-white/90 border-none">
-                    Update Templates
-                  </Button>
-                </CardContent>
-              </Card>
             </div>
           </div>
         </div>
