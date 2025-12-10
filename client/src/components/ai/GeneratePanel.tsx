@@ -1,37 +1,11 @@
-import { useState } from 'react';
-import { Sparkles, Wand2, Loader2, RotateCcw } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Sparkles, Wand2, Loader2, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
 import { Card } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import type { AIModel } from '@/lib/api';
-
-const DEFAULT_INSTRUCTIONS = `IMPORTANT: Generate a bid response using ONLY the following data sources. Do NOT invent, assume, or hallucinate any information:
-
-DATA SOURCES (Use ONLY these):
-- Uploaded RFP/RFQ documents (project requirements, scope, specifications)
-- Company profile information (name, certifications, experience, capabilities)
-- Project details (name, client, location, dates)
-- Historical bid data from similar past projects (if available)
-
-STRICT RULES:
-- Extract ALL requirements directly from the uploaded documents
-- Use ONLY company information provided in the system
-- If specific data is missing, mark it as [TO BE PROVIDED] - do NOT make up values
-- Reference actual document content when addressing requirements
-- Do NOT invent project timelines, costs, or specifications not in the source documents
-
-BID STRUCTURE:
-1. Executive Summary - Based on actual project scope from RFP
-2. Company Qualifications - Use only verified company data
-3. Technical Approach - Address specific RFP requirements
-4. Project Timeline - Based on RFP timeline or mark [TO BE PROVIDED]
-5. Safety & Quality Plans - Use company's actual certifications
-6. Pricing - Based on RFP requirements or mark [TO BE PROVIDED]
-7. Compliance Matrix - Map each RFP requirement to our response
-
-Ensure every claim is traceable to source documents or company data.`;
+import { getAIInstructions, type AIModel, type AIInstruction } from '@/lib/api';
+import { Link } from 'wouter';
 
 interface GeneratePanelProps {
   onGenerate: (instructions: string, tone?: string, model?: AIModel) => void;
@@ -39,18 +13,39 @@ interface GeneratePanelProps {
 }
 
 export function GeneratePanel({ onGenerate, isGenerating }: GeneratePanelProps) {
-  const [instructions, setInstructions] = useState(DEFAULT_INSTRUCTIONS);
+  const [instructions, setInstructions] = useState<AIInstruction[]>([]);
+  const [selectedInstructionId, setSelectedInstructionId] = useState<string>('');
   const [tone, setTone] = useState('professional');
   const [model, setModel] = useState<AIModel>('openai');
+  const [isLoading, setIsLoading] = useState(true);
 
-  const handleReset = () => {
-    setInstructions(DEFAULT_INSTRUCTIONS);
-  };
+  useEffect(() => {
+    const fetchInstructions = async () => {
+      try {
+        const data = await getAIInstructions();
+        setInstructions(data.instructions);
+        // Select the default instruction or first one
+        const defaultInstruction = data.instructions.find(i => i.isDefault) || data.instructions[0];
+        if (defaultInstruction) {
+          setSelectedInstructionId(String(defaultInstruction.id));
+        }
+      } catch (error) {
+        console.error('Failed to fetch AI instructions:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchInstructions();
+  }, []);
 
   const handleGenerate = () => {
-    if (!instructions) return;
-    onGenerate(instructions, tone, model);
+    const selectedInstruction = instructions.find(i => String(i.id) === selectedInstructionId);
+    if (!selectedInstruction) return;
+    onGenerate(selectedInstruction.instructions, tone, model);
   };
+
+  const selectedInstruction = instructions.find(i => String(i.id) === selectedInstructionId);
 
   return (
     <div className="space-y-4">
@@ -79,7 +74,7 @@ export function GeneratePanel({ onGenerate, isGenerating }: GeneratePanelProps) 
           <div className="space-y-2">
             <Label htmlFor="tone">Tone & Style</Label>
             <Select value={tone} onValueChange={setTone}>
-              <SelectTrigger id="tone">
+              <SelectTrigger id="tone" data-testid="select-tone">
                 <SelectValue placeholder="Select tone" />
               </SelectTrigger>
               <SelectContent>
@@ -93,37 +88,47 @@ export function GeneratePanel({ onGenerate, isGenerating }: GeneratePanelProps) 
 
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <Label htmlFor="instructions">Instructions</Label>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="h-6 px-2 text-xs text-muted-foreground hover:text-foreground"
-                onClick={handleReset}
-                data-testid="button-reset-instructions"
-              >
-                <RotateCcw className="h-3 w-3 mr-1" />
-                Reset
-              </Button>
+              <Label htmlFor="instructions">Instructions Preset</Label>
+              <Link href="/settings" className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1">
+                <Settings className="h-3 w-3" />
+                Manage
+              </Link>
             </div>
-            <Textarea
-              id="instructions"
-              placeholder="Enter your bid generation instructions..."
-              className="min-h-[200px] resize-y text-sm"
-              value={instructions}
-              onChange={(e) => setInstructions(e.target.value)}
-              data-testid="textarea-instructions"
-            />
-            <p className="text-xs text-muted-foreground">
-              Modify the instructions above to customize what the AI generates. Click Reset to restore defaults.
-            </p>
+            {isLoading ? (
+              <div className="flex items-center justify-center py-4">
+                <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+              </div>
+            ) : (
+              <>
+                <Select value={selectedInstructionId} onValueChange={setSelectedInstructionId}>
+                  <SelectTrigger id="instructions" data-testid="select-instructions">
+                    <SelectValue placeholder="Select instruction preset" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {instructions.map((instruction) => (
+                      <SelectItem key={instruction.id} value={String(instruction.id)}>
+                        {instruction.name}
+                        {instruction.isDefault && ' (Default)'}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {selectedInstruction && (
+                  <div className="p-3 bg-muted/50 rounded-md border text-xs text-muted-foreground max-h-[100px] overflow-y-auto">
+                    {selectedInstruction.instructions.substring(0, 300)}
+                    {selectedInstruction.instructions.length > 300 && '...'}
+                  </div>
+                )}
+              </>
+            )}
           </div>
 
           <Button 
             className="w-full gap-2 font-medium" 
             size="lg" 
             onClick={handleGenerate}
-            disabled={isGenerating || !instructions}
+            disabled={isGenerating || !selectedInstructionId || isLoading}
+            data-testid="button-generate-bid"
           >
             {isGenerating ? (
               <>
