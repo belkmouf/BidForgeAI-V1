@@ -11,8 +11,9 @@ import { ChevronLeft, Save, Share2, Eye, Edit3, ShieldCheck, AlertTriangle, Load
 import { Link } from 'wouter';
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from '@/hooks/use-toast';
-import { getProject, listDocuments, uploadDocument, deleteDocument, generateBid, refineBid, getLatestBid, wrapInTemplate, generateShareLink, type AIModel } from '@/lib/api';
+import { getProject, listDocuments, uploadDocument, deleteDocument, generateBid, refineBid, getLatestBid, wrapInTemplate, generateShareLink, updateProjectStatus, type AIModel } from '@/lib/api';
 import type { Project, Document } from '@shared/schema';
 
 const initialEditorContent = '<h1>Welcome to BidForge AI</h1><p>Use the Generate panel to create your first bid draft, or start typing to manually build your proposal.</p>';
@@ -32,6 +33,29 @@ export default function ProjectWorkspace() {
   const [isLoadingPreview, setIsLoadingPreview] = useState(false);
   const [currentBidId, setCurrentBidId] = useState<number | null>(null);
   const [isSharing, setIsSharing] = useState(false);
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+
+  const handleStatusChange = async (newStatus: string) => {
+    if (!project) return;
+    setIsUpdatingStatus(true);
+    try {
+      const updatedProject = await updateProjectStatus(projectId, newStatus);
+      setProject(updatedProject);
+      toast({
+        title: "Status Updated",
+        description: `Project status changed to ${newStatus}`,
+      });
+    } catch (error) {
+      console.error('Failed to update status:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update project status",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUpdatingStatus(false);
+    }
+  };
 
   useEffect(() => {
     async function loadProject() {
@@ -313,9 +337,21 @@ export default function ProjectWorkspace() {
             <div>
               <h1 className="font-semibold text-sm flex items-center gap-2">
                 {project.name}
-                <span className="px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[10px] font-bold uppercase tracking-wider">
-                  {project.status}
-                </span>
+                <Select 
+                  value={project.status || 'Active'} 
+                  onValueChange={handleStatusChange}
+                  disabled={isUpdatingStatus}
+                >
+                  <SelectTrigger className="h-6 w-auto px-2 py-0 text-[10px] font-bold uppercase tracking-wider bg-primary/10 border-0 text-primary" data-testid="select-project-status">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Active">Active</SelectItem>
+                    <SelectItem value="Submitted">Submitted</SelectItem>
+                    <SelectItem value="Closed-Won">Closed-Won</SelectItem>
+                    <SelectItem value="Closed-Lost">Closed-Lost</SelectItem>
+                  </SelectContent>
+                </Select>
               </h1>
               <p className="text-xs text-muted-foreground">{project.clientName}</p>
             </div>
