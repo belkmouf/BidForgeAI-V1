@@ -126,23 +126,34 @@ export default function Landing() {
               }`}>
                 {displayName}
               </div>
-              <div className={`text-xs tracking-[0.2em] transition-colors duration-300 ${
-                scrolled ? 'text-gold-700' : 'text-gold-400'
-              }`}>
+              <div 
+                className="text-xs tracking-[0.2em] transition-colors duration-300"
+                style={{ color: primaryColor }}
+              >
                 {displayTagline}
               </div>
             </div>
           </Link>
           
           <div className="hidden md:flex items-center gap-8">
-            <a href="#features" className={`text-sm font-medium tracking-wide hover:text-teal-500 transition-colors ${
-              scrolled ? 'text-charcoal-800' : 'text-white/90'
-            }`}>
+            <a 
+              href="#features" 
+              className={`text-sm font-medium tracking-wide transition-colors ${
+                scrolled ? 'text-charcoal-800' : 'text-white/90'
+              }`}
+              onMouseEnter={(e) => e.currentTarget.style.color = primaryColor}
+              onMouseLeave={(e) => e.currentTarget.style.color = ''}
+            >
               Features
             </a>
-            <a href="#testimonial" className={`text-sm font-medium tracking-wide hover:text-teal-500 transition-colors ${
-              scrolled ? 'text-charcoal-800' : 'text-white/90'
-            }`}>
+            <a 
+              href="#testimonial" 
+              className={`text-sm font-medium tracking-wide transition-colors ${
+                scrolled ? 'text-charcoal-800' : 'text-white/90'
+              }`}
+              onMouseEnter={(e) => e.currentTarget.style.color = primaryColor}
+              onMouseLeave={(e) => e.currentTarget.style.color = ''}
+            >
               Testimonials
             </a>
             <Link 
@@ -217,18 +228,24 @@ export default function Landing() {
           className="absolute top-1/4 -left-20 w-96 h-96 rounded-full blur-3xl"
           style={{ backgroundColor: `${primaryColor}20` }}
         />
-        <div className="absolute bottom-1/4 -right-20 w-96 h-96 bg-gold-500/10 rounded-full blur-3xl" />
+        <div 
+          className="absolute bottom-1/4 -right-20 w-96 h-96 rounded-full blur-3xl"
+          style={{ backgroundColor: `${primaryColor}15` }}
+        />
         
         <div className="relative z-10 max-w-6xl mx-auto px-6 lg:px-8 text-center">
           <div className="animate-in mb-6">
-            <span className="text-gold-400 uppercase tracking-[0.25em] text-sm font-medium">
+            <span 
+              className="uppercase tracking-[0.25em] text-sm font-medium"
+              style={{ color: primaryColor }}
+            >
               Intelligent Bidding Platform
             </span>
           </div>
           
           <h1 className="animate-in font-display text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-bold text-white mb-8 leading-[1.1] tracking-tight">
             Win More Bids.<br />
-            <span className="text-gold-400">Work Less.</span>
+            <span style={{ color: primaryColor }}>Work Less.</span>
           </h1>
           
           <p className="animate-in text-lg md:text-xl lg:text-2xl text-gray-300 mb-12 max-w-3xl mx-auto leading-relaxed font-light">
@@ -249,7 +266,10 @@ export default function Landing() {
             
             <a 
               href="#features" 
-              className="px-10 py-5 border-2 border-gold-500/50 text-gold-400 font-semibold text-lg hover:bg-gold-500/10 hover:border-gold-400 transition-all duration-300"
+              className="px-10 py-5 border-2 font-semibold text-lg transition-all duration-300"
+              style={{ borderColor: `${primaryColor}80`, color: primaryColor }}
+              onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = `${primaryColor}15`; e.currentTarget.style.borderColor = primaryColor; }}
+              onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.borderColor = `${primaryColor}80`; }}
             >
               Explore Features
             </a>
@@ -257,8 +277,14 @@ export default function Landing() {
         </div>
         
         <div className="absolute bottom-10 left-1/2 -translate-x-1/2 animate-bounce">
-          <div className="w-6 h-10 border-2 border-gold-500/50 rounded-full flex justify-center pt-2">
-            <div className="w-1 h-3 bg-gold-400 rounded-full" />
+          <div 
+            className="w-6 h-10 border-2 rounded-full flex justify-center pt-2"
+            style={{ borderColor: `${primaryColor}80` }}
+          >
+            <div 
+              className="w-1 h-3 rounded-full"
+              style={{ backgroundColor: primaryColor }}
+            />
           </div>
         </div>
       </section>
@@ -267,7 +293,10 @@ export default function Landing() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
             {stats.map((stat, index) => (
               <div key={index} className="text-center">
-                <div className="text-4xl md:text-5xl font-display font-bold text-gold-400 mb-2">
+                <div 
+                  className="text-4xl md:text-5xl font-display font-bold mb-2"
+                  style={{ color: primaryColor }}
+                >
                   {stat.value}
                 </div>
                 <div className="text-gray-400 text-sm uppercase tracking-wider">
@@ -281,7 +310,10 @@ export default function Landing() {
       <section id="features" className="py-24 md:py-32 bg-background">
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
           <div className="text-center mb-20">
-            <span className="text-teal-700 uppercase tracking-[0.2em] text-sm font-medium mb-4 block">
+            <span 
+              className="uppercase tracking-[0.2em] text-sm font-medium mb-4 block"
+              style={{ color: primaryColor }}
+            >
               Core Capabilities
             </span>
             <h2 className="font-display text-4xl md:text-5xl lg:text-6xl font-bold text-foreground mb-6">
@@ -296,10 +328,16 @@ export default function Landing() {
             {features.map((feature, index) => (
               <div
                 key={index}
-                className="group bg-card p-8 lg:p-10 border border-border hover:shadow-2xl transition-all duration-500 hover:border-teal-700 hover:-translate-y-1"
+                className="group bg-card p-8 lg:p-10 border border-border hover:shadow-2xl transition-all duration-500 hover:-translate-y-1"
+                style={{ ['--hover-border-color' as string]: primaryColor }}
+                onMouseEnter={(e) => (e.currentTarget.style.borderColor = primaryColor)}
+                onMouseLeave={(e) => (e.currentTarget.style.borderColor = '')}
                 data-testid={`card-feature-${index}`}
               >
-                <div className="w-14 h-14 lg:w-16 lg:h-16 bg-gradient-to-br from-teal-700 to-teal-600 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
+                <div 
+                  className="w-14 h-14 lg:w-16 lg:h-16 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300"
+                  style={{ background: primaryColor }}
+                >
                   <feature.icon className="text-white" size={28} />
                 </div>
                 
@@ -311,7 +349,10 @@ export default function Landing() {
                 </p>
                 
                 <div className="pt-6 border-t border-border">
-                  <div className="text-3xl lg:text-4xl font-bold text-teal-700 mb-1">
+                  <div 
+                    className="text-3xl lg:text-4xl font-bold mb-1"
+                    style={{ color: primaryColor }}
+                  >
                     {feature.stat}
                   </div>
                   <div className="text-sm text-muted-foreground uppercase tracking-wider">
@@ -324,18 +365,22 @@ export default function Landing() {
         </div>
       </section>
       <section id="testimonial" className="py-24 md:py-32 bg-charcoal-900 text-white relative overflow-hidden">
-        <div className="absolute inset-0 opacity-5">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-teal-500 via-transparent to-transparent" />
-        </div>
+        <div 
+          className="absolute inset-0 opacity-5"
+          style={{ background: `radial-gradient(circle at center, ${primaryColor}, transparent, transparent)` }}
+        />
         
         <div className="relative z-10 max-w-4xl mx-auto px-6 lg:px-8 text-center">
-          <div className="font-accent text-gold-400 text-7xl md:text-8xl mb-8 leading-none">"</div>
+          <div 
+            className="font-accent text-7xl md:text-8xl mb-8 leading-none"
+            style={{ color: primaryColor }}
+          >"</div>
           
           <blockquote className="text-xl md:text-2xl lg:text-3xl font-light leading-relaxed mb-10 text-gray-300">
             BidForge transformed our bidding process. We went from spending 
             <span className="text-white font-medium"> 3 days per proposal </span>
             to generating comprehensive, winning bids in 
-            <span className="text-gold-400 font-medium"> under an hour</span>.
+            <span style={{ color: primaryColor }} className="font-medium"> under an hour</span>.
             Our win rate increased by 40%.
           </blockquote>
           
@@ -343,7 +388,7 @@ export default function Landing() {
             <div className="font-medium text-lg text-white mb-1">
               Sarah Mitchell
             </div>
-            <div className="text-gold-500 text-sm tracking-wider">
+            <div style={{ color: primaryColor }} className="text-sm tracking-wider">
               Director of Operations, Apex Construction Ltd.
             </div>
           </div>
@@ -401,17 +446,17 @@ export default function Landing() {
             <div>
               <h4 className="font-display font-semibold text-white mb-4">Platform</h4>
               <ul className="space-y-3 text-gray-400">
-                <li><a href="#features" className="hover:text-teal-400 transition-colors">Features</a></li>
-                <li><Link href="/dashboard" className="hover:text-teal-400 transition-colors">Dashboard</Link></li>
-                <li><Link href="/templates" className="hover:text-teal-400 transition-colors">Templates</Link></li>
+                <li><a href="#features" className="transition-colors" onMouseEnter={(e) => e.currentTarget.style.color = primaryColor} onMouseLeave={(e) => e.currentTarget.style.color = ''}>Features</a></li>
+                <li><Link href="/dashboard" className="transition-colors" onMouseEnter={(e) => e.currentTarget.style.color = primaryColor} onMouseLeave={(e) => e.currentTarget.style.color = ''}>Dashboard</Link></li>
+                <li><Link href="/templates" className="transition-colors" onMouseEnter={(e) => e.currentTarget.style.color = primaryColor} onMouseLeave={(e) => e.currentTarget.style.color = ''}>Templates</Link></li>
               </ul>
             </div>
             <div>
               <h4 className="font-display font-semibold text-white mb-4">Company</h4>
               <ul className="space-y-3 text-gray-400">
-                <li><a href="#" className="hover:text-teal-400 transition-colors">About</a></li>
-                <li><a href="#" className="hover:text-teal-400 transition-colors">Contact</a></li>
-                <li><a href="#" className="hover:text-teal-400 transition-colors">Privacy</a></li>
+                <li><a href="#" className="transition-colors" onMouseEnter={(e) => e.currentTarget.style.color = primaryColor} onMouseLeave={(e) => e.currentTarget.style.color = ''}>About</a></li>
+                <li><a href="#" className="transition-colors" onMouseEnter={(e) => e.currentTarget.style.color = primaryColor} onMouseLeave={(e) => e.currentTarget.style.color = ''}>Contact</a></li>
+                <li><a href="#" className="transition-colors" onMouseEnter={(e) => e.currentTarget.style.color = primaryColor} onMouseLeave={(e) => e.currentTarget.style.color = ''}>Privacy</a></li>
               </ul>
             </div>
           </div>
