@@ -115,7 +115,7 @@ export default function Dashboard() {
           {/* Stats Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             {displayStats.map((stat, i) => (
-              <Card key={i} className="hover:shadow-md transition-shadow border-primary/20 shadow-sm !bg-teal-50">
+              <Card key={i} className="hover:shadow-md transition-shadow border-primary/20 shadow-sm !bg-teal-100">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium text-muted-foreground">
                     {stat.label}
@@ -145,7 +145,7 @@ export default function Dashboard() {
             
             {/* Left Column: Projects Table */}
             <div className="lg:col-span-2 space-y-6">
-              <Card className="border-primary/20 shadow-sm h-full !bg-teal-50">
+              <Card className="border-primary/20 shadow-sm h-full !bg-teal-100">
                 <CardHeader className="flex flex-row items-center justify-between">
                   <div>
                     <CardTitle>Recent Projects</CardTitle>
@@ -215,7 +215,7 @@ export default function Dashboard() {
 
             {/* Right Column: Pipeline Chart */}
             <div className="space-y-6">
-              <Card className="border-primary/20 shadow-sm !bg-teal-50">
+              <Card className="border-primary/20 shadow-sm !bg-teal-100">
                 <CardHeader>
                   <CardTitle>Pipeline Health</CardTitle>
                   <CardDescription>Distribution of projects by stage</CardDescription>
