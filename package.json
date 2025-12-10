@@ -9,7 +9,15 @@
     "build": "tsx script/build.ts",
     "start": "NODE_ENV=production node dist/index.cjs",
     "check": "tsc",
-    "db:push": "drizzle-kit push"
+    "db:push": "drizzle-kit push",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "test:server": "jest server/",
+    "test:client": "jest client/",
+    "test:e2e": "playwright test",
+    "lint": "eslint . --ext .ts,.tsx --fix",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.71.0",
@@ -89,6 +97,7 @@
     "helmet": "^8.1.0",
     "input-otp": "^1.4.2",
     "ioredis": "^5.8.2",
+    "redis": "^4.7.0",
     "jest": "^30.2.0",
     "jest-environment-jsdom": "^30.2.0",
     "jsonwebtoken": "^9.0.3",
@@ -147,7 +156,24 @@
     "tailwindcss": "^4.1.14",
     "tsx": "^4.20.5",
     "typescript": "5.6.3",
-    "vite": "^7.1.9"
+    "vite": "^7.1.9",
+    "@playwright/test": "^1.48.0",
+    "@testing-library/dom": "^10.4.0",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.0",
+    "@testing-library/user-event": "^14.6.1",
+    "@types/jest": "^30.0.0",
+    "eslint": "^9.16.0",
+    "eslint-plugin-react": "^7.37.2",
+    "eslint-plugin-react-hooks": "^5.0.0",
+    "@typescript-eslint/eslint-plugin": "^8.18.0",
+    "@typescript-eslint/parser": "^8.18.0",
+    "jest": "^30.2.0",
+    "jest-environment-jsdom": "^30.2.0",
+    "jest-environment-node": "^30.2.0",
+    "ts-jest": "^29.4.6",
+    "msw": "^2.6.8",
+    "cross-env": "^7.0.3"
   },
   "optionalDependencies": {
     "bufferutil": "^4.0.8"

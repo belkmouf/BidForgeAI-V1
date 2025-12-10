@@ -41,6 +41,8 @@ import auditRoutes from "./routes/audit";
 import analyticsRoutes from "./routes/analytics";
 import reportsRoutes from "./routes/reports";
 import adminRoutes from "./routes/admin";
+import v1Routes from "./routes/v1/index";
+import { apiVersioning, API_VERSIONS, trackVersionUsage, VersionedRequest } from "./middleware/versioning";
 import { authenticateToken, optionalAuth, AuthRequest } from "./middleware/auth";
 import { requirePermission, requireRole, PERMISSIONS } from "./middleware/rbac";
 import { 
@@ -196,6 +198,21 @@ export async function registerRoutes(
   const path = await import('path');
   const express = await import('express');
   app.use('/uploads', express.default.static(path.join(process.cwd(), 'uploads')));
+  
+  // ==================== API VERSIONING ====================
+  // Apply API versioning middleware to all API routes
+  app.use('/api', apiVersioning);
+  
+  // Version-specific routes
+  app.use('/api/v1', v1Routes);
+  
+  // For backwards compatibility, also serve v1 routes on the base /api path
+  // This maintains compatibility while allowing explicit versioning
+  app.use('/api', (req: VersionedRequest, res, next) => {
+    // Track version usage for analytics
+    trackVersionUsage(req);
+    next();
+  });
   
   // ==================== AUTHENTICATION ====================
   app.use('/api/auth', authRoutes);

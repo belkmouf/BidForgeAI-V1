@@ -14,6 +14,7 @@ import {
   verifyRefreshTokenHash,
 } from '../lib/auth';
 import { authenticateToken, AuthRequest } from '../middleware/auth';
+import { logContext } from '../lib/logger.js';
 
 const router = Router();
 
@@ -154,10 +155,27 @@ router.post('/login', async (req, res) => {
 
     // Check all conditions after password verification to prevent timing leaks
     if (!user || !isValid) {
+      logContext.security('Login attempt failed', {
+        email,
+        ip: req.ip,
+        userAgent: req.get('User-Agent'),
+        action: 'login',
+        result: 'failure',
+        reason: 'invalid_credentials'
+      });
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
     if (!user.isActive) {
+      logContext.security('Login attempt failed - account deactivated', {
+        userId: user.id,
+        email: user.email,
+        ip: req.ip,
+        userAgent: req.get('User-Agent'),
+        action: 'login',
+        result: 'failure',
+        reason: 'account_deactivated'
+      });
       return res.status(403).json({ error: 'Account is deactivated' });
     }
 
@@ -183,6 +201,24 @@ router.post('/login', async (req, res) => {
       userId: user.id,
       tokenHash,
       expiresAt,
+    });
+
+    // Log successful login
+    logContext.security('User logged in successfully', {
+      userId: user.id,
+      email: user.email,
+      ip: req.ip,
+      userAgent: req.get('User-Agent'),
+      action: 'login',
+      result: 'success'
+    });
+
+    logContext.audit('User login', {
+      userId: user.id,
+      email: user.email,
+      action: 'login',
+      ip: req.ip,
+      userAgent: req.get('User-Agent')
     });
 
     res.json({
