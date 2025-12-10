@@ -138,7 +138,7 @@ export interface IStorage {
   getTemplates(companyId: number): Promise<Template[]>;
   getTemplate(id: number, companyId: number): Promise<Template | undefined>;
   createTemplate(template: InsertTemplate): Promise<Template>;
-  updateTemplate(id: number, companyId: number, updates: Partial<Template>): Promise<Template | undefined>;
+  updateTemplate(id: number, companyId: number, updates: Partial<Pick<Template, 'name' | 'description' | 'category' | 'sections'>>): Promise<Template | undefined>;
   deleteTemplate(id: number, companyId: number): Promise<boolean>;
 }
 
@@ -1159,10 +1159,16 @@ export class DatabaseStorage implements IStorage {
     return result;
   }
 
-  async updateTemplate(id: number, companyId: number, updates: Partial<Template>): Promise<Template | undefined> {
+  async updateTemplate(id: number, companyId: number, updates: Partial<Pick<Template, 'name' | 'description' | 'category' | 'sections'>>): Promise<Template | undefined> {
+    const allowedUpdates: Record<string, any> = { updatedAt: new Date() };
+    if (updates.name !== undefined) allowedUpdates.name = updates.name;
+    if (updates.description !== undefined) allowedUpdates.description = updates.description;
+    if (updates.category !== undefined) allowedUpdates.category = updates.category;
+    if (updates.sections !== undefined) allowedUpdates.sections = updates.sections;
+    
     const [template] = await db
       .update(templates)
-      .set({ ...updates, updatedAt: new Date() })
+      .set(allowedUpdates)
       .where(and(
         eq(templates.id, id),
         eq(templates.companyId, companyId)

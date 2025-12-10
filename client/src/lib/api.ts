@@ -221,3 +221,53 @@ export async function deleteAIInstruction(id: number) {
   if (!res.ok) throw new Error(await res.text());
   return res.json() as Promise<{ success: boolean }>;
 }
+
+// Templates API
+export interface Template {
+  id: number;
+  companyId: number;
+  name: string;
+  description: string | null;
+  category: string;
+  sections: { title: string; content: string }[] | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export async function getTemplates() {
+  const res = await apiRequest(`${API_BASE}/templates`);
+  if (!res.ok) throw new Error(await res.text());
+  return res.json() as Promise<Template[]>;
+}
+
+export async function getTemplate(id: number) {
+  const res = await apiRequest(`${API_BASE}/templates/${id}`);
+  if (!res.ok) throw new Error(await res.text());
+  return res.json() as Promise<Template>;
+}
+
+export async function createTemplate(data: { name: string; description?: string; category: string; sections?: { title: string; content: string }[] }) {
+  const res = await apiRequest(`${API_BASE}/templates`, {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json() as Promise<Template>;
+}
+
+export async function updateTemplate(id: number, data: { name?: string; description?: string; category?: string; sections?: { title: string; content: string }[] }) {
+  const res = await apiRequest(`${API_BASE}/templates/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json() as Promise<Template>;
+}
+
+export async function deleteTemplate(id: number) {
+  const res = await apiRequest(`${API_BASE}/templates/${id}`, {
+    method: 'DELETE',
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json() as Promise<{ success: boolean }>;
+}
