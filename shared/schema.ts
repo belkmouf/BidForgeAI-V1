@@ -149,6 +149,36 @@ export const documentChunks = pgTable("document_chunks", {
   chunkIndex: integer("chunk_index").notNull(),
 });
 
+// Company Knowledge Base Documents Table (for RAG during bid generation)
+export const knowledgeBaseDocuments = pgTable("knowledge_base_documents", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  companyId: integer("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+  filename: text("filename").notNull(),
+  originalName: text("original_name").notNull(),
+  fileType: text("file_type").notNull(), // csv, docx, pdf, txt, xlsx
+  fileSize: integer("file_size").notNull(),
+  content: text("content"),
+  isProcessed: boolean("is_processed").default(false).notNull(),
+  chunkCount: integer("chunk_count").default(0),
+  uploadedAt: timestamp("uploaded_at").defaultNow().notNull(),
+});
+
+export type KnowledgeBaseDocument = typeof knowledgeBaseDocuments.$inferSelect;
+export type InsertKnowledgeBaseDocument = typeof knowledgeBaseDocuments.$inferInsert;
+
+// Knowledge Base Chunks Table (for RAG)
+export const knowledgeBaseChunks = pgTable("knowledge_base_chunks", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  documentId: integer("document_id").notNull().references(() => knowledgeBaseDocuments.id, { onDelete: "cascade" }),
+  companyId: integer("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+  content: text("content").notNull(),
+  embedding: vector("embedding", { dimensions: 1536 }),
+  chunkIndex: integer("chunk_index").notNull(),
+});
+
+export type KnowledgeBaseChunk = typeof knowledgeBaseChunks.$inferSelect;
+export type InsertKnowledgeBaseChunk = typeof knowledgeBaseChunks.$inferInsert;
+
 // Generated Bids Table
 export const bids = pgTable("bids", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),

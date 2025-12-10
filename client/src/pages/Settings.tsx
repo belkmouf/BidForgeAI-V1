@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Settings as SettingsIcon, Bell, Palette, Shield, User, LogOut, Lock, Loader2, Building2, Globe, Phone, Mail, MapPin, Award, Upload, CheckCircle } from 'lucide-react';
+import { Settings as SettingsIcon, Bell, Palette, Shield, User, LogOut, Lock, Loader2, Building2, Globe, Phone, Mail, MapPin, Award, Upload, CheckCircle, FileText, Trash2, File, FileSpreadsheet } from 'lucide-react';
 import { useAuthStore, logout, apiRequest } from '@/lib/auth';
 
 interface BrandingProfile {
@@ -66,6 +66,24 @@ export default function Settings() {
   const [brandingError, setBrandingError] = useState('');
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  // Knowledge base documents state
+  interface KnowledgeDoc {
+    id: number;
+    filename: string;
+    originalName: string;
+    fileType: string;
+    fileSize: number;
+    isProcessed: boolean;
+    chunkCount: number;
+    uploadedAt: string;
+  }
+  const [knowledgeDocs, setKnowledgeDocs] = useState<KnowledgeDoc[]>([]);
+  const [isUploadingKnowledge, setIsUploadingKnowledge] = useState(false);
+  const [knowledgeError, setKnowledgeError] = useState('');
+  const [knowledgeSuccess, setKnowledgeSuccess] = useState('');
+  const [isDeletingDoc, setIsDeletingDoc] = useState<number | null>(null);
+  const knowledgeInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const fetchBranding = async () => {
@@ -101,6 +119,120 @@ export default function Settings() {
       fetchBranding();
     }
   }, [isAuthenticated, user?.companyName]);
+
+  // Fetch knowledge base documents
+  useEffect(() => {
+    const fetchKnowledgeDocs = async () => {
+      try {
+        const response = await apiRequest('/api/knowledge-base');
+        if (response.ok) {
+          const data = await response.json();
+          setKnowledgeDocs(data.documents || []);
+        }
+      } catch (error) {
+        console.error('Failed to fetch knowledge docs:', error);
+      }
+    };
+
+    if (isAuthenticated) {
+      fetchKnowledgeDocs();
+    }
+  }, [isAuthenticated]);
+
+  const handleKnowledgeUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    const allowedTypes = [
+      'text/csv',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'application/pdf',
+      'text/plain',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'application/vnd.ms-excel'
+    ];
+
+    setIsUploadingKnowledge(true);
+    setKnowledgeError('');
+    setKnowledgeSuccess('');
+
+    try {
+      for (const file of Array.from(files)) {
+        if (!allowedTypes.includes(file.type)) {
+          setKnowledgeError(`File type not supported: ${file.name}. Use CSV, DOCX, PDF, TXT, or Excel files.`);
+          continue;
+        }
+
+        if (file.size > 10 * 1024 * 1024) {
+          setKnowledgeError(`File too large: ${file.name}. Maximum size is 10MB.`);
+          continue;
+        }
+
+        const formData = new FormData();
+        formData.append('file', file);
+
+        const res = await fetch('/api/knowledge-base/upload', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${useAuthStore.getState().accessToken}`,
+          },
+          body: formData,
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          setKnowledgeError(data.error || `Failed to upload ${file.name}`);
+        } else {
+          setKnowledgeDocs(prev => [...prev, data.document]);
+          setKnowledgeSuccess(`Successfully uploaded ${file.name}`);
+        }
+      }
+    } catch {
+      setKnowledgeError('Failed to upload documents. Please try again.');
+    } finally {
+      setIsUploadingKnowledge(false);
+      if (knowledgeInputRef.current) {
+        knowledgeInputRef.current.value = '';
+      }
+    }
+  };
+
+  const handleDeleteKnowledgeDoc = async (docId: number) => {
+    setIsDeletingDoc(docId);
+    setKnowledgeError('');
+
+    try {
+      const response = await apiRequest(`/api/knowledge-base/${docId}`, {
+        method: 'DELETE',
+      });
+
+      if (response.ok) {
+        setKnowledgeDocs(prev => prev.filter(doc => doc.id !== docId));
+        setKnowledgeSuccess('Document deleted successfully');
+      } else {
+        const error = await response.json();
+        setKnowledgeError(error.error || 'Failed to delete document');
+      }
+    } catch {
+      setKnowledgeError('Failed to delete document. Please try again.');
+    } finally {
+      setIsDeletingDoc(null);
+    }
+  };
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  };
+
+  const getFileIcon = (fileType: string) => {
+    if (fileType === 'pdf') return <FileText className="h-5 w-5 text-red-500" />;
+    if (fileType === 'docx') return <FileText className="h-5 w-5 text-blue-500" />;
+    if (fileType === 'xlsx' || fileType === 'csv') return <FileSpreadsheet className="h-5 w-5 text-green-500" />;
+    return <File className="h-5 w-5 text-gray-500" />;
+  };
 
   const handleLogout = async () => {
     await logout();
@@ -755,6 +887,128 @@ export default function Settings() {
                   </div>
                   <Switch data-testid="switch-compact-view" />
                 </div>
+              </CardContent>
+            </Card>
+
+            <Card data-testid="card-knowledge-base-settings">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <FileText className="h-5 w-5" />
+                  Supporting Documents (Knowledge Base)
+                </CardTitle>
+                <CardDescription>
+                  Upload documents (CSV, DOCX, PDF, TXT, Excel) to use as a knowledge base during AI bid generation. These documents help the AI understand your company's capabilities, past projects, and technical specifications.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {knowledgeSuccess && (
+                  <Alert className="bg-green-900/20 border-green-500/50">
+                    <AlertDescription className="text-green-400">{knowledgeSuccess}</AlertDescription>
+                  </Alert>
+                )}
+                {knowledgeError && (
+                  <Alert variant="destructive" className="bg-red-900/20 border-red-500/50">
+                    <AlertDescription>{knowledgeError}</AlertDescription>
+                  </Alert>
+                )}
+
+                <div className="space-y-2">
+                  <input
+                    ref={knowledgeInputRef}
+                    type="file"
+                    accept=".csv,.docx,.pdf,.txt,.xlsx,.xls"
+                    multiple
+                    onChange={handleKnowledgeUpload}
+                    className="hidden"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => knowledgeInputRef.current?.click()}
+                    disabled={isUploadingKnowledge}
+                    className="w-full h-24 border-dashed border-2 hover:border-primary/50"
+                    data-testid="button-upload-knowledge"
+                  >
+                    {isUploadingKnowledge ? (
+                      <div className="flex flex-col items-center gap-2">
+                        <Loader2 className="h-6 w-6 animate-spin" />
+                        <span>Uploading and processing...</span>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center gap-2">
+                        <Upload className="h-6 w-6" />
+                        <span>Click to upload documents</span>
+                        <span className="text-xs text-muted-foreground">CSV, DOCX, PDF, TXT, Excel (max 10MB each)</span>
+                      </div>
+                    )}
+                  </Button>
+                </div>
+
+                {knowledgeDocs.length > 0 && (
+                  <>
+                    <Separator />
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium">Uploaded Documents ({knowledgeDocs.length})</Label>
+                      <div className="space-y-2 max-h-64 overflow-y-auto">
+                        {knowledgeDocs.map((doc) => (
+                          <div
+                            key={doc.id}
+                            className="flex items-center justify-between p-3 bg-muted/50 rounded-lg border"
+                            data-testid={`knowledge-doc-${doc.id}`}
+                          >
+                            <div className="flex items-center gap-3">
+                              {getFileIcon(doc.fileType)}
+                              <div>
+                                <p className="text-sm font-medium truncate max-w-[200px]">{doc.originalName}</p>
+                                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                  <span>{formatFileSize(doc.fileSize)}</span>
+                                  <span>•</span>
+                                  <span>{doc.fileType.toUpperCase()}</span>
+                                  {doc.isProcessed ? (
+                                    <>
+                                      <span>•</span>
+                                      <span className="text-green-500 flex items-center gap-1">
+                                        <CheckCircle className="h-3 w-3" />
+                                        {doc.chunkCount} chunks indexed
+                                      </span>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <span>•</span>
+                                      <span className="text-yellow-500">Processing...</span>
+                                    </>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleDeleteKnowledgeDoc(doc.id)}
+                              disabled={isDeletingDoc === doc.id}
+                              className="text-red-500 hover:text-red-600 hover:bg-red-500/10"
+                              data-testid={`button-delete-doc-${doc.id}`}
+                            >
+                              {isDeletingDoc === doc.id ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <Trash2 className="h-4 w-4" />
+                              )}
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                {knowledgeDocs.length === 0 && (
+                  <div className="text-center py-6 text-muted-foreground">
+                    <FileText className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                    <p>No documents uploaded yet</p>
+                    <p className="text-sm">Upload company documents to enhance AI-generated bids</p>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>
