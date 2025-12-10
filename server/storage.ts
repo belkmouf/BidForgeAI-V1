@@ -13,6 +13,7 @@ import {
   aiInstructions,
   knowledgeBaseDocuments,
   knowledgeBaseChunks,
+  templates,
   type Project, 
   type InsertProject,
   type Document,
@@ -40,7 +41,9 @@ import {
   type KnowledgeBaseChunk,
   type InsertKnowledgeBaseChunk,
   type AIInstruction,
-  type InsertAIInstruction
+  type InsertAIInstruction,
+  type Template,
+  type InsertTemplate
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, sql, and, isNull, or } from "drizzle-orm";
@@ -130,6 +133,13 @@ export interface IStorage {
   createAIInstruction(instruction: InsertAIInstruction): Promise<AIInstruction>;
   updateAIInstruction(id: number, companyId: number, updates: Partial<AIInstruction>): Promise<AIInstruction | undefined>;
   deleteAIInstruction(id: number, companyId: number): Promise<boolean>;
+  
+  // Templates (company-scoped)
+  getTemplates(companyId: number): Promise<Template[]>;
+  getTemplate(id: number, companyId: number): Promise<Template | undefined>;
+  createTemplate(template: InsertTemplate): Promise<Template>;
+  updateTemplate(id: number, companyId: number, updates: Partial<Template>): Promise<Template | undefined>;
+  deleteTemplate(id: number, companyId: number): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1117,6 +1127,56 @@ export class DatabaseStorage implements IStorage {
       .where(and(
         eq(aiInstructions.id, id),
         eq(aiInstructions.companyId, companyId)
+      ));
+    return (result.rowCount ?? 0) > 0;
+  }
+
+  // Templates methods
+  async getTemplates(companyId: number): Promise<Template[]> {
+    return await db
+      .select()
+      .from(templates)
+      .where(eq(templates.companyId, companyId))
+      .orderBy(desc(templates.createdAt));
+  }
+
+  async getTemplate(id: number, companyId: number): Promise<Template | undefined> {
+    const [template] = await db
+      .select()
+      .from(templates)
+      .where(and(
+        eq(templates.id, id),
+        eq(templates.companyId, companyId)
+      ));
+    return template || undefined;
+  }
+
+  async createTemplate(template: InsertTemplate): Promise<Template> {
+    const [result] = await db
+      .insert(templates)
+      .values(template)
+      .returning();
+    return result;
+  }
+
+  async updateTemplate(id: number, companyId: number, updates: Partial<Template>): Promise<Template | undefined> {
+    const [template] = await db
+      .update(templates)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(and(
+        eq(templates.id, id),
+        eq(templates.companyId, companyId)
+      ))
+      .returning();
+    return template || undefined;
+  }
+
+  async deleteTemplate(id: number, companyId: number): Promise<boolean> {
+    const result = await db
+      .delete(templates)
+      .where(and(
+        eq(templates.id, id),
+        eq(templates.companyId, companyId)
       ));
     return (result.rowCount ?? 0) > 0;
   }
