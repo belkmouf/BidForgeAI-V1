@@ -73,6 +73,109 @@ const generateBidSchema = z.object({
   models: z.array(modelEnum).optional(),
 });
 
+// Process knowledge base document asynchronously
+async function processKnowledgeBaseDocument(
+  docId: number,
+  companyId: number,
+  filepath: string,
+  fileType: string
+): Promise<void> {
+  try {
+    const fs = await import('fs/promises');
+    const path = await import('path');
+    const fullPath = path.join(process.cwd(), filepath);
+    const buffer = await fs.readFile(fullPath);
+    
+    let textContent = '';
+    
+    // Extract text based on file type
+    if (fileType === 'txt') {
+      textContent = buffer.toString('utf-8');
+    } else if (fileType === 'pdf') {
+      try {
+        const pdfParse = (await import('pdf-parse')).default;
+        const { text } = await pdfParse(buffer);
+        textContent = text || '';
+      } catch (pdfError: any) {
+        console.error('PDF parsing error:', pdfError);
+        textContent = `[PDF content could not be extracted: ${pdfError.message}]`;
+      }
+    } else if (fileType === 'docx') {
+      const mammoth = await import('mammoth');
+      const result = await mammoth.extractRawText({ buffer });
+      textContent = result.value;
+    } else if (fileType === 'xlsx' || fileType === 'csv') {
+      // For Excel/CSV files, use xlsx library for proper parsing
+      const XLSXModule = await import('xlsx');
+      const XLSX = XLSXModule.default || XLSXModule;
+      const workbook = XLSX.read(buffer, { type: 'buffer' });
+      const allText: string[] = [];
+      
+      for (const sheetName of workbook.SheetNames) {
+        const sheet = workbook.Sheets[sheetName];
+        const csvData = XLSX.utils.sheet_to_csv(sheet);
+        allText.push(`Sheet: ${sheetName}\n${csvData}`);
+      }
+      textContent = allText.join('\n\n');
+    }
+    
+    if (!textContent.trim()) {
+      console.warn(`No text content extracted from document ${docId}`);
+      // Mark document as processed with 0 chunks and error message
+      await storage.updateKnowledgeBaseDocument(docId, companyId, {
+        isProcessed: true,
+        chunkCount: 0,
+        content: '[No text content could be extracted from this document]'
+      });
+      return;
+    }
+
+    // Update document with extracted content
+    await storage.updateKnowledgeBaseDocument(docId, companyId, {
+      content: textContent.substring(0, 500000) // Limit to 500K chars
+    });
+
+    // Chunk the text using similar logic to document ingestion
+    const { RecursiveCharacterTextSplitter } = await import('@langchain/textsplitters');
+    const splitter = new RecursiveCharacterTextSplitter({
+      chunkSize: 1000,
+      chunkOverlap: 200,
+    });
+    
+    const chunks = await splitter.splitText(textContent);
+    
+    // Create embeddings and store chunks
+    let chunkCount = 0;
+    for (let i = 0; i < chunks.length; i++) {
+      try {
+        const embedding = await generateEmbedding(chunks[i]);
+        
+        await storage.createKnowledgeBaseChunk({
+          documentId: docId,
+          companyId,
+          content: chunks[i],
+          embedding,
+          chunkIndex: i
+        });
+        chunkCount++;
+      } catch (embeddingError) {
+        console.error(`Error creating embedding for chunk ${i}:`, embeddingError);
+      }
+    }
+
+    // Mark document as processed
+    await storage.updateKnowledgeBaseDocument(docId, companyId, {
+      isProcessed: true,
+      chunkCount
+    });
+
+    console.log(`Processed knowledge base document ${docId}: ${chunkCount} chunks created`);
+  } catch (error) {
+    console.error(`Error processing knowledge base document ${docId}:`, error);
+    throw error;
+  }
+}
+
 const refineBidSchema = z.object({
   currentHtml: z.string().min(1),
   feedback: z.string().min(1),
@@ -359,15 +462,36 @@ export async function registerRoutes(
         chunksUsed = relevantChunks.length;
         console.log(`Found ${chunksUsed} relevant chunks via hybrid RAG search`);
         
+        let projectContext = '';
         if (relevantChunks.length > 0) {
           // Build context from the most relevant chunks
-          context = relevantChunks
+          projectContext = relevantChunks
             .map((chunk, i) => {
               const scoreInfo = `[Relevance: ${(chunk.score * 100).toFixed(1)}%]`;
-              return `--- Relevant Section ${i + 1} ${scoreInfo} ---\n${chunk.content}`;
+              return `--- Relevant Project Section ${i + 1} ${scoreInfo} ---\n${chunk.content}`;
             })
             .join('\n\n');
         }
+        
+        // Also search company knowledge base for additional context
+        let knowledgeBaseContext = '';
+        if (companyId) {
+          try {
+            const kbChunks = await storage.searchKnowledgeBaseChunks(queryEmbedding, companyId, 10);
+            if (kbChunks.length > 0) {
+              console.log(`Found ${kbChunks.length} relevant knowledge base chunks`);
+              knowledgeBaseContext = '\n\n--- COMPANY KNOWLEDGE BASE ---\n' + 
+                kbChunks
+                  .map((chunk, i) => `[Knowledge ${i + 1}] ${chunk.content}`)
+                  .join('\n\n');
+              chunksUsed += kbChunks.length;
+            }
+          } catch (kbError) {
+            console.warn('Knowledge base search failed:', kbError);
+          }
+        }
+        
+        context = projectContext + knowledgeBaseContext;
       } catch (embeddingError: any) {
         // Fallback to direct document content if embedding fails
         console.warn('RAG search failed, falling back to direct document content:', embeddingError.message);
@@ -1671,6 +1795,153 @@ or contact details from other sources.
       });
     } catch (error: any) {
       console.error('Error fetching public bid:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // ==================== KNOWLEDGE BASE ====================
+
+  // Get all knowledge base documents for company
+  app.get("/api/knowledge-base", authenticateToken, async (req: AuthRequest, res) => {
+    try {
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(403).json({ error: "Company context required" });
+      }
+
+      const documents = await storage.getKnowledgeBaseDocuments(companyId);
+      res.json({ documents });
+    } catch (error: any) {
+      console.error('Error fetching knowledge base documents:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Upload knowledge base document
+  app.post("/api/knowledge-base/upload", authenticateToken, upload.single('file'), async (req: AuthRequest, res) => {
+    try {
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(403).json({ error: "Company context required" });
+      }
+
+      if (!req.file) {
+        return res.status(400).json({ error: "No file uploaded" });
+      }
+
+      const allowedMimeTypes = [
+        'text/csv',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'application/pdf',
+        'text/plain',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'application/vnd.ms-excel'
+      ];
+
+      if (!allowedMimeTypes.includes(req.file.mimetype)) {
+        return res.status(400).json({ error: "File type not supported. Use CSV, DOCX, PDF, TXT, or Excel files." });
+      }
+
+      if (req.file.size > 10 * 1024 * 1024) {
+        return res.status(400).json({ error: "File too large. Maximum size is 10MB." });
+      }
+
+      // Determine file type
+      const extension = req.file.originalname.split('.').pop()?.toLowerCase() || 'unknown';
+      const fileTypeMap: Record<string, string> = {
+        'csv': 'csv',
+        'docx': 'docx',
+        'pdf': 'pdf',
+        'txt': 'txt',
+        'xlsx': 'xlsx',
+        'xls': 'xlsx'
+      };
+      const fileType = fileTypeMap[extension] || 'unknown';
+
+      // Save file to disk
+      const filename = `kb_${companyId}_${Date.now()}.${extension}`;
+      const filepath = `uploads/knowledge-base/${filename}`;
+      
+      const fs = await import('fs/promises');
+      const path = await import('path');
+      
+      const uploadsDir = path.join(process.cwd(), 'uploads', 'knowledge-base');
+      await fs.mkdir(uploadsDir, { recursive: true });
+      await fs.writeFile(path.join(uploadsDir, filename), req.file.buffer);
+
+      // Create document record
+      const document = await storage.createKnowledgeBaseDocument({
+        companyId,
+        filename,
+        originalName: req.file.originalname,
+        fileType,
+        fileSize: req.file.size,
+        content: null,
+        isProcessed: false,
+        chunkCount: 0
+      });
+
+      // Process document asynchronously (extract text and create embeddings)
+      // Fire and forget - don't block the response
+      setImmediate(async () => {
+        try {
+          await processKnowledgeBaseDocument(document.id, companyId, filepath, fileType);
+        } catch (err) {
+          console.error('Error processing knowledge base document:', err);
+          // Mark document as processed with 0 chunks if processing fails
+          await storage.updateKnowledgeBaseDocument(document.id, companyId, {
+            isProcessed: true,
+            chunkCount: 0,
+            content: `[Processing failed: ${err instanceof Error ? err.message : 'Unknown error'}]`
+          });
+        }
+      });
+
+      res.status(202).json({ document, message: 'Document uploaded, processing in background' });
+    } catch (error: any) {
+      console.error('Error uploading knowledge base document:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Delete knowledge base document
+  app.delete("/api/knowledge-base/:id", authenticateToken, async (req: AuthRequest, res) => {
+    try {
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(403).json({ error: "Company context required" });
+      }
+
+      const docId = parseInt(req.params.id, 10);
+      if (isNaN(docId)) {
+        return res.status(400).json({ error: "Invalid document ID" });
+      }
+
+      // Get document to find file path
+      const doc = await storage.getKnowledgeBaseDocument(docId, companyId);
+      if (!doc) {
+        return res.status(404).json({ error: "Document not found" });
+      }
+
+      // Delete file from disk
+      try {
+        const fs = await import('fs/promises');
+        const path = await import('path');
+        const filepath = path.join(process.cwd(), 'uploads', 'knowledge-base', doc.filename);
+        await fs.unlink(filepath);
+      } catch (e) {
+        console.warn('Could not delete file from disk:', e);
+      }
+
+      // Delete from database (cascades to chunks)
+      const deleted = await storage.deleteKnowledgeBaseDocument(docId, companyId);
+      if (!deleted) {
+        return res.status(404).json({ error: "Document not found" });
+      }
+
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error('Error deleting knowledge base document:', error);
       res.status(500).json({ error: error.message });
     }
   });

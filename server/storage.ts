@@ -10,6 +10,8 @@ import {
   users,
   companies,
   companyInvites,
+  knowledgeBaseDocuments,
+  knowledgeBaseChunks,
   type Project, 
   type InsertProject,
   type Document,
@@ -31,7 +33,11 @@ import {
   type Company,
   type CompanyInvite,
   type UserRole,
-  type BrandingProfile
+  type BrandingProfile,
+  type KnowledgeBaseDocument,
+  type InsertKnowledgeBaseDocument,
+  type KnowledgeBaseChunk,
+  type InsertKnowledgeBaseChunk
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, sql, and, isNull, or } from "drizzle-orm";
@@ -102,6 +108,15 @@ export interface IStorage {
   // Onboarding
   completeOnboarding(userId: number, brandingProfile: BrandingProfile): Promise<User | undefined>;
   getUserOnboardingStatus(userId: number): Promise<{ status: string; brandingProfile: BrandingProfile | null } | undefined>;
+  
+  // Knowledge Base (company-scoped)
+  createKnowledgeBaseDocument(doc: InsertKnowledgeBaseDocument): Promise<KnowledgeBaseDocument>;
+  getKnowledgeBaseDocuments(companyId: number): Promise<KnowledgeBaseDocument[]>;
+  getKnowledgeBaseDocument(id: number, companyId: number): Promise<KnowledgeBaseDocument | undefined>;
+  updateKnowledgeBaseDocument(id: number, companyId: number, updates: Partial<KnowledgeBaseDocument>): Promise<KnowledgeBaseDocument | undefined>;
+  deleteKnowledgeBaseDocument(id: number, companyId: number): Promise<boolean>;
+  createKnowledgeBaseChunk(chunk: InsertKnowledgeBaseChunk): Promise<KnowledgeBaseChunk>;
+  searchKnowledgeBaseChunks(embedding: number[], companyId: number, limit: number): Promise<Array<KnowledgeBaseChunk & { distance: number }>>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -931,6 +946,77 @@ export class DatabaseStorage implements IStorage {
       status: user.status,
       brandingProfile: user.brandingProfile || null
     };
+  }
+
+  // Knowledge Base methods
+  async createKnowledgeBaseDocument(doc: InsertKnowledgeBaseDocument): Promise<KnowledgeBaseDocument> {
+    const [result] = await db
+      .insert(knowledgeBaseDocuments)
+      .values(doc)
+      .returning();
+    return result;
+  }
+
+  async getKnowledgeBaseDocuments(companyId: number): Promise<KnowledgeBaseDocument[]> {
+    return await db
+      .select()
+      .from(knowledgeBaseDocuments)
+      .where(eq(knowledgeBaseDocuments.companyId, companyId))
+      .orderBy(desc(knowledgeBaseDocuments.uploadedAt));
+  }
+
+  async getKnowledgeBaseDocument(id: number, companyId: number): Promise<KnowledgeBaseDocument | undefined> {
+    const [doc] = await db
+      .select()
+      .from(knowledgeBaseDocuments)
+      .where(and(
+        eq(knowledgeBaseDocuments.id, id),
+        eq(knowledgeBaseDocuments.companyId, companyId)
+      ));
+    return doc || undefined;
+  }
+
+  async updateKnowledgeBaseDocument(id: number, companyId: number, updates: Partial<KnowledgeBaseDocument>): Promise<KnowledgeBaseDocument | undefined> {
+    const [doc] = await db
+      .update(knowledgeBaseDocuments)
+      .set(updates)
+      .where(and(
+        eq(knowledgeBaseDocuments.id, id),
+        eq(knowledgeBaseDocuments.companyId, companyId)
+      ))
+      .returning();
+    return doc || undefined;
+  }
+
+  async deleteKnowledgeBaseDocument(id: number, companyId: number): Promise<boolean> {
+    const result = await db
+      .delete(knowledgeBaseDocuments)
+      .where(and(
+        eq(knowledgeBaseDocuments.id, id),
+        eq(knowledgeBaseDocuments.companyId, companyId)
+      ));
+    return (result.rowCount ?? 0) > 0;
+  }
+
+  async createKnowledgeBaseChunk(chunk: InsertKnowledgeBaseChunk): Promise<KnowledgeBaseChunk> {
+    const [result] = await db
+      .insert(knowledgeBaseChunks)
+      .values(chunk)
+      .returning();
+    return result;
+  }
+
+  async searchKnowledgeBaseChunks(embedding: number[], companyId: number, limit: number): Promise<Array<KnowledgeBaseChunk & { distance: number }>> {
+    const embeddingStr = `[${embedding.join(',')}]`;
+    const results = await db.execute(sql`
+      SELECT *,
+        embedding <=> ${embeddingStr}::vector AS distance
+      FROM knowledge_base_chunks
+      WHERE company_id = ${companyId}
+      ORDER BY distance ASC
+      LIMIT ${limit}
+    `);
+    return results.rows as Array<KnowledgeBaseChunk & { distance: number }>;
   }
 }
 
