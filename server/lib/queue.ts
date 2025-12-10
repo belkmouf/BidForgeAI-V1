@@ -186,15 +186,24 @@ let workerConnection: Redis | null = null;
 let isPublisherConnected = false;
 let isWorkerConnected = false;
 
+let redisDisabled = false;
+
 function getRedisConfig() {
   return {
     host: process.env.REDIS_HOST || 'localhost',
     port: parseInt(process.env.REDIS_PORT || '6379', 10),
     password: process.env.REDIS_PASSWORD || undefined,
-    maxRetriesPerRequest: 3,
-    retryDelayOnFailover: 100,
+    maxRetriesPerRequest: 1,
+    retryStrategy: (times: number) => {
+      if (times >= 1) {
+        redisDisabled = true;
+        return null;
+      }
+      return Math.min(times * 100, 1000);
+    },
     lazyConnect: true,
-    connectTimeout: 5000,
+    connectTimeout: 2000,
+    enableOfflineQueue: false,
   };
 }
 
@@ -202,15 +211,22 @@ function createConnection(name: string): Redis {
   const connection = new Redis(getRedisConfig());
   
   connection.on('connect', () => {
-    console.log(`Redis ${name} connected`);
+    if (!redisDisabled) {
+      console.log(`Redis ${name} connected`);
+    }
   });
   
   connection.on('error', (err) => {
-    console.warn(`Redis ${name} error:`, err.message);
+    if (!redisDisabled) {
+      console.warn(`Redis ${name} unavailable:`, err.message);
+      redisDisabled = true;
+    }
   });
   
   connection.on('close', () => {
-    console.log(`Redis ${name} connection closed`);
+    if (!redisDisabled) {
+      console.log(`Redis ${name} connection closed`);
+    }
   });
   
   return connection;
