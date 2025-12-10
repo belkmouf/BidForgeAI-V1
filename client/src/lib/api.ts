@@ -279,10 +279,9 @@ export async function uploadTemplateFile(file: File, data: { name: string; descr
   formData.append('category', data.category);
   if (data.description) formData.append('description', data.description);
 
-  const res = await fetch(`${API_BASE}/templates/upload`, {
+  const res = await apiRequest(`${API_BASE}/templates/upload`, {
     method: 'POST',
     body: formData,
-    credentials: 'include',
   });
   if (!res.ok) throw new Error(await res.text());
   return res.json() as Promise<Template>;
