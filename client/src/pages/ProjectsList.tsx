@@ -154,7 +154,7 @@ export default function ProjectsList() {
             </div>
           </div>
 
-          <Card className="border-border/60">
+          <Card className="border-2 border-primary/30 !bg-teal-100 shadow-md">
             <CardHeader className="flex flex-row items-center justify-between">
               <div className="relative w-72">
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
