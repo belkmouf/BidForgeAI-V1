@@ -1,15 +1,30 @@
 import OpenAI from 'openai';
 
-const openrouter = new OpenAI({
-  baseURL: process.env.AI_INTEGRATIONS_OPENROUTER_BASE_URL,
-  apiKey: process.env.AI_INTEGRATIONS_OPENROUTER_API_KEY,
-});
+function getDeepSeekClient(): OpenAI {
+  if (process.env.DEEPSEEK_API_KEY) {
+    return new OpenAI({
+      baseURL: 'https://api.deepseek.com',
+      apiKey: process.env.DEEPSEEK_API_KEY,
+    });
+  }
+  return new OpenAI({
+    baseURL: process.env.AI_INTEGRATIONS_OPENROUTER_BASE_URL,
+    apiKey: process.env.AI_INTEGRATIONS_OPENROUTER_API_KEY,
+  });
+}
+
+function getModelName(): string {
+  return process.env.DEEPSEEK_API_KEY ? 'deepseek-chat' : 'deepseek/deepseek-chat';
+}
 
 export async function generateBidWithDeepSeek(params: {
   instructions: string;
   context: string;
   tone?: string;
 }): Promise<string> {
+  const client = getDeepSeekClient();
+  const model = getModelName();
+  
   const systemPrompt = `You are an expert construction bid writer. You MUST follow these strict rules:
 
 CRITICAL DATA RULES:
@@ -32,8 +47,8 @@ OUTPUT REQUIREMENTS:
 - Mark any missing required information as [TO BE PROVIDED]
 - CRITICAL: Output ONLY raw HTML content. Do NOT wrap your response in markdown code blocks (like \`\`\`html or \`\`\`). Start directly with <div> or other HTML tags.`;
 
-  const response = await openrouter.chat.completions.create({
-    model: 'deepseek/deepseek-chat',
+  const response = await client.chat.completions.create({
+    model,
     max_tokens: 8192,
     messages: [
       { role: 'system', content: systemPrompt },
@@ -51,13 +66,16 @@ export async function refineBidWithDeepSeek(params: {
   currentHtml: string;
   feedback: string;
 }): Promise<string> {
+  const client = getDeepSeekClient();
+  const model = getModelName();
+  
   const systemPrompt = `You are an expert construction bid writer. 
 Apply the user's feedback to improve the bid response.
 Maintain the HTML structure and professional styling.
 CRITICAL: Output ONLY raw HTML content. Do NOT wrap your response in markdown code blocks (like \`\`\`html or \`\`\`).`;
 
-  const response = await openrouter.chat.completions.create({
-    model: 'deepseek/deepseek-chat',
+  const response = await client.chat.completions.create({
+    model,
     max_tokens: 8192,
     messages: [
       { role: 'system', content: systemPrompt },
