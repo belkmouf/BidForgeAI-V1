@@ -149,6 +149,20 @@ export const documentChunks = pgTable("document_chunks", {
   chunkIndex: integer("chunk_index").notNull(),
 });
 
+// AI Instructions Table (company-scoped presets for bid generation)
+export const aiInstructions = pgTable("ai_instructions", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  companyId: integer("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  instructions: text("instructions").notNull(),
+  isDefault: boolean("is_default").default(false).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export type AIInstruction = typeof aiInstructions.$inferSelect;
+export type InsertAIInstruction = typeof aiInstructions.$inferInsert;
+
 // Company Knowledge Base Documents Table (for RAG during bid generation)
 export const knowledgeBaseDocuments = pgTable("knowledge_base_documents", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),

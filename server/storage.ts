@@ -10,6 +10,7 @@ import {
   users,
   companies,
   companyInvites,
+  aiInstructions,
   knowledgeBaseDocuments,
   knowledgeBaseChunks,
   type Project, 
@@ -37,7 +38,9 @@ import {
   type KnowledgeBaseDocument,
   type InsertKnowledgeBaseDocument,
   type KnowledgeBaseChunk,
-  type InsertKnowledgeBaseChunk
+  type InsertKnowledgeBaseChunk,
+  type AIInstruction,
+  type InsertAIInstruction
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, sql, and, isNull, or } from "drizzle-orm";
@@ -117,6 +120,13 @@ export interface IStorage {
   deleteKnowledgeBaseDocument(id: number, companyId: number): Promise<boolean>;
   createKnowledgeBaseChunk(chunk: InsertKnowledgeBaseChunk): Promise<KnowledgeBaseChunk>;
   searchKnowledgeBaseChunks(embedding: number[], companyId: number, limit: number): Promise<Array<KnowledgeBaseChunk & { distance: number }>>;
+  
+  // AI Instructions (company-scoped)
+  getAIInstructions(companyId: number): Promise<AIInstruction[]>;
+  getAIInstruction(id: number, companyId: number): Promise<AIInstruction | undefined>;
+  createAIInstruction(instruction: InsertAIInstruction): Promise<AIInstruction>;
+  updateAIInstruction(id: number, companyId: number, updates: Partial<AIInstruction>): Promise<AIInstruction | undefined>;
+  deleteAIInstruction(id: number, companyId: number): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1017,6 +1027,56 @@ export class DatabaseStorage implements IStorage {
       LIMIT ${limit}
     `);
     return results.rows as Array<KnowledgeBaseChunk & { distance: number }>;
+  }
+
+  // AI Instructions methods
+  async getAIInstructions(companyId: number): Promise<AIInstruction[]> {
+    return await db
+      .select()
+      .from(aiInstructions)
+      .where(eq(aiInstructions.companyId, companyId))
+      .orderBy(desc(aiInstructions.isDefault), aiInstructions.name);
+  }
+
+  async getAIInstruction(id: number, companyId: number): Promise<AIInstruction | undefined> {
+    const [instruction] = await db
+      .select()
+      .from(aiInstructions)
+      .where(and(
+        eq(aiInstructions.id, id),
+        eq(aiInstructions.companyId, companyId)
+      ));
+    return instruction || undefined;
+  }
+
+  async createAIInstruction(instruction: InsertAIInstruction): Promise<AIInstruction> {
+    const [result] = await db
+      .insert(aiInstructions)
+      .values(instruction)
+      .returning();
+    return result;
+  }
+
+  async updateAIInstruction(id: number, companyId: number, updates: Partial<AIInstruction>): Promise<AIInstruction | undefined> {
+    const [instruction] = await db
+      .update(aiInstructions)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(and(
+        eq(aiInstructions.id, id),
+        eq(aiInstructions.companyId, companyId)
+      ))
+      .returning();
+    return instruction || undefined;
+  }
+
+  async deleteAIInstruction(id: number, companyId: number): Promise<boolean> {
+    const result = await db
+      .delete(aiInstructions)
+      .where(and(
+        eq(aiInstructions.id, id),
+        eq(aiInstructions.companyId, companyId)
+      ));
+    return (result.rowCount ?? 0) > 0;
   }
 }
 

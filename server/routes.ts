@@ -1799,6 +1799,172 @@ or contact details from other sources.
     }
   });
 
+  // ==================== AI INSTRUCTIONS ====================
+
+  // Get all AI instructions for company
+  app.get("/api/ai-instructions", authenticateToken, async (req: AuthRequest, res) => {
+    try {
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(403).json({ error: "Company context required" });
+      }
+
+      let instructions = await storage.getAIInstructions(companyId);
+      
+      // If no instructions exist, create default ones
+      if (instructions.length === 0) {
+        const defaultInstructions = [
+          {
+            companyId,
+            name: "Standard Bid Response",
+            instructions: `IMPORTANT: Generate a bid response using ONLY the following data sources. Do NOT invent, assume, or hallucinate any information:
+
+DATA SOURCES (Use ONLY these):
+- Uploaded RFP/RFQ documents (project requirements, scope, specifications)
+- Company profile information (name, certifications, experience, capabilities)
+- Project details (name, client, location, dates)
+- Historical bid data from similar past projects (if available)
+
+STRICT RULES:
+- Extract ALL requirements directly from the uploaded documents
+- Use ONLY company information provided in the system
+- If specific data is missing, mark it as [TO BE PROVIDED] - do NOT make up values
+- Reference actual document content when addressing requirements
+- Do NOT invent project timelines, costs, or specifications not in the source documents
+
+BID STRUCTURE:
+1. Executive Summary - Based on actual project scope from RFP
+2. Company Qualifications - Use only verified company data
+3. Technical Approach - Address specific RFP requirements
+4. Project Timeline - Based on RFP timeline or mark [TO BE PROVIDED]
+5. Safety & Quality Plans - Use company's actual certifications
+6. Pricing - Based on RFP requirements or mark [TO BE PROVIDED]
+7. Compliance Matrix - Map each RFP requirement to our response
+
+Ensure every claim is traceable to source documents or company data.`,
+            isDefault: true
+          },
+          {
+            companyId,
+            name: "Executive Summary Only",
+            instructions: `Generate a concise executive summary for the bid proposal. Focus on:
+
+1. Project Understanding - Demonstrate clear understanding of client needs from RFP
+2. Key Value Proposition - Why we are the best choice
+3. Relevant Experience - Brief mention of similar projects
+4. Commitment - Our dedication to quality and timeline
+
+Keep it to 1-2 pages maximum. Use professional tone.
+Do NOT include pricing or detailed technical specifications.
+Mark any missing information as [TO BE PROVIDED].`,
+            isDefault: false
+          }
+        ];
+
+        for (const instr of defaultInstructions) {
+          await storage.createAIInstruction(instr);
+        }
+        
+        instructions = await storage.getAIInstructions(companyId);
+      }
+
+      res.json({ instructions });
+    } catch (error: any) {
+      console.error('Error fetching AI instructions:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Create AI instruction
+  app.post("/api/ai-instructions", authenticateToken, async (req: AuthRequest, res) => {
+    try {
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(403).json({ error: "Company context required" });
+      }
+
+      const { name, instructions, isDefault } = req.body;
+      
+      if (!name || !instructions) {
+        return res.status(400).json({ error: "Name and instructions are required" });
+      }
+
+      const instruction = await storage.createAIInstruction({
+        companyId,
+        name,
+        instructions,
+        isDefault: isDefault || false
+      });
+
+      res.status(201).json({ instruction });
+    } catch (error: any) {
+      console.error('Error creating AI instruction:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Update AI instruction
+  app.patch("/api/ai-instructions/:id", authenticateToken, async (req: AuthRequest, res) => {
+    try {
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(403).json({ error: "Company context required" });
+      }
+
+      const id = parseInt(req.params.id, 10);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "Invalid instruction ID" });
+      }
+
+      const { name, instructions } = req.body;
+      
+      const instruction = await storage.updateAIInstruction(id, companyId, {
+        name,
+        instructions
+      });
+
+      if (!instruction) {
+        return res.status(404).json({ error: "Instruction not found" });
+      }
+
+      res.json({ instruction });
+    } catch (error: any) {
+      console.error('Error updating AI instruction:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Delete AI instruction
+  app.delete("/api/ai-instructions/:id", authenticateToken, async (req: AuthRequest, res) => {
+    try {
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(403).json({ error: "Company context required" });
+      }
+
+      const id = parseInt(req.params.id, 10);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "Invalid instruction ID" });
+      }
+
+      // Check if this is the last instruction
+      const allInstructions = await storage.getAIInstructions(companyId);
+      if (allInstructions.length <= 1) {
+        return res.status(400).json({ error: "Cannot delete the last instruction. At least one instruction must exist." });
+      }
+
+      const deleted = await storage.deleteAIInstruction(id, companyId);
+      if (!deleted) {
+        return res.status(404).json({ error: "Instruction not found" });
+      }
+
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error('Error deleting AI instruction:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // ==================== KNOWLEDGE BASE ====================
 
   // Get all knowledge base documents for company
