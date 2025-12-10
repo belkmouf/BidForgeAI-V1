@@ -13,6 +13,7 @@ interface CompanyBranding {
   tagline?: string;
   primaryColor?: string;
   logoUrl?: string;
+  aboutUs?: string;
 }
 
 const features = [
@@ -102,6 +103,7 @@ export default function Landing() {
   const displayTagline = branding?.tagline || 'INTELLIGENT BIDDING';
   const displayLogo = branding?.logoUrl || _1764979718;
   const primaryColor = branding?.primaryColor || '#0d9488';
+  const aboutUs = branding?.aboutUs || 'The intelligent bidding platform that learns from your wins to create better proposals, faster.';
 
   return (
     <div className="min-h-screen bg-background" data-testid="landing-page">
@@ -440,7 +442,7 @@ export default function Landing() {
                 <span className="font-display text-xl font-bold text-white">{displayName}</span>
               </div>
               <p className="text-gray-400 max-w-md leading-relaxed">
-                The intelligent bidding platform that learns from your wins to create better proposals, faster.
+                {aboutUs}
               </p>
             </div>
             <div>
