@@ -118,6 +118,29 @@ export const companyInvites = pgTable("company_invites", {
 export type CompanyInvite = typeof companyInvites.$inferSelect;
 export type InsertCompanyInvite = typeof companyInvites.$inferInsert;
 
+// Templates Table
+export const templates = pgTable("templates", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  companyId: integer("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
+  name: varchar("name", { length: 255 }).notNull(),
+  description: text("description"),
+  category: varchar("category", { length: 100 }).notNull(),
+  sections: jsonb("sections").$type<{ title: string; content: string }[]>().default(sql`'[]'::jsonb`),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export type Template = typeof templates.$inferSelect;
+export type InsertTemplate = typeof templates.$inferInsert;
+
+export const insertTemplateSchema = createInsertSchema(templates).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertTemplateInput = z.infer<typeof insertTemplateSchema>;
+
 // Projects Table
 export const projects = pgTable("projects", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
