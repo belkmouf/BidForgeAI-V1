@@ -2269,6 +2269,80 @@ Mark any missing information as [TO BE PROVIDED].`,
     }
   });
 
+  // Template file upload - parse file and extract content for template
+  app.post("/api/templates/upload", authenticateToken, upload.single('file'), async (req: AuthRequest, res) => {
+    try {
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(403).json({ error: "Company context required" });
+      }
+      if (!req.file) {
+        return res.status(400).json({ error: "No file uploaded" });
+      }
+
+      const { name, category, description } = req.body;
+      if (!name || !category) {
+        return res.status(400).json({ error: "Name and category are required" });
+      }
+
+      const buffer = req.file.buffer;
+      const filename = req.file.originalname;
+      const ext = filename.toLowerCase().split('.').pop() || '';
+      
+      let content = '';
+      
+      // Parse file based on type
+      if (ext === 'pdf') {
+        try {
+          const { PDFParse } = await import('pdf-parse');
+          const parser = new PDFParse({ data: buffer });
+          const textResult = await parser.getText();
+          content = typeof textResult === 'string' ? textResult : (textResult as any).text || String(textResult);
+        } catch (e) {
+          content = '[PDF content could not be extracted]';
+        }
+      } else if (ext === 'docx') {
+        const mammoth = await import('mammoth');
+        const result = await mammoth.extractRawText({ buffer });
+        content = result.value || '';
+      } else if (ext === 'html' || ext === 'htm') {
+        content = buffer.toString('utf-8');
+      } else if (ext === 'txt' || ext === 'csv') {
+        content = buffer.toString('utf-8');
+      } else if (ext === 'pptx') {
+        const AdmZip = (await import('adm-zip')).default;
+        const zip = new AdmZip(buffer);
+        const entries = zip.getEntries();
+        const textParts: string[] = [];
+        for (const entry of entries) {
+          if (entry.entryName.startsWith('ppt/slides/slide') && entry.entryName.endsWith('.xml')) {
+            const xmlContent = entry.getData().toString('utf-8');
+            const textMatches = xmlContent.match(/<a:t>([^<]*)<\/a:t>/g);
+            if (textMatches) {
+              textParts.push(textMatches.map(m => m.replace(/<\/?a:t>/g, '')).join(' '));
+            }
+          }
+        }
+        content = textParts.join('\n\n');
+      } else {
+        content = buffer.toString('utf-8');
+      }
+
+      const template = await storage.createTemplate({
+        companyId,
+        name,
+        description: description || `Imported from ${filename}`,
+        category,
+        sections: [{ title: 'Imported Content', content: content.trim() }]
+      });
+
+      res.status(201).json(template);
+    } catch (error: any) {
+      console.error('Error uploading template file:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // Upload company logo
   app.post("/api/upload/logo", authenticateToken, upload.single('file'), async (req: AuthRequest, res) => {
     try {

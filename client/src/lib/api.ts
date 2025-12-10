@@ -271,3 +271,19 @@ export async function deleteTemplate(id: number) {
   if (!res.ok) throw new Error(await res.text());
   return res.json() as Promise<{ success: boolean }>;
 }
+
+export async function uploadTemplateFile(file: File, data: { name: string; description?: string; category: string }) {
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('name', data.name);
+  formData.append('category', data.category);
+  if (data.description) formData.append('description', data.description);
+
+  const res = await fetch(`${API_BASE}/templates/upload`, {
+    method: 'POST',
+    body: formData,
+    credentials: 'include',
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json() as Promise<Template>;
+}

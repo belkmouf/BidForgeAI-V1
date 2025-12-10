@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useLocation } from 'wouter';
+import { useDropzone } from 'react-dropzone';
 import { AppSidebar } from '@/components/layout/AppSidebar';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -10,11 +11,20 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { FileText, Plus, Copy, Pencil, Trash2, Loader2 } from 'lucide-react';
-import { createProject, getTemplates, createTemplate, updateTemplate, deleteTemplate, type Template } from '@/lib/api';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { FileText, Plus, Copy, Pencil, Trash2, Loader2, Upload, X } from 'lucide-react';
+import { createProject, getTemplates, createTemplate, updateTemplate, deleteTemplate, uploadTemplateFile, type Template } from '@/lib/api';
 import { toast } from '@/hooks/use-toast';
 
 const CATEGORIES = ['Commercial', 'Residential', 'Government', 'Infrastructure', 'Industrial', 'Other'];
+const ACCEPTED_FILES = {
+  'text/plain': ['.txt'],
+  'text/csv': ['.csv'],
+  'text/html': ['.html', '.htm'],
+  'application/pdf': ['.pdf'],
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
+  'application/vnd.openxmlformats-officedocument.presentationml.presentation': ['.pptx'],
+};
 
 export default function Templates() {
   const [, setLocation] = useLocation();
@@ -32,7 +42,11 @@ export default function Templates() {
   const [templateName, setTemplateName] = useState('');
   const [templateDescription, setTemplateDescription] = useState('');
   const [templateCategory, setTemplateCategory] = useState('Commercial');
+  const [templateContent, setTemplateContent] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+
+  const [createMode, setCreateMode] = useState<'manual' | 'upload'>('manual');
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
 
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [templateToDelete, setTemplateToDelete] = useState<Template | null>(null);
@@ -52,6 +66,23 @@ export default function Templates() {
       setIsLoading(false);
     }
   };
+
+  const onDrop = useCallback((acceptedFiles: File[]) => {
+    if (acceptedFiles.length > 0) {
+      setUploadedFile(acceptedFiles[0]);
+      if (!templateName) {
+        const fileName = acceptedFiles[0].name.replace(/\.[^/.]+$/, '');
+        setTemplateName(fileName);
+      }
+    }
+  }, [templateName]);
+
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    onDrop,
+    accept: ACCEPTED_FILES,
+    maxFiles: 1,
+    maxSize: 10 * 1024 * 1024,
+  });
 
   const handleUseTemplate = (template: Template) => {
     setSelectedTemplate(template);
@@ -106,6 +137,9 @@ export default function Templates() {
     setTemplateName('');
     setTemplateDescription('');
     setTemplateCategory('Commercial');
+    setTemplateContent('');
+    setUploadedFile(null);
+    setCreateMode('manual');
     setEditDialogOpen(true);
   };
 
@@ -114,6 +148,10 @@ export default function Templates() {
     setTemplateName(template.name);
     setTemplateDescription(template.description || '');
     setTemplateCategory(template.category);
+    const content = template.sections?.map(s => `## ${s.title}\n${s.content}`).join('\n\n') || '';
+    setTemplateContent(content);
+    setUploadedFile(null);
+    setCreateMode('manual');
     setEditDialogOpen(true);
   };
 
@@ -127,21 +165,68 @@ export default function Templates() {
       return;
     }
 
+    if (createMode === 'upload' && !uploadedFile && !editingTemplate) {
+      toast({
+        title: "No File Selected",
+        description: "Please upload a file or switch to manual entry.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsSaving(true);
     try {
-      if (editingTemplate) {
-        const updated = await updateTemplate(editingTemplate.id, {
+      if (createMode === 'upload' && uploadedFile && !editingTemplate) {
+        const created = await uploadTemplateFile(uploadedFile, {
           name: templateName.trim(),
           description: templateDescription.trim(),
           category: templateCategory,
         });
+        setTemplates(prev => [created, ...prev]);
+        toast({ title: "Template Created", description: "Your template has been imported from the file." });
+      } else if (editingTemplate) {
+        let sections = editingTemplate.sections || [];
+        if (templateContent.trim()) {
+          const parts = templateContent.split(/^## /gm).filter(Boolean);
+          if (parts.length > 0 && templateContent.includes('## ')) {
+            sections = parts.map(part => {
+              const lines = part.split('\n');
+              const title = lines[0].trim();
+              const content = lines.slice(1).join('\n').trim();
+              return { title, content };
+            });
+          } else {
+            sections = [{ title: 'Content', content: templateContent.trim() }];
+          }
+        }
+        const updated = await updateTemplate(editingTemplate.id, {
+          name: templateName.trim(),
+          description: templateDescription.trim(),
+          category: templateCategory,
+          sections,
+        });
         setTemplates(prev => prev.map(t => t.id === updated.id ? updated : t));
         toast({ title: "Template Updated", description: "Your changes have been saved." });
       } else {
+        let sections: { title: string; content: string }[] = [];
+        if (templateContent.trim()) {
+          const parts = templateContent.split(/^## /gm).filter(Boolean);
+          if (parts.length > 0 && templateContent.includes('## ')) {
+            sections = parts.map(part => {
+              const lines = part.split('\n');
+              const title = lines[0].trim();
+              const content = lines.slice(1).join('\n').trim();
+              return { title, content };
+            });
+          } else {
+            sections = [{ title: 'Content', content: templateContent.trim() }];
+          }
+        }
         const created = await createTemplate({
           name: templateName.trim(),
           description: templateDescription.trim(),
           category: templateCategory,
+          sections,
         });
         setTemplates(prev => [created, ...prev]);
         toast({ title: "Template Created", description: "Your new template is ready to use." });
@@ -382,49 +467,126 @@ export default function Templates() {
       </Dialog>
 
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>{editingTemplate ? 'Edit Template' : 'Create Template'}</DialogTitle>
             <DialogDescription>
-              {editingTemplate ? 'Update your template details.' : 'Create a new bid template to reuse across projects.'}
+              {editingTemplate ? 'Update your template details.' : 'Create a new bid template by entering content or uploading a file.'}
             </DialogDescription>
           </DialogHeader>
           
+          {!editingTemplate && (
+            <Tabs value={createMode} onValueChange={(v) => setCreateMode(v as 'manual' | 'upload')} className="w-full">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="manual" data-testid="tab-manual-entry">
+                  <Pencil className="h-4 w-4 mr-2" />
+                  Manual Entry
+                </TabsTrigger>
+                <TabsTrigger value="upload" data-testid="tab-file-upload">
+                  <Upload className="h-4 w-4 mr-2" />
+                  Upload File
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+          )}
+          
           <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="template-name">Template Name</Label>
-              <Input
-                id="template-name"
-                value={templateName}
-                onChange={(e) => setTemplateName(e.target.value)}
-                placeholder="e.g., Commercial Building Bid"
-                data-testid="input-template-name"
-              />
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="template-name">Template Name</Label>
+                <Input
+                  id="template-name"
+                  value={templateName}
+                  onChange={(e) => setTemplateName(e.target.value)}
+                  placeholder="e.g., Commercial Building Bid"
+                  data-testid="input-template-name"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="template-category">Category</Label>
+                <Select value={templateCategory} onValueChange={setTemplateCategory}>
+                  <SelectTrigger data-testid="select-template-category">
+                    <SelectValue placeholder="Select a category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {CATEGORIES.map(cat => (
+                      <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="template-category">Category</Label>
-              <Select value={templateCategory} onValueChange={setTemplateCategory}>
-                <SelectTrigger data-testid="select-template-category">
-                  <SelectValue placeholder="Select a category" />
-                </SelectTrigger>
-                <SelectContent>
-                  {CATEGORIES.map(cat => (
-                    <SelectItem key={cat} value={cat}>{cat}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+
             <div className="space-y-2">
               <Label htmlFor="template-description">Description</Label>
-              <Textarea
+              <Input
                 id="template-description"
                 value={templateDescription}
                 onChange={(e) => setTemplateDescription(e.target.value)}
                 placeholder="Describe what this template is for..."
-                rows={3}
                 data-testid="input-template-description"
               />
             </div>
+
+            {createMode === 'manual' || editingTemplate ? (
+              <div className="space-y-2">
+                <Label htmlFor="template-content">Template Content</Label>
+                <Textarea
+                  id="template-content"
+                  value={templateContent}
+                  onChange={(e) => setTemplateContent(e.target.value)}
+                  placeholder="Enter your template content here... This will be used as the base for generating bids."
+                  rows={8}
+                  className="font-mono text-sm"
+                  data-testid="input-template-content"
+                />
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <Label>Upload Template File</Label>
+                {uploadedFile ? (
+                  <div className="flex items-center justify-between p-4 border-2 border-primary/30 rounded-lg bg-primary/5">
+                    <div className="flex items-center gap-3">
+                      <FileText className="h-8 w-8 text-primary" />
+                      <div>
+                        <p className="font-medium">{uploadedFile.name}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {(uploadedFile.size / 1024).toFixed(1)} KB
+                        </p>
+                      </div>
+                    </div>
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      onClick={() => setUploadedFile(null)}
+                      data-testid="button-remove-file"
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ) : (
+                  <div
+                    {...getRootProps()}
+                    className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${
+                      isDragActive ? 'border-primary bg-primary/5' : 'border-muted-foreground/30 hover:border-primary/50'
+                    }`}
+                    data-testid="dropzone-template-file"
+                  >
+                    <input {...getInputProps()} />
+                    <Upload className="h-10 w-10 mx-auto text-muted-foreground mb-3" />
+                    <p className="font-medium">
+                      {isDragActive ? 'Drop the file here' : 'Drag & drop a file here'}
+                    </p>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      or click to browse
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-3">
+                      Supported: PDF, DOCX, TXT, CSV, HTML, PPTX (max 10MB)
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
           
           <DialogFooter>
@@ -435,10 +597,10 @@ export default function Templates() {
               {isSaving ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Saving...
+                  {createMode === 'upload' && !editingTemplate ? 'Uploading...' : 'Saving...'}
                 </>
               ) : (
-                editingTemplate ? 'Save Changes' : 'Create Template'
+                editingTemplate ? 'Save Changes' : (createMode === 'upload' ? 'Upload & Create' : 'Create Template')
               )}
             </Button>
           </DialogFooter>
