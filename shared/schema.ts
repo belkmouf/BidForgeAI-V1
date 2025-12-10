@@ -165,6 +165,8 @@ export const documents = pgTable("documents", {
   isProcessed: boolean("is_processed").default(false).notNull(),
   uploadedAt: timestamp("uploaded_at").defaultNow().notNull(),
   deletedAt: timestamp("deleted_at"),
+  version: integer("version").default(1),
+  groupId: varchar("group_id", { length: 255 }),
 });
 
 // Document Chunks Table (for RAG)
@@ -501,6 +503,8 @@ export const insertDocumentSchema = z.object({
   filename: z.string(),
   content: z.string().optional().nullable(),
   isProcessed: z.boolean().optional(),
+  version: z.number().int().positive().optional(),
+  groupId: z.string().optional().nullable(),
 });
 
 export const insertDocumentChunkSchema = z.object({
