@@ -80,7 +80,7 @@ export default function Dashboard() {
   ] : [];
 
   return (
-    <div className="flex min-h-screen bg-background">
+    <div className="flex min-h-screen bg-gray-100">
       <AppSidebar />
       <main className="flex-1 ml-64 p-8 overflow-auto">
         <div className="max-w-7xl mx-auto space-y-8">
