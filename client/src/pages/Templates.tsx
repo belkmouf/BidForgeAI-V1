@@ -114,7 +114,11 @@ export default function Templates() {
                 Create and manage reusable bid templates to speed up your proposal workflow.
               </p>
             </div>
-            <Button className="border-2 border-primary" data-testid="button-create-template">
+            <Button 
+              className="border-2 border-primary" 
+              data-testid="button-create-template"
+              onClick={() => toast({ title: "Coming Soon", description: "Template creation will be available soon." })}
+            >
               <Plus className="h-4 w-4 mr-2" />
               Create Template
             </Button>
@@ -165,7 +169,11 @@ export default function Templates() {
               </Card>
             ))}
 
-            <Card className="border-2 border-dashed border-primary/30 !bg-teal-100 shadow-md flex items-center justify-center min-h-[200px] hover:border-primary/50 transition-colors cursor-pointer" data-testid="card-new-template">
+            <Card 
+              className="border-2 border-dashed border-primary/30 !bg-teal-100 shadow-md flex items-center justify-center min-h-[200px] hover:border-primary/50 transition-colors cursor-pointer" 
+              data-testid="card-new-template"
+              onClick={() => toast({ title: "Coming Soon", description: "Template creation will be available soon." })}
+            >
               <div className="text-center">
                 <div className="mx-auto w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mb-3">
                   <Plus className="h-6 w-6 text-primary" />
