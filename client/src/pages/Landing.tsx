@@ -4,8 +4,16 @@ import { FileText, Brain, Zap, Shield, Menu, X, ChevronRight, ArrowRight } from 
 import gsap from 'gsap';
 import constructionBg from '@assets/stock_images/construction_site_bu_f0afb754.jpg';
 import bidForgeLogo from '@assets/generated_images/bidforge_ai_premium_logo.png';
+import { useAuthStore, apiRequest } from '@/lib/auth';
 
 import _1764979718 from "@assets/1764979718.png";
+
+interface CompanyBranding {
+  companyName?: string;
+  tagline?: string;
+  primaryColor?: string;
+  logoUrl?: string;
+}
 
 const features = [
   {
@@ -49,6 +57,27 @@ export default function Landing() {
   const heroRef = useRef<HTMLDivElement>(null);
   const [scrolled, setScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [branding, setBranding] = useState<CompanyBranding | null>(null);
+  const { isAuthenticated, user } = useAuthStore();
+
+  useEffect(() => {
+    const fetchBranding = async () => {
+      if (isAuthenticated) {
+        try {
+          const response = await apiRequest('/api/branding');
+          if (response.ok) {
+            const data = await response.json();
+            setBranding(data.brandingProfile || null);
+          }
+        } catch (error) {
+          console.error('Failed to fetch branding:', error);
+        }
+      } else {
+        setBranding(null);
+      }
+    };
+    fetchBranding();
+  }, [isAuthenticated]);
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 50);
@@ -69,6 +98,11 @@ export default function Landing() {
     }
   }, []);
 
+  const displayName = branding?.companyName || user?.companyName || 'BidForge AI';
+  const displayTagline = branding?.tagline || 'INTELLIGENT BIDDING';
+  const displayLogo = branding?.logoUrl || _1764979718;
+  const primaryColor = branding?.primaryColor || '#0d9488';
+
   return (
     <div className="min-h-screen bg-background" data-testid="landing-page">
       <nav 
@@ -82,20 +116,20 @@ export default function Landing() {
         <div className="max-w-7xl mx-auto px-6 lg:px-8 flex justify-between items-center">
           <Link href="/" className="flex items-center gap-3 group" data-testid="link-home">
             <img 
-              src={_1764979718} 
-              alt="BidForge AI Logo" 
+              src={displayLogo} 
+              alt={`${displayName} Logo`} 
               className="h-10 w-10 object-contain"
             />
             <div>
               <div className={`font-display text-xl font-bold transition-colors duration-300 ${
                 scrolled ? 'text-charcoal-900' : 'text-white'
               }`}>
-                BidForge AI
+                {displayName}
               </div>
               <div className={`text-xs tracking-[0.2em] transition-colors duration-300 ${
                 scrolled ? 'text-gold-700' : 'text-gold-400'
               }`}>
-                INTELLIGENT BIDDING
+                {displayTagline}
               </div>
             </div>
           </Link>
@@ -115,9 +149,12 @@ export default function Landing() {
               href="/dashboard" 
               className={`px-6 py-2.5 text-sm font-medium tracking-wide border-2 transition-all duration-300 ${
                 scrolled 
-                  ? 'border-teal-700 text-teal-700 hover:bg-teal-700 hover:text-white' 
+                  ? 'hover:text-white' 
                   : 'border-white/80 text-white hover:bg-white hover:text-charcoal-900'
               }`}
+              style={scrolled ? { borderColor: primaryColor, color: primaryColor } : undefined}
+              onMouseEnter={(e) => { if (scrolled) { e.currentTarget.style.backgroundColor = primaryColor; e.currentTarget.style.color = 'white'; }}}
+              onMouseLeave={(e) => { if (scrolled) { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = primaryColor; }}}
               data-testid="link-dashboard"
             >
               Enter Platform
@@ -137,14 +174,21 @@ export default function Landing() {
           <div className="md:hidden absolute top-full left-0 w-full bg-white shadow-xl py-6 px-6 space-y-4">
             <a href="#features" className="block text-charcoal-800 font-medium py-2">Features</a>
             <a href="#testimonial" className="block text-charcoal-800 font-medium py-2">Testimonials</a>
-            <Link href="/dashboard" className="block bg-teal-700 text-white py-3 px-4 text-center font-medium">
+            <Link 
+              href="/dashboard" 
+              className="block text-white py-3 px-4 text-center font-medium"
+              style={{ backgroundColor: primaryColor }}
+            >
               Enter Platform
             </Link>
           </div>
         )}
       </nav>
       <section ref={heroRef} className="min-h-screen flex items-center justify-center relative overflow-hidden pt-20">
-        <div className="absolute inset-0 bg-gradient-to-br from-charcoal-800 via-teal-600 to-charcoal-700" />
+        <div 
+          className="absolute inset-0"
+          style={{ background: `linear-gradient(to bottom right, #1f2937, ${primaryColor}, #374151)` }}
+        />
         
         <div 
           className="absolute inset-0 opacity-[0.08] mix-blend-luminosity"
@@ -169,7 +213,10 @@ export default function Landing() {
           </svg>
         </div>
         
-        <div className="absolute top-1/4 -left-20 w-96 h-96 bg-teal-500/10 rounded-full blur-3xl" />
+        <div 
+          className="absolute top-1/4 -left-20 w-96 h-96 rounded-full blur-3xl"
+          style={{ backgroundColor: `${primaryColor}20` }}
+        />
         <div className="absolute bottom-1/4 -right-20 w-96 h-96 bg-gold-500/10 rounded-full blur-3xl" />
         
         <div className="relative z-10 max-w-6xl mx-auto px-6 lg:px-8 text-center">
@@ -192,7 +239,8 @@ export default function Landing() {
           <div className="animate-in flex flex-col sm:flex-row gap-4 justify-center">
             <Link 
               href="/dashboard" 
-              className="group px-10 py-5 bg-gradient-to-r from-teal-700 to-teal-600 text-white font-semibold text-lg hover:shadow-2xl hover:shadow-teal-500/25 transition-all duration-300 hover:scale-105 inline-flex items-center justify-center gap-2"
+              className="group px-10 py-5 text-white font-semibold text-lg hover:shadow-2xl transition-all duration-300 hover:scale-105 inline-flex items-center justify-center gap-2"
+              style={{ background: primaryColor }}
               data-testid="button-start"
             >
               Start Building Bids
@@ -301,7 +349,10 @@ export default function Landing() {
           </div>
         </div>
       </section>
-      <section className="py-24 md:py-32 bg-gradient-to-br from-teal-900 to-charcoal-900 relative overflow-hidden">
+      <section 
+        className="py-24 md:py-32 relative overflow-hidden"
+        style={{ background: `linear-gradient(to bottom right, ${primaryColor}dd, #1f2937)` }}
+      >
         <div className="absolute inset-0 opacity-5">
           <svg className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
             <defs>
@@ -322,7 +373,8 @@ export default function Landing() {
           </p>
           <Link 
             href="/dashboard" 
-            className="group inline-flex items-center gap-3 px-12 py-6 bg-gold-600 text-charcoal-900 font-bold text-lg hover:bg-gold-500 transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-gold-500/25"
+            className="group inline-flex items-center gap-3 px-12 py-6 text-white font-bold text-lg transition-all duration-300 hover:scale-105 hover:shadow-2xl"
+            style={{ backgroundColor: primaryColor }}
             data-testid="button-cta"
           >
             Get Started Now
@@ -336,11 +388,11 @@ export default function Landing() {
             <div className="md:col-span-2">
               <div className="flex items-center gap-3 mb-4">
                 <img 
-                  src={_1764979718} 
-                  alt="BidForge AI Logo" 
+                  src={displayLogo} 
+                  alt={`${displayName} Logo`} 
                   className="h-8 w-8 object-contain"
                 />
-                <span className="font-display text-xl font-bold text-white">BidForge AI</span>
+                <span className="font-display text-xl font-bold text-white">{displayName}</span>
               </div>
               <p className="text-gray-400 max-w-md leading-relaxed">
                 The intelligent bidding platform that learns from your wins to create better proposals, faster.
@@ -365,7 +417,7 @@ export default function Landing() {
           </div>
           <div className="pt-8 border-t border-charcoal-800 flex flex-col md:flex-row justify-between items-center gap-4">
             <p className="text-gray-500 text-sm">
-              © {new Date().getFullYear()} BidForge AI. All rights reserved.
+              © {new Date().getFullYear()} {displayName}. All rights reserved.
             </p>
             <p className="text-gray-600 text-sm">
               Built for construction professionals who refuse to lose.
