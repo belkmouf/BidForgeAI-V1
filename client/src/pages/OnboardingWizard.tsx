@@ -117,7 +117,7 @@ export default function OnboardingWizard() {
         setError(data.error || data.details?.[0]?.message || 'Failed to complete setup');
       } else {
         updateUser({ onboardingStatus: 'complete' });
-        setLocation('/dashboard');
+        setLocation('/');
       }
     } catch {
       setError('Network error. Please try again.');
