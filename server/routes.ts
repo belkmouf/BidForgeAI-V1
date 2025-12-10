@@ -2155,6 +2155,120 @@ Mark any missing information as [TO BE PROVIDED].`,
     }
   });
 
+  // ==================== TEMPLATES API ====================
+  
+  // List templates
+  app.get("/api/templates", authenticateToken, async (req: AuthRequest, res) => {
+    try {
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(403).json({ error: "Company context required" });
+      }
+      const templates = await storage.getTemplates(companyId);
+      res.json(templates);
+    } catch (error: any) {
+      console.error('Error listing templates:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get single template
+  app.get("/api/templates/:id", authenticateToken, async (req: AuthRequest, res) => {
+    try {
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(403).json({ error: "Company context required" });
+      }
+      const templateId = parseInt(req.params.id, 10);
+      if (isNaN(templateId)) {
+        return res.status(400).json({ error: "Invalid template ID" });
+      }
+      const template = await storage.getTemplate(templateId, companyId);
+      if (!template) {
+        return res.status(404).json({ error: "Template not found" });
+      }
+      res.json(template);
+    } catch (error: any) {
+      console.error('Error getting template:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Create template
+  app.post("/api/templates", authenticateToken, async (req: AuthRequest, res) => {
+    try {
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(403).json({ error: "Company context required" });
+      }
+      const { name, description, category, sections } = req.body;
+      if (!name || !category) {
+        return res.status(400).json({ error: "Name and category are required" });
+      }
+      const template = await storage.createTemplate({
+        companyId,
+        name,
+        description: description || '',
+        category,
+        sections: sections || []
+      });
+      res.status(201).json(template);
+    } catch (error: any) {
+      console.error('Error creating template:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Update template
+  app.put("/api/templates/:id", authenticateToken, async (req: AuthRequest, res) => {
+    try {
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(403).json({ error: "Company context required" });
+      }
+      const templateId = parseInt(req.params.id, 10);
+      if (isNaN(templateId)) {
+        return res.status(400).json({ error: "Invalid template ID" });
+      }
+      const { name, description, category, sections } = req.body;
+      const template = await storage.updateTemplate(templateId, companyId, {
+        name,
+        description,
+        category,
+        sections
+      });
+      if (!template) {
+        return res.status(404).json({ error: "Template not found" });
+      }
+      res.json(template);
+    } catch (error: any) {
+      console.error('Error updating template:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Delete template
+  app.delete("/api/templates/:id", authenticateToken, async (req: AuthRequest, res) => {
+    try {
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(403).json({ error: "Company context required" });
+      }
+      const templateId = parseInt(req.params.id, 10);
+      if (isNaN(templateId)) {
+        return res.status(400).json({ error: "Invalid template ID" });
+      }
+      const deleted = await storage.deleteTemplate(templateId, companyId);
+      if (!deleted) {
+        return res.status(404).json({ error: "Template not found" });
+      }
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error('Error deleting template:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // Upload company logo
   app.post("/api/upload/logo", authenticateToken, upload.single('file'), async (req: AuthRequest, res) => {
     try {
