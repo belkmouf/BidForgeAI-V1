@@ -99,31 +99,30 @@ export default function Templates() {
   };
 
   return (
-    <div className="flex min-h-screen bg-background">
+    <div className="flex min-h-screen bg-gray-100">
       <AppSidebar />
 
       <main className="flex-1 ml-64 p-8 overflow-auto">
         <div className="max-w-7xl mx-auto space-y-8">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <FileText className="h-6 w-6 text-primary" />
-              <h1 className="text-3xl font-display font-bold">Templates</h1>
+          <div className="flex items-center justify-between p-4 border-2 border-primary/30 rounded-xl !bg-teal-100 shadow-md">
+            <div>
+              <div className="flex items-center gap-2">
+                <FileText className="h-6 w-6 text-primary" />
+                <h1 className="text-3xl font-display font-bold">Templates</h1>
+              </div>
+              <p className="text-muted-foreground mt-1">
+                Create and manage reusable bid templates to speed up your proposal workflow.
+              </p>
             </div>
-            <Button data-testid="button-create-template">
+            <Button className="border-2 border-primary" data-testid="button-create-template">
               <Plus className="h-4 w-4 mr-2" />
               Create Template
             </Button>
           </div>
 
-          <div className="mb-6">
-            <p className="text-muted-foreground">
-              Create and manage reusable bid templates to speed up your proposal workflow.
-            </p>
-          </div>
-
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {templates.map((template) => (
-              <Card key={template.id} className="group hover:border-primary/50 transition-colors" data-testid={`card-template-${template.id}`}>
+              <Card key={template.id} className="group border-2 border-primary/30 !bg-teal-100 shadow-md hover:border-primary/50 transition-colors" data-testid={`card-template-${template.id}`}>
                 <CardHeader>
                   <div className="flex items-start justify-between">
                     <div>
@@ -166,7 +165,7 @@ export default function Templates() {
               </Card>
             ))}
 
-            <Card className="border-dashed flex items-center justify-center min-h-[200px] hover:border-primary/50 transition-colors cursor-pointer" data-testid="card-new-template">
+            <Card className="border-2 border-dashed border-primary/30 !bg-teal-100 shadow-md flex items-center justify-center min-h-[200px] hover:border-primary/50 transition-colors cursor-pointer" data-testid="card-new-template">
               <div className="text-center">
                 <div className="mx-auto w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mb-3">
                   <Plus className="h-6 w-6 text-primary" />
