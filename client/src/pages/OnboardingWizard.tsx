@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2, Building2, Globe, Palette, Image, FileText, CheckCircle, Upload, ExternalLink, User, Phone, Mail, MapPin, Award, Wand2 } from 'lucide-react';
+import { Loader2, Building2, Globe, Palette, Image, FileText, CheckCircle, Upload, ExternalLink, User, Phone, Mail, MapPin, Award } from 'lucide-react';
 import { useAuthStore, apiRequest } from '@/lib/auth';
 import bidForgeLogo from '@assets/generated_images/bidforge_ai_premium_logo.png';
 
@@ -36,92 +36,7 @@ export default function OnboardingWizard() {
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingBranding, setIsLoadingBranding] = useState(true);
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
-  const [isAutoFilling, setIsAutoFilling] = useState(false);
-  const [autoFillSuccess, setAutoFillSuccess] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const handleAutoFill = async () => {
-    if (!websiteUrl) {
-      setError('Please enter a website URL first');
-      return;
-    }
-
-    setIsAutoFilling(true);
-    setError('');
-    setAutoFillSuccess('');
-
-    try {
-      const response = await apiRequest('/api/branding/autofill', {
-        method: 'POST',
-        body: JSON.stringify({ websiteUrl }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        setError(data.error || 'Failed to auto-fill from website');
-        return;
-      }
-
-      const bp = data.branding;
-      let fieldsUpdated = 0;
-
-      if (bp.companyName && !companyName) {
-        setCompanyName(bp.companyName);
-        fieldsUpdated++;
-      }
-      if (bp.tagline && !tagline) {
-        setTagline(bp.tagline);
-        fieldsUpdated++;
-      }
-      if (bp.logoUrl && !logoUrl) {
-        setLogoUrl(bp.logoUrl);
-        fieldsUpdated++;
-      }
-      if (bp.primaryColor) {
-        setPrimaryColor(bp.primaryColor);
-        fieldsUpdated++;
-      }
-      if (bp.aboutUs && !aboutUs) {
-        setAboutUs(bp.aboutUs);
-        fieldsUpdated++;
-      }
-      if (bp.contactEmail && !contactEmail) {
-        setContactEmail(bp.contactEmail);
-        fieldsUpdated++;
-      }
-      if (bp.contactPhone && !contactPhone) {
-        setContactPhone(bp.contactPhone);
-        fieldsUpdated++;
-      }
-      if (bp.streetAddress && !streetAddress) {
-        setStreetAddress(bp.streetAddress);
-        fieldsUpdated++;
-      }
-      if (bp.city && !city) {
-        setCity(bp.city);
-        fieldsUpdated++;
-      }
-      if (bp.state && !state) {
-        setState(bp.state);
-        fieldsUpdated++;
-      }
-      if (bp.zip && !zip) {
-        setZip(bp.zip);
-        fieldsUpdated++;
-      }
-
-      if (fieldsUpdated > 0) {
-        setAutoFillSuccess(`Auto-filled ${fieldsUpdated} field${fieldsUpdated > 1 ? 's' : ''} from website`);
-      } else {
-        setAutoFillSuccess('No new fields found to auto-fill');
-      }
-    } catch (err) {
-      setError('Failed to connect to the website. Please check the URL.');
-    } finally {
-      setIsAutoFilling(false);
-    }
-  };
 
   useEffect(() => {
     const fetchBranding = async () => {
@@ -285,13 +200,6 @@ export default function OnboardingWizard() {
                 </Alert>
               )}
               
-              {autoFillSuccess && (
-                <Alert className="bg-green-100 border-green-500/50">
-                  <CheckCircle className="h-4 w-4 text-green-600" />
-                  <AlertDescription className="text-green-700">{autoFillSuccess}</AlertDescription>
-                </Alert>
-              )}
-              
               <div className="space-y-4">
                 <h3 className="text-lg font-semibold text-slate-700 border-b pb-2">Company Information</h3>
                 
@@ -330,56 +238,38 @@ export default function OnboardingWizard() {
                   </div>
                 </div>
                 
-                <div className="space-y-2">
-                  <Label htmlFor="websiteUrl" className="text-slate-700 flex items-center gap-2">
-                    <Globe className="h-4 w-4" />
-                    Website URL
-                  </Label>
-                  <div className="flex gap-2">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="websiteUrl" className="text-slate-700 flex items-center gap-2">
+                      <Globe className="h-4 w-4" />
+                      Website URL
+                    </Label>
                     <Input
                       id="websiteUrl"
                       type="url"
                       placeholder="https://yourcompany.com"
                       value={websiteUrl}
                       onChange={(e) => setWebsiteUrl(e.target.value)}
-                      className="flex-1 bg-slate-50 border-slate-300 text-slate-900 placeholder:text-slate-400"
+                      className="bg-slate-50 border-slate-300 text-slate-900 placeholder:text-slate-400"
                       data-testid="input-website-url"
                     />
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={handleAutoFill}
-                      disabled={isAutoFilling || !websiteUrl}
-                      className="border-deep-teal/50 text-deep-teal hover:bg-deep-teal/10"
-                      data-testid="button-autofill"
-                    >
-                      {isAutoFilling ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <Wand2 className="h-4 w-4" />
-                      )}
-                      <span className="ml-2 hidden sm:inline">Auto-fill</span>
-                    </Button>
                   </div>
-                  <p className="text-xs text-slate-500">
-                    Enter your website URL and click Auto-fill to automatically extract branding information
-                  </p>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="licenseNumber" className="text-slate-700 flex items-center gap-2">
-                    <Award className="h-4 w-4" />
-                    License Number
-                  </Label>
-                  <Input
-                    id="licenseNumber"
-                    type="text"
-                    placeholder="GC-123456"
-                    value={licenseNumber}
-                    onChange={(e) => setLicenseNumber(e.target.value)}
-                    className="bg-slate-50 border-slate-300 text-slate-900 placeholder:text-slate-400"
-                    data-testid="input-license-number"
-                  />
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="licenseNumber" className="text-slate-700 flex items-center gap-2">
+                      <Award className="h-4 w-4" />
+                      License Number
+                    </Label>
+                    <Input
+                      id="licenseNumber"
+                      type="text"
+                      placeholder="GC-123456"
+                      value={licenseNumber}
+                      onChange={(e) => setLicenseNumber(e.target.value)}
+                      className="bg-slate-50 border-slate-300 text-slate-900 placeholder:text-slate-400"
+                      data-testid="input-license-number"
+                    />
+                  </div>
                 </div>
                 
                 <div className="space-y-2">

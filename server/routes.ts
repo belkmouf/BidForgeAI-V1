@@ -1814,31 +1814,6 @@ or contact details from other sources.
     }
   });
 
-  // Auto-fill branding from website
-  app.post("/api/branding/autofill", authenticateToken, async (req: AuthRequest, res) => {
-    try {
-      if (!req.user?.userId) {
-        return res.status(401).json({ error: "Not authenticated" });
-      }
-
-      const { websiteUrl } = req.body;
-      if (!websiteUrl || typeof websiteUrl !== 'string') {
-        return res.status(400).json({ error: "Website URL is required" });
-      }
-
-      const { scrapeWebsiteForBranding } = await import('./lib/website-scraper.js');
-      const brandingData = await scrapeWebsiteForBranding(websiteUrl);
-
-      res.json({ 
-        success: true,
-        branding: brandingData,
-        fieldsFound: Object.keys(brandingData).length
-      });
-    } catch (error: any) {
-      res.status(500).json({ error: error.message });
-    }
-  });
-
   // ==================== PUBLIC SHARING ====================
 
   // Generate share token for a bid (requires authentication)
