@@ -151,3 +151,46 @@ export async function getPublicBid(token: string) {
   if (!res.ok) throw new Error(await res.text());
   return res.json() as Promise<{ bid: Bid; projectName: string; clientName: string }>;
 }
+
+// AI Instructions API
+export interface AIInstruction {
+  id: number;
+  companyId: number;
+  name: string;
+  instructions: string;
+  isDefault: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export async function getAIInstructions() {
+  const res = await apiRequest(`${API_BASE}/ai-instructions`);
+  if (!res.ok) throw new Error(await res.text());
+  return res.json() as Promise<{ instructions: AIInstruction[] }>;
+}
+
+export async function createAIInstruction(data: { name: string; instructions: string; isDefault?: boolean }) {
+  const res = await apiRequest(`${API_BASE}/ai-instructions`, {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json() as Promise<{ instruction: AIInstruction }>;
+}
+
+export async function updateAIInstruction(id: number, data: { name?: string; instructions?: string }) {
+  const res = await apiRequest(`${API_BASE}/ai-instructions/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json() as Promise<{ instruction: AIInstruction }>;
+}
+
+export async function deleteAIInstruction(id: number) {
+  const res = await apiRequest(`${API_BASE}/ai-instructions/${id}`, {
+    method: 'DELETE',
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json() as Promise<{ success: boolean }>;
+}

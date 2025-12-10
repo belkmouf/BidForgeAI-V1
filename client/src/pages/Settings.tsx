@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Settings as SettingsIcon, Bell, Palette, Shield, User, LogOut, Lock, Loader2, Building2, Globe, Phone, Mail, MapPin, Award, Upload, CheckCircle, FileText, Trash2, File, FileSpreadsheet } from 'lucide-react';
+import { Settings as SettingsIcon, Bell, Palette, Shield, User, LogOut, Lock, Loader2, Building2, Globe, Phone, Mail, MapPin, Award, Upload, CheckCircle, FileText, Trash2, File, FileSpreadsheet, Sparkles, Plus, Edit2, Save, X } from 'lucide-react';
 import { useAuthStore, logout, apiRequest } from '@/lib/auth';
 
 interface BrandingProfile {
@@ -84,6 +84,28 @@ export default function Settings() {
   const [knowledgeSuccess, setKnowledgeSuccess] = useState('');
   const [isDeletingDoc, setIsDeletingDoc] = useState<number | null>(null);
   const knowledgeInputRef = useRef<HTMLInputElement>(null);
+  
+  // AI Instructions state
+  interface AIInstructionType {
+    id: number;
+    name: string;
+    instructions: string;
+    isDefault: boolean;
+    createdAt: string;
+    updatedAt: string;
+  }
+  const [aiInstructions, setAiInstructions] = useState<AIInstructionType[]>([]);
+  const [aiInstructionsLoading, setAiInstructionsLoading] = useState(true);
+  const [aiInstructionsError, setAiInstructionsError] = useState('');
+  const [aiInstructionsSuccess, setAiInstructionsSuccess] = useState('');
+  const [editingInstructionId, setEditingInstructionId] = useState<number | null>(null);
+  const [editingName, setEditingName] = useState('');
+  const [editingText, setEditingText] = useState('');
+  const [isCreatingInstruction, setIsCreatingInstruction] = useState(false);
+  const [newInstructionName, setNewInstructionName] = useState('');
+  const [newInstructionText, setNewInstructionText] = useState('');
+  const [savingInstructionId, setSavingInstructionId] = useState<number | null>(null);
+  const [deletingInstructionId, setDeletingInstructionId] = useState<number | null>(null);
 
   useEffect(() => {
     const fetchBranding = async () => {
@@ -138,6 +160,123 @@ export default function Settings() {
       fetchKnowledgeDocs();
     }
   }, [isAuthenticated]);
+
+  // Fetch AI instructions
+  useEffect(() => {
+    const fetchAiInstructions = async () => {
+      try {
+        const response = await apiRequest('/api/ai-instructions');
+        if (response.ok) {
+          const data = await response.json();
+          setAiInstructions(data.instructions || []);
+        }
+      } catch (error) {
+        console.error('Failed to fetch AI instructions:', error);
+      } finally {
+        setAiInstructionsLoading(false);
+      }
+    };
+
+    if (isAuthenticated) {
+      fetchAiInstructions();
+    }
+  }, [isAuthenticated]);
+
+  const handleStartEdit = (instruction: AIInstructionType) => {
+    setEditingInstructionId(instruction.id);
+    setEditingName(instruction.name);
+    setEditingText(instruction.instructions);
+  };
+
+  const handleCancelEdit = () => {
+    setEditingInstructionId(null);
+    setEditingName('');
+    setEditingText('');
+  };
+
+  const handleSaveInstruction = async (id: number) => {
+    setSavingInstructionId(id);
+    setAiInstructionsError('');
+    setAiInstructionsSuccess('');
+
+    try {
+      const response = await apiRequest(`/api/ai-instructions/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ name: editingName, instructions: editingText }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setAiInstructions(prev => prev.map(i => i.id === id ? data.instruction : i));
+        setAiInstructionsSuccess('Instruction updated successfully');
+        handleCancelEdit();
+      } else {
+        const error = await response.json();
+        setAiInstructionsError(error.error || 'Failed to update instruction');
+      }
+    } catch {
+      setAiInstructionsError('Failed to update instruction. Please try again.');
+    } finally {
+      setSavingInstructionId(null);
+    }
+  };
+
+  const handleDeleteInstruction = async (id: number) => {
+    setDeletingInstructionId(id);
+    setAiInstructionsError('');
+
+    try {
+      const response = await apiRequest(`/api/ai-instructions/${id}`, {
+        method: 'DELETE',
+      });
+
+      if (response.ok) {
+        setAiInstructions(prev => prev.filter(i => i.id !== id));
+        setAiInstructionsSuccess('Instruction deleted successfully');
+      } else {
+        const error = await response.json();
+        setAiInstructionsError(error.error || 'Failed to delete instruction');
+      }
+    } catch {
+      setAiInstructionsError('Failed to delete instruction. Please try again.');
+    } finally {
+      setDeletingInstructionId(null);
+    }
+  };
+
+  const handleCreateInstruction = async () => {
+    if (!newInstructionName.trim() || !newInstructionText.trim()) {
+      setAiInstructionsError('Name and instructions are required');
+      return;
+    }
+
+    setSavingInstructionId(-1);
+    setAiInstructionsError('');
+    setAiInstructionsSuccess('');
+
+    try {
+      const response = await apiRequest('/api/ai-instructions', {
+        method: 'POST',
+        body: JSON.stringify({ name: newInstructionName, instructions: newInstructionText }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setAiInstructions(prev => [...prev, data.instruction]);
+        setAiInstructionsSuccess('Instruction created successfully');
+        setIsCreatingInstruction(false);
+        setNewInstructionName('');
+        setNewInstructionText('');
+      } else {
+        const error = await response.json();
+        setAiInstructionsError(error.error || 'Failed to create instruction');
+      }
+    } catch {
+      setAiInstructionsError('Failed to create instruction. Please try again.');
+    } finally {
+      setSavingInstructionId(null);
+    }
+  };
 
   const handleKnowledgeUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -1008,6 +1147,184 @@ export default function Settings() {
                     <p>No documents uploaded yet</p>
                     <p className="text-sm">Upload company documents to enhance AI-generated bids</p>
                   </div>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card data-testid="card-ai-instructions-settings">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Sparkles className="h-5 w-5" />
+                  AI Instructions
+                </CardTitle>
+                <CardDescription>
+                  Create and manage reusable instruction presets for AI bid generation. These presets will be available in the bid generator dropdown.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {aiInstructionsSuccess && (
+                  <Alert className="bg-green-900/20 border-green-500/50">
+                    <AlertDescription className="text-green-400">{aiInstructionsSuccess}</AlertDescription>
+                  </Alert>
+                )}
+                {aiInstructionsError && (
+                  <Alert variant="destructive" className="bg-red-900/20 border-red-500/50">
+                    <AlertDescription>{aiInstructionsError}</AlertDescription>
+                  </Alert>
+                )}
+
+                {aiInstructionsLoading ? (
+                  <div className="flex items-center justify-center py-6">
+                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                  </div>
+                ) : (
+                  <>
+                    <div className="space-y-3">
+                      {aiInstructions.map((instruction) => (
+                        <div
+                          key={instruction.id}
+                          className="p-4 bg-muted/50 rounded-lg border"
+                          data-testid={`ai-instruction-${instruction.id}`}
+                        >
+                          {editingInstructionId === instruction.id ? (
+                            <div className="space-y-3">
+                              <Input
+                                value={editingName}
+                                onChange={(e) => setEditingName(e.target.value)}
+                                placeholder="Instruction name"
+                                data-testid={`input-instruction-name-${instruction.id}`}
+                              />
+                              <Textarea
+                                value={editingText}
+                                onChange={(e) => setEditingText(e.target.value)}
+                                placeholder="Enter AI instructions..."
+                                className="min-h-[150px]"
+                                data-testid={`textarea-instruction-${instruction.id}`}
+                              />
+                              <div className="flex gap-2">
+                                <Button
+                                  size="sm"
+                                  onClick={() => handleSaveInstruction(instruction.id)}
+                                  disabled={savingInstructionId === instruction.id}
+                                  data-testid={`button-save-instruction-${instruction.id}`}
+                                >
+                                  {savingInstructionId === instruction.id ? (
+                                    <Loader2 className="h-4 w-4 animate-spin mr-1" />
+                                  ) : (
+                                    <Save className="h-4 w-4 mr-1" />
+                                  )}
+                                  Save
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={handleCancelEdit}
+                                  data-testid={`button-cancel-edit-${instruction.id}`}
+                                >
+                                  <X className="h-4 w-4 mr-1" />
+                                  Cancel
+                                </Button>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2">
+                                  <h4 className="font-medium">{instruction.name}</h4>
+                                  {instruction.isDefault && (
+                                    <span className="text-xs bg-primary/20 text-primary px-2 py-0.5 rounded">Default</span>
+                                  )}
+                                </div>
+                                <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
+                                  {instruction.instructions.substring(0, 150)}...
+                                </p>
+                              </div>
+                              <div className="flex gap-1 ml-4">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleStartEdit(instruction)}
+                                  data-testid={`button-edit-instruction-${instruction.id}`}
+                                >
+                                  <Edit2 className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleDeleteInstruction(instruction.id)}
+                                  disabled={deletingInstructionId === instruction.id || aiInstructions.length <= 1}
+                                  className="text-red-500 hover:text-red-600 hover:bg-red-500/10"
+                                  data-testid={`button-delete-instruction-${instruction.id}`}
+                                >
+                                  {deletingInstructionId === instruction.id ? (
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                  ) : (
+                                    <Trash2 className="h-4 w-4" />
+                                  )}
+                                </Button>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+
+                    {isCreatingInstruction ? (
+                      <div className="p-4 border-2 border-dashed border-primary/50 rounded-lg space-y-3">
+                        <Input
+                          value={newInstructionName}
+                          onChange={(e) => setNewInstructionName(e.target.value)}
+                          placeholder="Enter instruction name (e.g., 'Technical Proposal')"
+                          data-testid="input-new-instruction-name"
+                        />
+                        <Textarea
+                          value={newInstructionText}
+                          onChange={(e) => setNewInstructionText(e.target.value)}
+                          placeholder="Enter the AI instructions..."
+                          className="min-h-[150px]"
+                          data-testid="textarea-new-instruction"
+                        />
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            onClick={handleCreateInstruction}
+                            disabled={savingInstructionId === -1}
+                            data-testid="button-save-new-instruction"
+                          >
+                            {savingInstructionId === -1 ? (
+                              <Loader2 className="h-4 w-4 animate-spin mr-1" />
+                            ) : (
+                              <Save className="h-4 w-4 mr-1" />
+                            )}
+                            Create
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
+                              setIsCreatingInstruction(false);
+                              setNewInstructionName('');
+                              setNewInstructionText('');
+                            }}
+                            data-testid="button-cancel-new-instruction"
+                          >
+                            <X className="h-4 w-4 mr-1" />
+                            Cancel
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <Button
+                        variant="outline"
+                        className="w-full"
+                        onClick={() => setIsCreatingInstruction(true)}
+                        data-testid="button-add-instruction"
+                      >
+                        <Plus className="h-4 w-4 mr-2" />
+                        Add New Instruction Preset
+                      </Button>
+                    )}
+                  </>
                 )}
               </CardContent>
             </Card>
