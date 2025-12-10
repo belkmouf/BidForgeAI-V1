@@ -27,6 +27,7 @@ export const companies = pgTable("companies", {
   isActive: boolean("is_active").default(true).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  deletedAt: timestamp("deleted_at"),
 });
 
 export type Company = typeof companies.$inferSelect;
@@ -72,6 +73,7 @@ export const users = pgTable("users", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
   lastLoginAt: timestamp("last_login_at"),
+  deletedAt: timestamp("deleted_at"),
 });
 
 // Sessions Table (for refresh tokens)
@@ -151,6 +153,7 @@ export const projects = pgTable("projects", {
   isArchived: boolean("is_archived").default(false).notNull(),
   metadata: jsonb("metadata").default(sql`'{}'::jsonb`),
   createdAt: timestamp("created_at").defaultNow().notNull(),
+  deletedAt: timestamp("deleted_at"),
 });
 
 // Documents Table
@@ -161,6 +164,7 @@ export const documents = pgTable("documents", {
   content: text("content"),
   isProcessed: boolean("is_processed").default(false).notNull(),
   uploadedAt: timestamp("uploaded_at").defaultNow().notNull(),
+  deletedAt: timestamp("deleted_at"),
 });
 
 // Document Chunks Table (for RAG)
@@ -239,6 +243,7 @@ export const bids = pgTable("bids", {
   shareToken: varchar("share_token", { length: 64 }).unique(),
   
   createdAt: timestamp("created_at").defaultNow().notNull(),
+  deletedAt: timestamp("deleted_at"),
 });
 
 export type Bid = typeof bids.$inferSelect;
