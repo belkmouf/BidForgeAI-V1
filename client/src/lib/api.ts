@@ -13,8 +13,11 @@ export async function createProject(data: { name: string; clientName: string; st
   return res.json() as Promise<Project>;
 }
 
-export async function listProjects() {
-  const res = await apiRequest(`${API_BASE}/projects`);
+export async function listProjects(includeArchived: boolean = false) {
+  const url = includeArchived 
+    ? `${API_BASE}/projects?includeArchived=true`
+    : `${API_BASE}/projects`;
+  const res = await apiRequest(url);
   if (!res.ok) throw new Error(await res.text());
   return res.json() as Promise<Project[]>;
 }
@@ -32,6 +35,30 @@ export async function updateProjectStatus(id: string, status: string) {
   });
   if (!res.ok) throw new Error(await res.text());
   return res.json() as Promise<Project>;
+}
+
+export async function archiveProject(id: string) {
+  const res = await apiRequest(`${API_BASE}/projects/${id}/archive`, {
+    method: 'PATCH',
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json() as Promise<Project>;
+}
+
+export async function unarchiveProject(id: string) {
+  const res = await apiRequest(`${API_BASE}/projects/${id}/unarchive`, {
+    method: 'PATCH',
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json() as Promise<Project>;
+}
+
+export async function deleteProject(id: string) {
+  const res = await apiRequest(`${API_BASE}/projects/${id}`, {
+    method: 'DELETE',
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json() as Promise<{ message: string }>;
 }
 
 // Documents API

@@ -242,7 +242,8 @@ export async function registerRoutes(
   app.get("/api/projects", authenticateToken, async (req: AuthRequest, res) => {
     try {
       const companyId = req.user?.companyId ?? null;
-      const projects = await storage.listProjects(companyId);
+      const includeArchived = req.query.includeArchived === 'true';
+      const projects = await storage.listProjects(companyId, includeArchived);
       res.json(projects);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
@@ -273,6 +274,48 @@ export async function registerRoutes(
         return res.status(404).json({ error: "Project not found" });
       }
       res.json(project);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  // Archive a project (requires admin/manager role)
+  app.patch("/api/projects/:id/archive", authenticateToken, requireRole(['admin', 'manager']), async (req: AuthRequest, res) => {
+    try {
+      const companyId = req.user?.companyId ?? null;
+      const project = await storage.archiveProject(req.params.id, companyId);
+      if (!project) {
+        return res.status(404).json({ error: "Project not found" });
+      }
+      res.json(project);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  // Unarchive a project (requires admin/manager role)
+  app.patch("/api/projects/:id/unarchive", authenticateToken, requireRole(['admin', 'manager']), async (req: AuthRequest, res) => {
+    try {
+      const companyId = req.user?.companyId ?? null;
+      const project = await storage.unarchiveProject(req.params.id, companyId);
+      if (!project) {
+        return res.status(404).json({ error: "Project not found" });
+      }
+      res.json(project);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  // Delete a project (requires admin role only)
+  app.delete("/api/projects/:id", authenticateToken, requireRole(['admin']), async (req: AuthRequest, res) => {
+    try {
+      const companyId = req.user?.companyId ?? null;
+      const deleted = await storage.deleteProject(req.params.id, companyId);
+      if (!deleted) {
+        return res.status(404).json({ error: "Project not found" });
+      }
+      res.json({ message: "Project deleted successfully" });
     } catch (error: any) {
       res.status(400).json({ error: error.message });
     }

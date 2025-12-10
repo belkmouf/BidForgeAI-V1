@@ -49,8 +49,11 @@ export interface IStorage {
   // Projects (company-scoped)
   createProject(project: InsertProject, companyId: number | null): Promise<Project>;
   getProject(id: string, companyId: number | null): Promise<Project | undefined>;
-  listProjects(companyId: number | null): Promise<Project[]>;
+  listProjects(companyId: number | null, includeArchived?: boolean): Promise<Project[]>;
   updateProjectStatus(id: string, status: ProjectStatus, companyId: number | null): Promise<Project | undefined>;
+  archiveProject(id: string, companyId: number | null): Promise<Project | undefined>;
+  unarchiveProject(id: string, companyId: number | null): Promise<Project | undefined>;
+  deleteProject(id: string, companyId: number | null): Promise<boolean>;
   
   // Documents
   createDocument(document: InsertDocument): Promise<Document>;
@@ -157,11 +160,15 @@ export class DatabaseStorage implements IStorage {
     return project || undefined;
   }
 
-  async listProjects(companyId: number | null): Promise<Project[]> {
+  async listProjects(companyId: number | null, includeArchived: boolean = false): Promise<Project[]> {
+    const conditions = [this.companyFilter(companyId)];
+    if (!includeArchived) {
+      conditions.push(eq(projects.isArchived, false));
+    }
     return await db
       .select()
       .from(projects)
-      .where(this.companyFilter(companyId))
+      .where(and(...conditions))
       .orderBy(desc(projects.createdAt));
   }
 
@@ -175,6 +182,41 @@ export class DatabaseStorage implements IStorage {
       ))
       .returning();
     return project || undefined;
+  }
+
+  async archiveProject(id: string, companyId: number | null): Promise<Project | undefined> {
+    const [project] = await db
+      .update(projects)
+      .set({ isArchived: true })
+      .where(and(
+        eq(projects.id, id),
+        this.companyFilter(companyId)
+      ))
+      .returning();
+    return project || undefined;
+  }
+
+  async unarchiveProject(id: string, companyId: number | null): Promise<Project | undefined> {
+    const [project] = await db
+      .update(projects)
+      .set({ isArchived: false })
+      .where(and(
+        eq(projects.id, id),
+        this.companyFilter(companyId)
+      ))
+      .returning();
+    return project || undefined;
+  }
+
+  async deleteProject(id: string, companyId: number | null): Promise<boolean> {
+    const result = await db
+      .delete(projects)
+      .where(and(
+        eq(projects.id, id),
+        this.companyFilter(companyId)
+      ))
+      .returning();
+    return result.length > 0;
   }
 
   // Documents (company access verified through project ownership)

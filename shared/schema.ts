@@ -125,6 +125,7 @@ export const projects = pgTable("projects", {
   name: text("name").notNull(),
   clientName: text("client_name").notNull(),
   status: text("status").notNull().default("Active"),
+  isArchived: boolean("is_archived").default(false).notNull(),
   metadata: jsonb("metadata").default(sql`'{}'::jsonb`),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
