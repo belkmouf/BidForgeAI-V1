@@ -124,13 +124,13 @@ export default function ProjectsList() {
         <div className="max-w-6xl mx-auto space-y-8">
           
           {/* Header */}
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between p-4 border-2 border-primary/30 rounded-xl !bg-teal-100 shadow-md">
             <div>
               <h1 className="text-3xl font-display font-bold tracking-tight text-foreground">Projects</h1>
               <p className="text-muted-foreground mt-1">Manage all your construction bids and proposals.</p>
             </div>
             <div className="flex items-center gap-3">
-               <div className="flex items-center gap-2">
+               <div className="flex items-center gap-2 border border-primary/20 rounded-lg px-3 py-2 bg-white">
                  <Switch
                    id="show-archived"
                    checked={showArchived}
@@ -141,12 +141,12 @@ export default function ProjectsList() {
                    Show archived
                  </Label>
                </div>
-               <Button variant="outline" className="gap-2">
+               <Button variant="outline" className="gap-2 border-2 border-primary/30">
                 <Filter className="h-4 w-4" />
                 Filter
                </Button>
                <Link href="/projects/new">
-                <Button className="gap-2 shadow-lg shadow-primary/20">
+                <Button className="gap-2 shadow-lg shadow-primary/20 border-2 border-primary">
                   <Plus className="h-4 w-4" />
                   New Project
                 </Button>
@@ -160,7 +160,7 @@ export default function ProjectsList() {
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input 
                   placeholder="Search projects..." 
-                  className="pl-9 bg-muted/50 border-0"
+                  className="pl-9 bg-white border-2 border-primary/30"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   data-testid="input-search-projects"
@@ -189,7 +189,7 @@ export default function ProjectsList() {
                   </TableHeader>
                   <TableBody>
                     {filteredProjects.map((project) => (
-                      <TableRow key={project.id} className="group cursor-pointer hover:bg-muted/40" data-testid={`row-project-${project.id}`}>
+                      <TableRow key={project.id} className="group cursor-pointer hover:bg-muted/40 border-b-2 border-primary/20" data-testid={`row-project-${project.id}`}>
                         <TableCell className="font-medium">
                           <span className="font-semibold text-foreground group-hover:text-primary transition-colors">{project.name}</span>
                         </TableCell>
