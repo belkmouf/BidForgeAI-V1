@@ -1493,7 +1493,7 @@ or contact details from other sources.
         tagline: z.string().max(200).optional().or(z.literal("")),
         websiteUrl: z.string().url().optional().or(z.literal("")),
         primaryColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/, "Invalid hex color"),
-        logoUrl: z.string().url().optional().or(z.literal("")),
+        logoUrl: z.string().refine((val) => val === "" || val.startsWith("/") || /^https?:\/\//.test(val), "Invalid logo URL or path").optional().or(z.literal("")),
         aboutUs: z.string().max(1000).optional(),
         contactName: z.string().max(100).optional().or(z.literal("")),
         contactTitle: z.string().max(100).optional().or(z.literal("")),
