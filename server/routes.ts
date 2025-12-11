@@ -1358,8 +1358,11 @@ or contact details from other sources.
 
   // Create invitation (company admin only)
   const createInviteSchema = z.object({
-    email: z.string().email(),
-    role: z.enum(['company_admin', 'company_user']).optional().default('company_user'),
+    email: z.string().email('Invalid email format'),
+    role: z.enum(['company_admin', 'company_user', 'admin']).optional().default('company_user').transform((role) => {
+      // Map old 'admin' role to new 'company_admin' for backward compatibility
+      return role === 'admin' ? 'company_admin' : role;
+    }),
   });
 
   app.post("/api/company/invites", authenticateToken, requireRole(['company_admin', 'admin']), async (req: AuthRequest, res) => {
