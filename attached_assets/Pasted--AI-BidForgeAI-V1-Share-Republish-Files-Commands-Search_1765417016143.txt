@@ -1,0 +1,210 @@
+
+
+AI
+
+
+
+BidForgeAI (V1
+
+
+
+
+Share
+
+Republish
+
+
+Files
+
+
+
+Commands
+Search
+Packager files
+Config files
+
+
+
+/
+
+
+
+
+Overview
+
+Logs
+
+Analytics
+
+Resources
+
+Domains
+
+Manage
+bidforge
+
+
+
+Errors only
+
+Date
+Time
+Deployment
+Source
+Log
+2025-12-10 20:14:06.83
+9d72985b
+User
+{"timestamp":"2025-12-11T01:14:06.830Z","level":"info","message":"CORS request without origin in production","action":"cors_validation","result":"allowed_no_origin","userAgent":"unknown","environment":"production","service":"bidforge-api","version":"1.0.0"}
+2025-12-10 20:22:55.50
+9d72985b
+User
+{"timestamp":"2025-12-11T01:22:55.508Z","level":"error","message":"Request error Origin not allowed by CORS policy","type":"request-error","stack":"Error: Origin not allowed by CORS policy\n at origin (/home/runner/workspace/dist/index.cjs:2463:11456)\n at /home/runner/workspace/dist/index.cjs:216:4809\n at x (/home/runner/workspace/dist/index.cjs:216:4629)\n at /home/runner/workspace/dist/index.cjs:216:4656\n at Lp.handle_request (/home/runner/workspace/dist/index.cjs:38:3184)\n at T (/home/runner/workspace/dist/index.cjs:38:8395)\n at /home/runner/workspace/dist/index.cjs:38:7988\n at Du.process_params (/home/runner/workspace/dist/index.cjs:38:8511)\n at w (/home/runner/workspace/dist/index.cjs:38:7914)\n at internalNext (/home/runner/workspace/node_modules/helmet/index.cjs:531:6)\n at xXssProtectionMiddleware (/home/runner/workspace/node_modules/helmet/index.cjs:311:3)\n at internalNext (/home/runner/workspace/node_modules/helmet/index.cjs:529:6)\n at xPoweredByMiddleware (/home/runner/workspace/node_modules/helmet/index.cjs:304:3)\n at internalNext (/home/runner/workspace/node_modules/helmet/index.cjs:529:6)\n at xFrameOptionsMiddleware (/home/runner/workspace/node_modules/helmet/index.cjs:281:3)\n at internalNext (/home/runner/workspace/node_modules/helmet/index.cjs:529:6)","method":"GET","path":"/assets/index-DycEMKeo.css","ip":"127.0.0.1","userAgent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36 Edg/143.0.0.0","environment":"production","service":"bidforge-api","version":"1.0.0"}
+2025-12-10 20:22:55.50
+9d72985b
+User
+{"timestamp":"2025-12-11T01:22:55.508Z","level":"error","message":"Request error Origin not allowed by CORS policy","errorId":"ERR-1765416175508-24xeqb4pk","status":500,"stack":"Error: Origin not allowed by CORS policy\n at origin (/home/runner/workspace/dist/index.cjs:2463:11456)\n at /home/runner/workspace/dist/index.cjs:216:4809\n at x (/home/runner/workspace/dist/index.cjs:216:4629)\n at /home/runner/workspace/dist/index.cjs:216:4656\n at Lp.handle_request (/home/runner/workspace/dist/index.cjs:38:3184)\n at T (/home/runner/workspace/dist/index.cjs:38:8395)\n at /home/runner/workspace/dist/index.cjs:38:7988\n at Du.process_params (/home/runner/workspace/dist/index.cjs:38:8511)\n at w (/home/runner/workspace/dist/index.cjs:38:7914)\n at internalNext (/home/runner/workspace/node_modules/helmet/index.cjs:531:6)\n at xXssProtectionMiddleware (/home/runner/workspace/node_modules/helmet/index.cjs:311:3)\n at internalNext (/home/runner/workspace/node_modules/helmet/index.cjs:529:6)\n at xPoweredByMiddleware (/home/runner/workspace/node_modules/helmet/index.cjs:304:3)\n at internalNext (/home/runner/workspace/node_modules/helmet/index.cjs:529:6)\n at xFrameOptionsMiddleware (/home/runner/workspace/node_modules/helmet/index.cjs:281:3)\n at internalNext (/home/runner/workspace/node_modules/helmet/index.cjs:529:6)","path":"/assets/index-DycEMKeo.css","method":"GET","ip":"127.0.0.1","type":"request-error","environment":"production","service":"bidforge-api","version":"1.0.0"}
+2025-12-10 20:22:55.69
+9d72985b
+User
+{"timestamp":"2025-12-11T01:22:55.698Z","level":"info","message":"CORS request without origin in production","action":"cors_validation","result":"allowed_no_origin","userAgent":"unknown","environment":"production","service":"bidforge-api","version":"1.0.0"}
+2025-12-10 20:22:55.83
+9d72985b
+User
+{"timestamp":"2025-12-11T01:22:55.834Z","level":"info","message":"CORS request without origin in production","action":"cors_validation","result":"allowed_no_origin","userAgent":"unknown","environment":"production","service":"bidforge-api","version":"1.0.0"}
+2025-12-10 20:26:05.15
+9d72985b
+User
+{"timestamp":"2025-12-11T01:26:05.158Z","level":"info","message":"CORS request without origin in production","action":"cors_validation","result":"allowed_no_origin","userAgent":"unknown","environment":"production","service":"bidforge-api","version":"1.0.0"}
+2025-12-10 20:28:13.02
+d75084cb
+User
+{"timestamp":"2025-12-11T01:28:13.020Z","level":"warn","message":"Redis cache unavailable - using fallback","error":"connect ECONNREFUSED 127.0.0.1:6379","environment":"production","service":"bidforge-api","version":"1.0.0"}
+2025-12-10 20:28:13.02
+d75084cb
+User
+{"timestamp":"2025-12-11T01:28:13.027Z","level":"info","message":"Started job queue: document","environment":"production","service":"bidforge-api","version":"1.0.0"}
+2025-12-10 20:28:13.02
+d75084cb
+User
+{"timestamp":"2025-12-11T01:28:13.026Z","level":"info","message":"Started job queue: ai","environment":"production","service":"bidforge-api","version":"1.0.0"}
+2025-12-10 20:28:13.02
+d75084cb
+User
+{"timestamp":"2025-12-11T01:28:13.028Z","level":"info","message":"Job manager initialized successfully","environment":"production","service":"bidforge-api","version":"1.0.0"}
+2025-12-10 20:28:13.02
+d75084cb
+User
+{"timestamp":"2025-12-11T01:28:13.027Z","level":"info","message":"Started job queue: notification","environment":"production","service":"bidforge-api","version":"1.0.0"}
+2025-12-10 20:28:13.02
+d75084cb
+User
+{"timestamp":"2025-12-11T01:28:13.028Z","level":"info","message":"Periodic maintenance scheduled","environment":"production","service":"bidforge-api","version":"1.0.0"}
+2025-12-10 20:28:13.06
+d75084cb
+User
+{"timestamp":"2025-12-11T01:28:13.060Z","level":"info","message":"serving on port 5000","source":"express","environment":"production","service":"bidforge-api","version":"1.0.0"}
+2025-12-10 20:28:13.06
+d75084cb
+User
+{"timestamp":"2025-12-11T01:28:13.061Z","level":"info","message":"BidForge AI server started successfully","port":5000,"environment":"production","services":{"cache":"initialized","jobManager":"initialized","database":"connected"},"service":"bidforge-api","version":"1.0.0"}
+2025-12-10 20:28:13.36
+d75084cb
+User
+{"timestamp":"2025-12-11T01:28:13.367Z","level":"info","message":"CORS request without origin in production","action":"cors_validation","result":"allowed_no_origin","userAgent":"unknown","environment":"production","service":"bidforge-api","version":"1.0.0"}
+2025-12-10 20:28:35.32
+d75084cb
+User
+{"timestamp":"2025-12-11T01:28:35.324Z","level":"info","message":"CORS request without origin in production","action":"cors_validation","result":"allowed_no_origin","userAgent":"unknown","environment":"production","service":"bidforge-api","version":"1.0.0"}
+2025-12-10 20:28:35.52
+d75084cb
+User
+{"timestamp":"2025-12-11T01:28:35.520Z","level":"info","message":"CORS rejected unauthorized origin in production","origin":"https://bidforgeai.com","originHost":"bidforgeai.com","action":"cors_validation","result":"failure","reason":"unauthorized_origin","environment":"production","service":"bidforge-api","version":"1.0.0"}
+2025-12-10 20:28:35.52
+d75084cb
+User
+{"timestamp":"2025-12-11T01:28:35.521Z","level":"error","message":"Request error Origin not allowed by CORS policy","type":"request-error","stack":"Error: Origin not allowed by CORS policy\n at origin (/home/runner/workspace/dist/index.cjs:2463:11456)\n at /home/runner/workspace/dist/index.cjs:216:4809\n at x (/home/runner/workspace/dist/index.cjs:216:4629)\n at /home/runner/workspace/dist/index.cjs:216:4656\n at Lp.handle_request (/home/runner/workspace/dist/index.cjs:38:3184)\n at T (/home/runner/workspace/dist/index.cjs:38:8395)\n at /home/runner/workspace/dist/index.cjs:38:7988\n at Du.process_params (/home/runner/workspace/dist/index.cjs:38:8511)\n at w (/home/runner/workspace/dist/index.cjs:38:7914)\n at internalNext (/home/runner/workspace/node_modules/helmet/index.cjs:531:6)\n at xXssProtectionMiddleware (/home/runner/workspace/node_modules/helmet/index.cjs:311:3)\n at internalNext (/home/runner/workspace/node_modules/helmet/index.cjs:529:6)\n at xPoweredByMiddleware (/home/runner/workspace/node_modules/helmet/index.cjs:304:3)\n at internalNext (/home/runner/workspace/node_modules/helmet/index.cjs:529:6)\n at xFrameOptionsMiddleware (/home/runner/workspace/node_modules/helmet/index.cjs:281:3)\n at internalNext (/home/runner/workspace/node_modules/helmet/index.cjs:529:6)","method":"GET","path":"/assets/index-DycEMKeo.css","ip":"127.0.0.1","userAgent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36 Edg/143.0.0.0","environment":"production","service":"bidforge-api","version":"1.0.0"}
+2025-12-10 20:28:35.52
+d75084cb
+User
+{"timestamp":"2025-12-11T01:28:35.522Z","level":"error","message":"Request error Origin not allowed by CORS policy","errorId":"ERR-1765416515522-a3a5f8l26","status":500,"stack":"Error: Origin not allowed by CORS policy\n at origin (/home/runner/workspace/dist/index.cjs:2463:11456)\n at /home/runner/workspace/dist/index.cjs:216:4809\n at x (/home/runner/workspace/dist/index.cjs:216:4629)\n at /home/runner/workspace/dist/index.cjs:216:4656\n at Lp.handle_request (/home/runner/workspace/dist/index.cjs:38:3184)\n at T (/home/runner/workspace/dist/index.cjs:38:8395)\n at /home/runner/workspace/dist/index.cjs:38:7988\n at Du.process_params (/home/runner/workspace/dist/index.cjs:38:8511)\n at w (/home/runner/workspace/dist/index.cjs:38:7914)\n at internalNext (/home/runner/workspace/node_modules/helmet/index.cjs:531:6)\n at xXssProtectionMiddleware (/home/runner/workspace/node_modules/helmet/index.cjs:311:3)\n at internalNext (/home/runner/workspace/node_modules/helmet/index.cjs:529:6)\n at xPoweredByMiddleware (/home/runner/workspace/node_modules/helmet/index.cjs:304:3)\n at internalNext (/home/runner/workspace/node_modules/helmet/index.cjs:529:6)\n at xFrameOptionsMiddleware (/home/runner/workspace/node_modules/helmet/index.cjs:281:3)\n at internalNext (/home/runner/workspace/node_modules/helmet/index.cjs:529:6)","path":"/assets/index-DycEMKeo.css","method":"GET","ip":"127.0.0.1","type":"request-error","environment":"production","service":"bidforge-api","version":"1.0.0"}
+2025-12-10 20:28:35.52
+d75084cb
+User
+{"timestamp":"2025-12-11T01:28:35.524Z","level":"info","message":"CORS rejected unauthorized origin in production","origin":"https://bidforgeai.com","originHost":"bidforgeai.com","action":"cors_validation","result":"failure","reason":"unauthorized_origin","environment":"production","service":"bidforge-api","version":"1.0.0"}
+2025-12-10 20:28:35.52
+d75084cb
+User
+{"timestamp":"2025-12-11T01:28:35.525Z","level":"error","message":"Request error Origin not allowed by CORS policy","type":"request-error","stack":"Error: Origin not allowed by CORS policy\n at origin (/home/runner/workspace/dist/index.cjs:2463:11456)\n at /home/runner/workspace/dist/index.cjs:216:4809\n at x (/home/runner/workspace/dist/index.cjs:216:4629)\n at /home/runner/workspace/dist/index.cjs:216:4656\n at Lp.handle_request (/home/runner/workspace/dist/index.cjs:38:3184)\n at T (/home/runner/workspace/dist/index.cjs:38:8395)\n at /home/runner/workspace/dist/index.cjs:38:7988\n at Du.process_params (/home/runner/workspace/dist/index.cjs:38:8511)\n at w (/home/runner/workspace/dist/index.cjs:38:7914)\n at internalNext (/home/runner/workspace/node_modules/helmet/index.cjs:531:6)\n at xXssProtectionMiddleware (/home/runner/workspace/node_modules/helmet/index.cjs:311:3)\n at internalNext (/home/runner/workspace/node_modules/helmet/index.cjs:529:6)\n at xPoweredByMiddleware (/home/runner/workspace/node_modules/helmet/index.cjs:304:3)\n at internalNext (/home/runner/workspace/node_modules/helmet/index.cjs:529:6)\n at xFrameOptionsMiddleware (/home/runner/workspace/node_modules/helmet/index.cjs:281:3)\n at internalNext (/home/runner/workspace/node_modules/helmet/index.cjs:529:6)","method":"GET","path":"/assets/index-oxu8w1bo.js","ip":"127.0.0.1","userAgent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36 Edg/143.0.0.0","environment":"production","service":"bidforge-api","version":"1.0.0"}
+2025-12-10 20:28:35.52
+d75084cb
+User
+{"timestamp":"2025-12-11T01:28:35.525Z","level":"error","message":"Request error Origin not allowed by CORS policy","errorId":"ERR-1765416515525-dexiwapta","status":500,"stack":"Error: Origin not allowed by CORS policy\n at origin (/home/runner/workspace/dist/index.cjs:2463:11456)\n at /home/runner/workspace/dist/index.cjs:216:4809\n at x (/home/runner/workspace/dist/index.cjs:216:4629)\n at /home/runner/workspace/dist/index.cjs:216:4656\n at Lp.handle_request (/home/runner/workspace/dist/index.cjs:38:3184)\n at T (/home/runner/workspace/dist/index.cjs:38:8395)\n at /home/runner/workspace/dist/index.cjs:38:7988\n at Du.process_params (/home/runner/workspace/dist/index.cjs:38:8511)\n at w (/home/runner/workspace/dist/index.cjs:38:7914)\n at internalNext (/home/runner/workspace/node_modules/helmet/index.cjs:531:6)\n at xXssProtectionMiddleware (/home/runner/workspace/node_modules/helmet/index.cjs:311:3)\n at internalNext (/home/runner/workspace/node_modules/helmet/index.cjs:529:6)\n at xPoweredByMiddleware (/home/runner/workspace/node_modules/helmet/index.cjs:304:3)\n at internalNext (/home/runner/workspace/node_modules/helmet/index.cjs:529:6)\n at xFrameOptionsMiddleware (/home/runner/workspace/node_modules/helmet/index.cjs:281:3)\n at internalNext (/home/runner/workspace/node_modules/helmet/index.cjs:529:6)","path":"/assets/index-oxu8w1bo.js","method":"GET","ip":"127.0.0.1","type":"request-error","environment":"production","service":"bidforge-api","version":"1.0.0"}
+2025-12-10 20:28:35.66
+d75084cb
+User
+{"timestamp":"2025-12-11T01:28:35.661Z","level":"info","message":"CORS request without origin in production","action":"cors_validation","result":"allowed_no_origin","userAgent":"unknown","environment":"production","service":"bidforge-api","version":"1.0.0"}
+2025-12-10 20:28:38.18
+d75084cb
+User
+{"timestamp":"2025-12-11T01:28:38.183Z","level":"info","message":"CORS request without origin in production","action":"cors_validation","result":"allowed_no_origin","userAgent":"unknown","environment":"production","service":"bidforge-api","version":"1.0.0"}
+2025-12-10 20:28:38.27
+d75084cb
+User
+{"timestamp":"2025-12-11T01:28:38.273Z","level":"info","message":"CORS rejected unauthorized origin in production","origin":"https://bidforgeai.com","originHost":"bidforgeai.com","action":"cors_validation","result":"failure","reason":"unauthorized_origin","environment":"production","service":"bidforge-api","version":"1.0.0"}
+2025-12-10 20:28:38.27
+d75084cb
+User
+{"timestamp":"2025-12-11T01:28:38.273Z","level":"error","message":"Request error Origin not allowed by CORS policy","type":"request-error","stack":"Error: Origin not allowed by CORS policy\n at origin (/home/runner/workspace/dist/index.cjs:2463:11456)\n at /home/runner/workspace/dist/index.cjs:216:4809\n at x (/home/runner/workspace/dist/index.cjs:216:4629)\n at /home/runner/workspace/dist/index.cjs:216:4656\n at Lp.handle_request (/home/runner/workspace/dist/index.cjs:38:3184)\n at T (/home/runner/workspace/dist/index.cjs:38:8395)\n at /home/runner/workspace/dist/index.cjs:38:7988\n at Du.process_params (/home/runner/workspace/dist/index.cjs:38:8511)\n at w (/home/runner/workspace/dist/index.cjs:38:7914)\n at internalNext (/home/runner/workspace/node_modules/helmet/index.cjs:531:6)\n at xXssProtectionMiddleware (/home/runner/workspace/node_modules/helmet/index.cjs:311:3)\n at internalNext (/home/runner/workspace/node_modules/helmet/index.cjs:529:6)\n at xPoweredByMiddleware (/home/runner/workspace/node_modules/helmet/index.cjs:304:3)\n at internalNext (/home/runner/workspace/node_modules/helmet/index.cjs:529:6)\n at xFrameOptionsMiddleware (/home/runner/workspace/node_modules/helmet/index.cjs:281:3)\n at internalNext (/home/runner/workspace/node_modules/helmet/index.cjs:529:6)","method":"GET","path":"/assets/index-DycEMKeo.css","ip":"127.0.0.1","userAgent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36 Edg/143.0.0.0","environment":"production","service":"bidforge-api","version":"1.0.0"}
+2025-12-10 20:28:38.27
+d75084cb
+User
+{"timestamp":"2025-12-11T01:28:38.274Z","level":"error","message":"Request error Origin not allowed by CORS policy","errorId":"ERR-1765416518273-3mq9oxf0h","status":500,"stack":"Error: Origin not allowed by CORS policy\n at origin (/home/runner/workspace/dist/index.cjs:2463:11456)\n at /home/runner/workspace/dist/index.cjs:216:4809\n at x (/home/runner/workspace/dist/index.cjs:216:4629)\n at /home/runner/workspace/dist/index.cjs:216:4656\n at Lp.handle_request (/home/runner/workspace/dist/index.cjs:38:3184)\n at T (/home/runner/workspace/dist/index.cjs:38:8395)\n at /home/runner/workspace/dist/index.cjs:38:7988\n at Du.process_params (/home/runner/workspace/dist/index.cjs:38:8511)\n at w (/home/runner/workspace/dist/index.cjs:38:7914)\n at internalNext (/home/runner/workspace/node_modules/helmet/index.cjs:531:6)\n at xXssProtectionMiddleware (/home/runner/workspace/node_modules/helmet/index.cjs:311:3)\n at internalNext (/home/runner/workspace/node_modules/helmet/index.cjs:529:6)\n at xPoweredByMiddleware (/home/runner/workspace/node_modules/helmet/index.cjs:304:3)\n at internalNext (/home/runner/workspace/node_modules/helmet/index.cjs:529:6)\n at xFrameOptionsMiddleware (/home/runner/workspace/node_modules/helmet/index.cjs:281:3)\n at internalNext (/home/runner/workspace/node_modules/helmet/index.cjs:529:6)","path":"/assets/index-DycEMKeo.css","method":"GET","ip":"127.0.0.1","type":"request-error","environment":"production","service":"bidforge-api","version":"1.0.0"}
+2025-12-10 20:28:38.30
+d75084cb
+User
+{"timestamp":"2025-12-11T01:28:38.301Z","level":"info","message":"CORS rejected unauthorized origin in production","origin":"https://bidforgeai.com","originHost":"bidforgeai.com","action":"cors_validation","result":"failure","reason":"unauthorized_origin","environment":"production","service":"bidforge-api","version":"1.0.0"}
+2025-12-10 20:28:38.30
+d75084cb
+User
+{"timestamp":"2025-12-11T01:28:38.301Z","level":"error","message":"Request error Origin not allowed by CORS policy","type":"request-error","stack":"Error: Origin not allowed by CORS policy\n at origin (/home/runner/workspace/dist/index.cjs:2463:11456)\n at /home/runner/workspace/dist/index.cjs:216:4809\n at x (/home/runner/workspace/dist/index.cjs:216:4629)\n at /home/runner/workspace/dist/index.cjs:216:4656\n at Lp.handle_request (/home/runner/workspace/dist/index.cjs:38:3184)\n at T (/home/runner/workspace/dist/index.cjs:38:8395)\n at /home/runner/workspace/dist/index.cjs:38:7988\n at Du.process_params (/home/runner/workspace/dist/index.cjs:38:8511)\n at w (/home/runner/workspace/dist/index.cjs:38:7914)\n at internalNext (/home/runner/workspace/node_modules/helmet/index.cjs:531:6)\n at xXssProtectionMiddleware (/home/runner/workspace/node_modules/helmet/index.cjs:311:3)\n at internalNext (/home/runner/workspace/node_modules/helmet/index.cjs:529:6)\n at xPoweredByMiddleware (/home/runner/workspace/node_modules/helmet/index.cjs:304:3)\n at internalNext (/home/runner/workspace/node_modules/helmet/index.cjs:529:6)\n at xFrameOptionsMiddleware (/home/runner/workspace/node_modules/helmet/index.cjs:281:3)\n at internalNext (/home/runner/workspace/node_modules/helmet/index.cjs:529:6)","method":"GET","path":"/assets/index-oxu8w1bo.js","ip":"127.0.0.1","userAgent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36 Edg/143.0.0.0","environment":"production","service":"bidforge-api","version":"1.0.0"}
+2025-12-10 20:28:38.30
+d75084cb
+User
+{"timestamp":"2025-12-11T01:28:38.302Z","level":"error","message":"Request error Origin not allowed by CORS policy","errorId":"ERR-1765416518302-f0r62k8ad","status":500,"stack":"Error: Origin not allowed by CORS policy\n at origin (/home/runner/workspace/dist/index.cjs:2463:11456)\n at /home/runner/workspace/dist/index.cjs:216:4809\n at x (/home/runner/workspace/dist/index.cjs:216:4629)\n at /home/runner/workspace/dist/index.cjs:216:4656\n at Lp.handle_request (/home/runner/workspace/dist/index.cjs:38:3184)\n at T (/home/runner/workspace/dist/index.cjs:38:8395)\n at /home/runner/workspace/dist/index.cjs:38:7988\n at Du.process_params (/home/runner/workspace/dist/index.cjs:38:8511)\n at w (/home/runner/workspace/dist/index.cjs:38:7914)\n at internalNext (/home/runner/workspace/node_modules/helmet/index.cjs:531:6)\n at xXssProtectionMiddleware (/home/runner/workspace/node_modules/helmet/index.cjs:311:3)\n at internalNext (/home/runner/workspace/node_modules/helmet/index.cjs:529:6)\n at xPoweredByMiddleware (/home/runner/workspace/node_modules/helmet/index.cjs:304:3)\n at internalNext (/home/runner/workspace/node_modules/helmet/index.cjs:529:6)\n at xFrameOptionsMiddleware (/home/runner/workspace/node_modules/helmet/index.cjs:281:3)\n at internalNext (/home/runner/workspace/node_modules/helmet/index.cjs:529:6)","path":"/assets/index-oxu8w1bo.js","method":"GET","ip":"127.0.0.1","type":"request-error","environment":"production","service":"bidforge-api","version":"1.0.0"}
+2025-12-10 20:28:38.40
+d75084cb
+User
+{"timestamp":"2025-12-11T01:28:38.401Z","level":"info","message":"CORS request without origin in production","action":"cors_validation","result":"allowed_no_origin","userAgent":"unknown","environment":"production","service":"bidforge-api","version":"1.0.0"}
+2025-12-10 20:30:42.54
+d75084cb
+User
+{"timestamp":"2025-12-11T01:30:42.544Z","level":"info","message":"CORS request without origin in production","action":"cors_validation","result":"allowed_no_origin","userAgent":"unknown","environment":"production","service":"bidforge-api","version":"1.0.0"}
+2025-12-10 20:31:20.16
+d75084cb
+User
+{"timestamp":"2025-12-11T01:31:20.163Z","level":"info","message":"CORS request without origin in production","action":"cors_validation","result":"allowed_no_origin","userAgent":"unknown","environment":"production","service":"bidforge-api","version":"1.0.0"}
+2025-12-10 20:31:20.37
+d75084cb
+User
+{"timestamp":"2025-12-11T01:31:20.374Z","level":"info","message":"CORS rejected unauthorized origin in production","origin":"https://bidforgeai.com","originHost":"bidforgeai.com","action":"cors_validation","result":"failure","reason":"unauthorized_origin","environment":"production","service":"bidforge-api","version":"1.0.0"}
+2025-12-10 20:31:20.37
+d75084cb
+User
+{"timestamp":"2025-12-11T01:31:20.375Z","level":"error","message":"Request error Origin not allowed by CORS policy","errorId":"ERR-1765416680375-9qnsevli4","status":500,"stack":"Error: Origin not allowed by CORS policy\n at origin (/home/runner/workspace/dist/index.cjs:2463:11456)\n at /home/runner/workspace/dist/index.cjs:216:4809\n at x (/home/runner/workspace/dist/index.cjs:216:4629)\n at /home/runner/workspace/dist/index.cjs:216:4656\n at Lp.handle_request (/home/runner/workspace/dist/index.cjs:38:3184)\n at T (/home/runner/workspace/dist/index.cjs:38:8395)\n at /home/runner/workspace/dist/index.cjs:38:7988\n at Du.process_params (/home/runner/workspace/dist/index.cjs:38:8511)\n at w (/home/runner/workspace/dist/index.cjs:38:7914)\n at internalNext (/home/runner/workspace/node_modules/helmet/index.cjs:531:6)\n at xXssProtectionMiddleware (/home/runner/workspace/node_modules/helmet/index.cjs:311:3)\n at internalNext (/home/runner/workspace/node_modules/helmet/index.cjs:529:6)\n at xPoweredByMiddleware (/home/runner/workspace/node_modules/helmet/index.cjs:304:3)\n at internalNext (/home/runner/workspace/node_modules/helmet/index.cjs:529:6)\n at xFrameOptionsMiddleware (/home/runner/workspace/node_modules/helmet/index.cjs:281:3)\n at internalNext (/home/runner/workspace/node_modules/helmet/index.cjs:529:6)","path":"/assets/index-DycEMKeo.css","method":"GET","ip":"127.0.0.1","type":"request-error","environment":"production","service":"bidforge-api","version":"1.0.0"}
+2025-12-10 20:31:20.37
+d75084cb
+User
+{"timestamp":"2025-12-11T01:31:20.375Z","level":"error","message":"Request error Origin not allowed by CORS policy","type":"request-error","stack":"Error: Origin not allowed by CORS policy\n at origin (/home/runner/workspace/dist/index.cjs:2463:11456)\n at /home/runner/workspace/dist/index.cjs:216:4809\n at x (/home/runner/workspace/dist/index.cjs:216:4629)\n at /home/runner/workspace/dist/index.cjs:216:4656\n at Lp.handle_request (/home/runner/workspace/dist/index.cjs:38:3184)\n at T (/home/runner/workspace/dist/index.cjs:38:8395)\n at /home/runner/workspace/dist/index.cjs:38:7988\n at Du.process_params (/home/runner/workspace/dist/index.cjs:38:8511)\n at w (/home/runner/workspace/dist/index.cjs:38:7914)\n at internalNext (/home/runner/workspace/node_modules/helmet/index.cjs:531:6)\n at xXssProtectionMiddleware (/home/runner/workspace/node_modules/helmet/index.cjs:311:3)\n at internalNext (/home/runner/workspace/node_modules/helmet/index.cjs:529:6)\n at xPoweredByMiddleware (/home/runner/workspace/node_modules/helmet/index.cjs:304:3)\n at internalNext (/home/runner/workspace/node_modules/helmet/index.cjs:529:6)\n at xFrameOptionsMiddleware (/home/runner/workspace/node_modules/helmet/index.cjs:281:3)\n at internalNext (/home/runner/workspace/node_modules/helmet/index.cjs:529:6)","method":"GET","path":"/assets/index-DycEMKeo.css","ip":"127.0.0.1","userAgent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36","environment":"production","service":"bidforge-api","version":"1.0.0"}
+2025-12-10 20:31:20.38
+d75084cb
+User
+{"timestamp":"2025-12-11T01:31:20.387Z","level":"error","message":"Request error Origin not allowed by CORS policy","type":"request-error","stack":"Error: Origin not allowed by CORS policy\n at origin (/home/runner/workspace/dist/index.cjs:2463:11456)\n at /home/runner/workspace/dist/index.cjs:216:4809\n at x (/home/runner/workspace/dist/index.cjs:216:4629)\n at /home/runner/workspace/dist/index.cjs:216:4656\n at Lp.handle_request (/home/runner/workspace/dist/index.cjs:38:3184)\n at T (/home/runner/workspace/dist/index.cjs:38:8395)\n at /home/runner/workspace/dist/index.cjs:38:7988\n at Du.process_params (/home/runner/workspace/dist/index.cjs:38:8511)\n at w (/home/runner/workspace/dist/index.cjs:38:7914)\n at internalNext (/home/runner/workspace/node_modules/helmet/index.cjs:531:6)\n at xXssProtectionMiddleware (/home/runner/workspace/node_modules/helmet/index.cjs:311:3)\n at internalNext (/home/runner/workspace/node_modules/helmet/index.cjs:529:6)\n at xPoweredByMiddleware (/home/runner/workspace/node_modules/helmet/index.cjs:304:3)\n at internalNext (/home/runner/workspace/node_modules/helmet/index.cjs:529:6)\n at xFrameOptionsMiddleware (/home/runner/workspace/node_modules/helmet/index.cjs:281:3)\n at internalNext (/home/runner/workspace/node_modules/helmet/index.cjs:529:6)","method":"GET","path":"/assets/index-oxu8w1bo.js","ip":"127.0.0.1","userAgent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36","environment":"production","service":"bidforge-api","version":"1.0.0"}
+2025-12-10 20:31:20.38
+d75084cb
+User
+{"timestamp":"2025-12-11T01:31:20.387Z","level":"info","message":"CORS rejected unauthorized origin in production","origin":"https://bidforgeai.com","originHost":"bidforgeai.com","action":"cors_validation","result":"failure","reason":"unauthorized_origin","environment":"production","service":"bidforge-api","version":"1.0.0"}
+2025-12-10 20:31:20.38
+d75084cb
+User
+{"timestamp":"2025-12-11T01:31:20.387Z","level":"error","message":"Request error Origin not allowed by CORS policy","errorId":"ERR-1765416680387-fbu434uwp","status":500,"stack":"Error: Origin not allowed by CORS policy\n at origin (/home/runner/workspace/dist/index.cjs:2463:11456)\n at /home/runner/workspace/dist/index.cjs:216:4809\n at x (/home/runner/workspace/dist/index.cjs:216:4629)\n at /home/runner/workspace/dist/index.cjs:216:4656\n at Lp.handle_request (/home/runner/workspace/dist/index.cjs:38:3184)\n at T (/home/runner/workspace/dist/index.cjs:38:8395)\n at /home/runner/workspace/dist/index.cjs:38:7988\n at Du.process_params (/home/runner/workspace/dist/index.cjs:38:8511)\n at w (/home/runner/workspace/dist/index.cjs:38:7914)\n at internalNext (/home/runner/workspace/node_modules/helmet/index.cjs:531:6)\n at xXssProtectionMiddleware (/home/runner/workspace/node_modules/helmet/index.cjs:311:3)\n at internalNext (/home/runner/workspace/node_modules/helmet/index.cjs:529:6)\n at xPoweredByMiddleware (/home/runner/workspace/node_modules/helmet/index.cjs:304:3)\n at internalNext (/home/runner/workspace/node_modules/helmet/index.cjs:529:6)\n at xFrameOptionsMiddleware (/home/runner/workspace/node_modules/helmet/index.cjs:281:3)\n at internalNext (/home/runner/workspace/node_modules/helmet/index.cjs:529:6)","path":"/assets/index-oxu8w1bo.js","method":"GET","ip":"127.0.0.1","type":"request-error","environment":"production","service":"bidforge-api","version":"1.0.0"}

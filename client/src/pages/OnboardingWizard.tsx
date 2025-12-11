@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useLocation } from 'wouter';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -6,8 +6,10 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2, Building2, Globe, Palette, Image, FileText, CheckCircle, Upload, ExternalLink, User, Phone, Mail, MapPin, Award } from 'lucide-react';
-import { useAuthStore } from '@/lib/auth';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Loader2, Building2, Globe, Palette, Image, FileText, CheckCircle, Upload, ExternalLink, User, Phone, Mail, MapPin, Award, Sparkles } from 'lucide-react';
+import { useAuthStore, apiRequest } from '@/lib/auth';
+import { WebsiteAutoFill } from '@/components/onboarding/website-auto-fill';
 import bidForgeLogo from '@assets/generated_images/bidforge_ai_premium_logo.png';
 
 export default function OnboardingWizard() {
@@ -34,8 +36,55 @@ export default function OnboardingWizard() {
   
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingBranding, setIsLoadingBranding] = useState(true);
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
+  const [showAutoFill, setShowAutoFill] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleAutoFillData = (data: any) => {
+    if (data.name) setCompanyName(data.name);
+    if (data.description) setAboutUs(data.description);
+    if (data.website) setWebsiteUrl(data.website);
+    if (data.email) setContactEmail(data.email);
+    if (data.phone) setContactPhone(data.phone);
+    if (data.address) setStreetAddress(data.address);
+    if (data.logo) setLogoUrl(data.logo);
+    setShowAutoFill(false);
+  };
+
+  useEffect(() => {
+    const fetchBranding = async () => {
+      try {
+        const response = await apiRequest('/api/branding');
+        const data = await response.json();
+        
+        if (data.brandingProfile) {
+          const bp = data.brandingProfile;
+          if (bp.companyName) setCompanyName(bp.companyName);
+          if (bp.tagline) setTagline(bp.tagline);
+          if (bp.websiteUrl) setWebsiteUrl(bp.websiteUrl);
+          if (bp.primaryColor) setPrimaryColor(bp.primaryColor);
+          if (bp.logoUrl) setLogoUrl(bp.logoUrl);
+          if (bp.aboutUs) setAboutUs(bp.aboutUs);
+          if (bp.contactName) setContactName(bp.contactName);
+          if (bp.contactTitle) setContactTitle(bp.contactTitle);
+          if (bp.contactPhone) setContactPhone(bp.contactPhone);
+          if (bp.contactEmail) setContactEmail(bp.contactEmail);
+          if (bp.streetAddress) setStreetAddress(bp.streetAddress);
+          if (bp.city) setCity(bp.city);
+          if (bp.state) setState(bp.state);
+          if (bp.zip) setZip(bp.zip);
+          if (bp.licenseNumber) setLicenseNumber(bp.licenseNumber);
+        }
+      } catch (err) {
+        console.error('Failed to fetch branding:', err);
+      } finally {
+        setIsLoadingBranding(false);
+      }
+    };
+
+    fetchBranding();
+  }, []);
 
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -128,6 +177,17 @@ export default function OnboardingWizard() {
 
   const fullAddress = [streetAddress, city, state, zip].filter(Boolean).join(', ');
 
+  if (isLoadingBranding) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-100 to-slate-200">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="h-8 w-8 animate-spin text-deep-teal" />
+          <p className="text-slate-600">Loading your branding profile...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen flex bg-gradient-to-br from-slate-100 to-slate-200">
       <div className="flex-1 flex flex-col h-screen">
@@ -155,7 +215,33 @@ export default function OnboardingWizard() {
               )}
               
               <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-slate-700 border-b pb-2">Company Information</h3>
+                <div className="flex items-center justify-between border-b pb-2">
+                  <h3 className="text-lg font-semibold text-slate-700">Company Information</h3>
+                  <Dialog open={showAutoFill} onOpenChange={setShowAutoFill}>
+                    <DialogTrigger asChild>
+                      <Button 
+                        type="button" 
+                        variant="outline" 
+                        size="sm"
+                        className="text-deep-teal border-deep-teal/50 hover:bg-deep-teal/10"
+                        data-testid="button-auto-fill"
+                      >
+                        <Sparkles className="h-4 w-4 mr-2" />
+                        Auto-Fill from Website
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                      <DialogHeader>
+                        <DialogTitle>Auto-Fill Company Information</DialogTitle>
+                      </DialogHeader>
+                      <WebsiteAutoFill
+                        onDataExtracted={handleAutoFillData}
+                        onCancel={() => setShowAutoFill(false)}
+                        initialWebsite={websiteUrl}
+                      />
+                    </DialogContent>
+                  </Dialog>
+                </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">

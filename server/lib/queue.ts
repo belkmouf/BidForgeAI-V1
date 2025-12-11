@@ -1,19 +1,209 @@
 import Redis from 'ioredis';
+import { EventEmitter } from 'events';
+
+// Job Priority Types
+export type JobPriority = 'low' | 'normal' | 'high' | 'critical';
+
+export type JobStatus = 'pending' | 'processing' | 'completed' | 'failed' | 'cancelled';
+
+// Job Interface
+export interface Job {
+  id: string;
+  type: string;
+  data: any;
+  status: JobStatus;
+  priority: JobPriority;
+  attempts: number;
+  maxAttempts: number;
+  result?: any;
+  error?: string;
+  userId?: number;
+  projectId?: string;
+  metadata?: Record<string, any>;
+  createdAt: Date;
+  startedAt?: Date;
+  completedAt?: Date;
+}
+
+export type JobProcessor = (job: Job, data: any) => Promise<any>;
+
+// In-memory Job Queue (fallback when Redis unavailable)
+export class JobQueue extends EventEmitter {
+  private name: string;
+  private jobs: Map<string, Job> = new Map();
+  private processors: Map<string, JobProcessor> = new Map();
+  private isRunning = false;
+  private processingInterval: NodeJS.Timeout | null = null;
+
+  constructor(name: string) {
+    super();
+    this.name = name;
+  }
+
+  addProcessor(jobType: string, processor: JobProcessor): void {
+    this.processors.set(jobType, processor);
+  }
+
+  async add(
+    type: string,
+    data: any,
+    options: {
+      priority?: JobPriority;
+      userId?: number;
+      projectId?: string;
+      metadata?: Record<string, any>;
+      maxAttempts?: number;
+    } = {}
+  ): Promise<string> {
+    const id = `job_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+    const job: Job = {
+      id,
+      type,
+      data,
+      status: 'pending',
+      priority: options.priority || 'normal',
+      attempts: 0,
+      maxAttempts: options.maxAttempts || 3,
+      userId: options.userId,
+      projectId: options.projectId,
+      metadata: options.metadata,
+      createdAt: new Date(),
+    };
+    this.jobs.set(id, job);
+    return id;
+  }
+
+  start(): void {
+    if (this.isRunning) return;
+    this.isRunning = true;
+    this.processingInterval = setInterval(() => this.processNextJob(), 100);
+  }
+
+  async stop(): Promise<void> {
+    this.isRunning = false;
+    if (this.processingInterval) {
+      clearInterval(this.processingInterval);
+      this.processingInterval = null;
+    }
+  }
+
+  private async processNextJob(): Promise<void> {
+    const pendingJobs = Array.from(this.jobs.values())
+      .filter(j => j.status === 'pending')
+      .sort((a, b) => {
+        const priorityOrder = { critical: 0, high: 1, normal: 2, low: 3 };
+        return priorityOrder[a.priority] - priorityOrder[b.priority];
+      });
+
+    const job = pendingJobs[0];
+    if (!job) return;
+
+    const processor = this.processors.get(job.type);
+    if (!processor) return;
+
+    job.status = 'processing';
+    job.startedAt = new Date();
+    job.attempts++;
+
+    try {
+      const result = await processor(job, job.data);
+      job.status = 'completed';
+      job.result = result;
+      job.completedAt = new Date();
+      this.emit('job:completed', job, result);
+    } catch (error: any) {
+      if (job.attempts < job.maxAttempts) {
+        job.status = 'pending';
+        this.emit('job:retry', job, error);
+      } else {
+        job.status = 'failed';
+        job.error = error.message;
+        job.completedAt = new Date();
+        this.emit('job:failed', job, error);
+      }
+    }
+  }
+
+  async getJob(jobId: string): Promise<Job | null> {
+    return this.jobs.get(jobId) || null;
+  }
+
+  async cancelJob(jobId: string): Promise<boolean> {
+    const job = this.jobs.get(jobId);
+    if (job && job.status === 'pending') {
+      job.status = 'cancelled';
+      return true;
+    }
+    return false;
+  }
+
+  getJobs(options: {
+    userId?: number;
+    projectId?: string;
+    status?: JobStatus;
+    type?: string;
+    limit?: number;
+  } = {}): Job[] {
+    let jobs = Array.from(this.jobs.values());
+    if (options.userId) jobs = jobs.filter(j => j.userId === options.userId);
+    if (options.projectId) jobs = jobs.filter(j => j.projectId === options.projectId);
+    if (options.status) jobs = jobs.filter(j => j.status === options.status);
+    if (options.type) jobs = jobs.filter(j => j.type === options.type);
+    if (options.limit) jobs = jobs.slice(0, options.limit);
+    return jobs;
+  }
+
+  getStats(): { pending: number; processing: number; completed: number; failed: number } {
+    const jobs = Array.from(this.jobs.values());
+    return {
+      pending: jobs.filter(j => j.status === 'pending').length,
+      processing: jobs.filter(j => j.status === 'processing').length,
+      completed: jobs.filter(j => j.status === 'completed').length,
+      failed: jobs.filter(j => j.status === 'failed').length,
+    };
+  }
+
+  async cleanup(olderThanMs: number): Promise<number> {
+    const cutoff = Date.now() - olderThanMs;
+    let cleaned = 0;
+    for (const [id, job] of Array.from(this.jobs.entries())) {
+      if ((job.status === 'completed' || job.status === 'failed') && job.createdAt.getTime() < cutoff) {
+        this.jobs.delete(id);
+        cleaned++;
+      }
+    }
+    return cleaned;
+  }
+}
+
+// Create queue instances
+export const aiQueue = new JobQueue('ai');
+export const documentQueue = new JobQueue('document');
+export const notificationQueue = new JobQueue('notification');
 
 let publisher: Redis | null = null;
 let workerConnection: Redis | null = null;
 let isPublisherConnected = false;
 let isWorkerConnected = false;
 
+let redisDisabled = false;
+
 function getRedisConfig() {
   return {
     host: process.env.REDIS_HOST || 'localhost',
     port: parseInt(process.env.REDIS_PORT || '6379', 10),
     password: process.env.REDIS_PASSWORD || undefined,
-    maxRetriesPerRequest: 3,
-    retryDelayOnFailover: 100,
+    maxRetriesPerRequest: 1,
+    retryStrategy: (times: number) => {
+      if (times >= 1) {
+        redisDisabled = true;
+        return null;
+      }
+      return Math.min(times * 100, 1000);
+    },
     lazyConnect: true,
-    connectTimeout: 5000,
+    connectTimeout: 2000,
+    enableOfflineQueue: false,
   };
 }
 
@@ -21,15 +211,22 @@ function createConnection(name: string): Redis {
   const connection = new Redis(getRedisConfig());
   
   connection.on('connect', () => {
-    console.log(`Redis ${name} connected`);
+    if (!redisDisabled) {
+      console.log(`Redis ${name} connected`);
+    }
   });
   
   connection.on('error', (err) => {
-    console.warn(`Redis ${name} error:`, err.message);
+    if (!redisDisabled) {
+      console.warn(`Redis ${name} unavailable:`, err.message);
+      redisDisabled = true;
+    }
   });
   
   connection.on('close', () => {
-    console.log(`Redis ${name} connection closed`);
+    if (!redisDisabled) {
+      console.log(`Redis ${name} connection closed`);
+    }
   });
   
   return connection;

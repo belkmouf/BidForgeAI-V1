@@ -66,8 +66,12 @@ export function AppSidebar() {
   ];
 
   return (
-    <aside className="w-64 bg-charcoal-900 flex flex-col h-screen text-white fixed left-0 top-0 bottom-0 z-10" data-testid="app-sidebar">
-      <div className="p-6 flex items-center gap-3 border-b border-charcoal-700">
+    <aside 
+      className="w-64 flex flex-col h-screen text-white fixed left-0 top-0 bottom-0 z-10" 
+      style={{ backgroundColor: primaryColor }}
+      data-testid="app-sidebar"
+    >
+      <div className="p-6 flex items-center gap-3 border-b border-white/20">
         <img 
           src={displayLogo} 
           alt={`${displayName} Logo`} 
@@ -75,7 +79,7 @@ export function AppSidebar() {
         />
         <div>
           <h1 className="font-display font-bold text-xl tracking-tight text-white">{displayName}</h1>
-          <p className="text-[10px] tracking-[0.15em] uppercase" style={{ color: primaryColor }}>{displayTagline}</p>
+          <p className="text-[10px] tracking-[0.15em] uppercase text-white/70">{displayTagline}</p>
         </div>
       </div>
       <nav className="flex-1 p-4 space-y-1">
@@ -90,21 +94,19 @@ export function AppSidebar() {
               href={item.href}
               data-testid={`link-${item.label.toLowerCase()}`}
               className={cn(
-                "flex items-center gap-3 px-3 py-3 transition-all duration-300 group",
-                !isActive && "text-white/80 hover:bg-charcoal-800 hover:text-white"
+                "flex items-center gap-3 px-3 py-3 transition-all duration-300 group rounded-md",
+                !isActive && "text-white/80 hover:bg-white/10 hover:text-white"
               )}
               style={isActive ? { 
-                backgroundColor: `${primaryColor}20`, 
-                color: primaryColor,
-                borderLeft: `2px solid ${primaryColor}`,
+                backgroundColor: 'rgba(255,255,255,0.2)', 
+                color: 'white',
+                borderLeft: '2px solid white',
                 marginLeft: '-1px'
               } : undefined}
             >
               <item.icon 
                 className="h-5 w-5 transition-colors"
-                style={isActive ? { color: primaryColor } : undefined}
-                onMouseEnter={(e) => { if (!isActive) e.currentTarget.style.color = primaryColor; }}
-                onMouseLeave={(e) => { if (!isActive) e.currentTarget.style.color = ''; }}
+                style={isActive ? { color: 'white' } : undefined}
               />
               <span className="text-sm font-medium">{item.label}</span>
             </Link>
@@ -114,24 +116,21 @@ export function AppSidebar() {
       <div className="p-4">
         <Link 
           href="/"
-          className="flex items-center gap-3 px-3 py-3 text-white/80 hover:bg-charcoal-800 transition-all duration-300 mb-4"
+          className="flex items-center gap-3 px-3 py-3 text-white/80 hover:bg-white/10 hover:text-white transition-all duration-300 mb-4 rounded-md"
           data-testid="link-landing"
-          onMouseEnter={(e) => e.currentTarget.style.color = primaryColor}
-          onMouseLeave={(e) => e.currentTarget.style.color = ''}
         >
           <Home className="h-5 w-5 text-white/70" />
           <span className="text-sm font-medium">Back to Home</span>
         </Link>
         
-        <div className="border-t border-charcoal-700 pt-4">
+        <div className="border-t border-white/20 pt-4">
           <div 
-            className="flex items-center gap-3 px-3 py-2 hover:bg-charcoal-800 cursor-pointer transition-colors group"
+            className="flex items-center gap-3 px-3 py-2 hover:bg-white/10 cursor-pointer transition-colors group rounded-md"
             onClick={() => { clearAuth(); window.location.href = '/login'; }}
             data-testid="button-logout"
           >
             <div 
-              className="h-9 w-9 flex items-center justify-center text-white font-display font-bold text-sm"
-              style={{ background: `linear-gradient(to bottom right, ${primaryColor}, ${primaryColor}dd)` }}
+              className="h-9 w-9 flex items-center justify-center text-white font-display font-bold text-sm bg-white/20 rounded"
             >
               {userInitials}
             </div>

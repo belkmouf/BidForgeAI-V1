@@ -34,7 +34,7 @@ export class JobManager {
       }
 
       // Start all queues
-      for (const [name, queue] of this.queues) {
+      for (const [name, queue] of Array.from(this.queues.entries())) {
         queue.start();
         logger.info(`Started job queue: ${name}`);
       }
@@ -61,7 +61,7 @@ export class JobManager {
 
     try {
       // Stop all queues
-      for (const [name, queue] of this.queues) {
+      for (const [name, queue] of Array.from(this.queues.entries())) {
         await queue.stop();
         logger.info(`Stopped job queue: ${name}`);
       }
@@ -188,7 +188,7 @@ export class JobManager {
    */
   async getJobStatus(jobId: string): Promise<Job | null> {
     // Check all queues for the job
-    for (const queue of this.queues.values()) {
+    for (const queue of Array.from(this.queues.values())) {
       const job = await queue.getJob(jobId);
       if (job) {
         return job;
@@ -202,7 +202,7 @@ export class JobManager {
    */
   async cancelJob(jobId: string): Promise<boolean> {
     // Try to cancel from all queues
-    for (const queue of this.queues.values()) {
+    for (const queue of Array.from(this.queues.values())) {
       const cancelled = await queue.cancelJob(jobId);
       if (cancelled) {
         return true;
@@ -258,7 +258,7 @@ export class JobManager {
   ): Job[] {
     const allJobs: Job[] = [];
 
-    for (const queue of this.queues.values()) {
+    for (const queue of Array.from(this.queues.values())) {
       const jobs = queue.getJobs({
         projectId,
         status: options.status as any,
@@ -280,7 +280,7 @@ export class JobManager {
   getQueueStats(): Record<string, any> {
     const stats: Record<string, any> = {};
 
-    for (const [name, queue] of this.queues) {
+    for (const [name, queue] of Array.from(this.queues.entries())) {
       stats[name] = queue.getStats();
     }
 
@@ -293,7 +293,7 @@ export class JobManager {
   async cleanup(olderThanMs: number = 86400000): Promise<Record<string, number>> {
     const cleanupResults: Record<string, number> = {};
 
-    for (const [name, queue] of this.queues) {
+    for (const [name, queue] of Array.from(this.queues.entries())) {
       const cleanedCount = await queue.cleanup(olderThanMs);
       cleanupResults[name] = cleanedCount;
     }
@@ -323,7 +323,7 @@ export class JobManager {
     const queueHealth: Record<string, { status: string; stats: any }> = {};
     let unhealthyQueues = 0;
 
-    for (const [name, queue] of this.queues) {
+    for (const [name, queue] of Array.from(this.queues.entries())) {
       const stats = queue.getStats();
       let status = 'healthy';
 
@@ -409,8 +409,9 @@ export class JobManager {
    * Set up event listeners for queue monitoring
    */
   private setupEventListeners(): void {
-    for (const [name, queue] of this.queues) {
-      queue.on('job:completed', (job, result) => {
+    const entries = Array.from(this.queues.entries());
+    for (const [name, queue] of entries) {
+      queue.on('job:completed', (job: Job, result: any) => {
         logContext.system('Job completed', {
           event: 'job_completed',
           severity: 'low',
@@ -425,7 +426,7 @@ export class JobManager {
         });
       });
 
-      queue.on('job:failed', (job, error) => {
+      queue.on('job:failed', (job: Job, error: Error) => {
         logContext.system('Job failed', {
           event: 'job_failed',
           severity: 'high',
@@ -441,7 +442,7 @@ export class JobManager {
         });
       });
 
-      queue.on('job:retry', (job, error) => {
+      queue.on('job:retry', (job: Job, error: Error) => {
         logContext.system('Job retrying', {
           event: 'job_retry',
           severity: 'medium',

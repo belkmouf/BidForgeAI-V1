@@ -15,6 +15,7 @@ interface CacheConfig {
 class CacheService {
   private redis: Redis | null = null;
   private isConnected = false;
+  private redisDisabled = false;
   private readonly config: CacheConfig;
   private readonly defaultTTL = 300; // 5 minutes default TTL
 
@@ -46,45 +47,57 @@ class CacheService {
         password: this.config.password,
         db: this.config.db,
         keyPrefix: this.config.keyPrefix,
-        maxRetriesPerRequest: this.config.maxRetriesPerRequest,
-        retryDelayOnFailover: this.config.retryDelayOnFailover,
-        enableOfflineQueue: this.config.enableOfflineQueue,
+        maxRetriesPerRequest: 1,
+        retryStrategy: (times: number) => {
+          if (times >= 1) {
+            this.redisDisabled = true;
+            return null;
+          }
+          return Math.min(times * 100, 1000);
+        },
+        enableOfflineQueue: false,
         lazyConnect: true,
+        connectTimeout: 2000,
       });
 
-      // Event listeners
+      // Event listeners - only log if not disabled
       this.redis.on('connect', () => {
-        logger.info('Redis connected');
-        this.isConnected = true;
+        if (!this.redisDisabled) {
+          logger.info('Redis cache connected');
+          this.isConnected = true;
+        }
       });
 
       this.redis.on('ready', () => {
-        logger.info('Redis ready');
+        if (!this.redisDisabled) {
+          logger.info('Redis cache ready');
+        }
       });
 
       this.redis.on('error', (error) => {
-        logger.error('Redis error', { error: error.message, stack: error.stack });
+        if (!this.redisDisabled) {
+          logger.warn('Redis cache unavailable - using fallback', { error: error.message });
+          this.redisDisabled = true;
+        }
         this.isConnected = false;
       });
 
       this.redis.on('close', () => {
-        logger.warn('Redis connection closed');
         this.isConnected = false;
       });
 
       this.redis.on('reconnecting', () => {
-        logger.info('Redis reconnecting');
+        // Don't log reconnection attempts to reduce spam
       });
 
       // Attempt connection
       await this.redis.connect();
       
     } catch (error: any) {
-      logger.error('Failed to connect to Redis', { 
-        error: error.message,
-        host: this.config.host,
-        port: this.config.port 
-      });
+      if (!this.redisDisabled) {
+        logger.info('Redis cache not available - running without cache');
+        this.redisDisabled = true;
+      }
       
       // Don't throw error - allow app to continue without cache
       this.redis = null;
@@ -102,7 +115,7 @@ class CacheService {
   }
 
   private isAvailable(): boolean {
-    return this.redis !== null && this.isConnected;
+    return this.redis !== null && this.isConnected && !this.redisDisabled;
   }
 
   async get<T = any>(key: string): Promise<T | null> {
