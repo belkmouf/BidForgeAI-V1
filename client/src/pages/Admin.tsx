@@ -133,7 +133,7 @@ export default function Admin() {
   // Team tab state
   const [isInviteOpen, setIsInviteOpen] = useState(false);
   const [inviteEmail, setInviteEmail] = useState('');
-  const [inviteRole, setInviteRole] = useState('user');
+  const [inviteRole, setInviteRole] = useState('company_user');
   const [copiedInviteCode, setCopiedInviteCode] = useState<string | null>(null);
   const [teamMemberToDeactivate, setTeamMemberToDeactivate] = useState<CompanyUser | null>(null);
   
@@ -259,7 +259,7 @@ export default function Admin() {
       queryClient.invalidateQueries({ queryKey: ['company-invites'] });
       setIsInviteOpen(false);
       setInviteEmail('');
-      setInviteRole('user');
+      setInviteRole('company_user');
       toast({ title: 'Invitation sent successfully' });
     },
     onError: (error: Error) => {
@@ -560,10 +560,8 @@ export default function Admin() {
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="admin">Admin</SelectItem>
-                              <SelectItem value="manager">Manager</SelectItem>
-                              <SelectItem value="user">User</SelectItem>
-                              <SelectItem value="viewer">Viewer</SelectItem>
+                              <SelectItem value="company_admin">Admin</SelectItem>
+                              <SelectItem value="company_user">User</SelectItem>
                             </SelectContent>
                           </Select>
                         </div>
