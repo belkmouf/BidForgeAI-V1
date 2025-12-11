@@ -12,8 +12,23 @@ export const riskLevelEnum = z.enum(["Low", "Medium", "High", "Critical"]);
 export type RiskLevel = z.infer<typeof riskLevelEnum>;
 
 // User Role Enum
-export const userRoleEnum = z.enum(["admin", "manager", "user", "viewer"]);
+// Role hierarchy:
+// - system_admin: Full access to everything (all companies, all features)
+// - system_user: Platform access with partial authority (view across platform, limited actions)
+// - company_admin: Full access within their company
+// - company_user: Limited access within their company
+export const userRoleEnum = z.enum(["system_admin", "system_user", "company_admin", "company_user"]);
 export type UserRole = z.infer<typeof userRoleEnum>;
+
+// Helper to check if role is system-level (cross-company access)
+export function isSystemRole(role: UserRole): boolean {
+  return role === 'system_admin' || role === 'system_user';
+}
+
+// Helper to check if role has admin privileges (within scope)
+export function isAdminRole(role: UserRole): boolean {
+  return role === 'system_admin' || role === 'company_admin';
+}
 
 // ==================== MULTI-TENANCY ====================
 
