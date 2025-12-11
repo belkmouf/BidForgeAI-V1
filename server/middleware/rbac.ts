@@ -151,6 +151,7 @@ export function requireCompanyAccess(companyIdParam: string = 'companyId') {
 /**
  * Middleware to ensure user can only access their own company's resources
  * Automatically scopes requests to the user's company
+ * Enforces company isolation by overwriting companyId in body, params, and query
  */
 export function scopeToCompany(req: AuthRequest, res: Response, next: NextFunction) {
   if (!req.user) {
@@ -167,8 +168,38 @@ export function scopeToCompany(req: AuthRequest, res: Response, next: NextFuncti
     return res.status(403).json({ error: 'User is not associated with a company' });
   }
 
-  // Add companyId to request for downstream handlers
-  req.body.companyId = req.user.companyId;
+  const userCompanyId = req.user.companyId;
+
+  // Check if any requested companyId differs from user's company
+  const requestedBodyCompanyId = req.body?.companyId;
+  const requestedParamCompanyId = req.params?.companyId;
+  const requestedQueryCompanyId = req.query?.companyId;
+
+  // Reject if explicitly requesting a different company
+  if (requestedBodyCompanyId && parseInt(requestedBodyCompanyId) !== userCompanyId) {
+    return res.status(403).json({ 
+      error: 'Access denied: You can only access your own company\'s data' 
+    });
+  }
+  if (requestedParamCompanyId && parseInt(requestedParamCompanyId) !== userCompanyId) {
+    return res.status(403).json({ 
+      error: 'Access denied: You can only access your own company\'s data' 
+    });
+  }
+  if (requestedQueryCompanyId && parseInt(requestedQueryCompanyId as string) !== userCompanyId) {
+    return res.status(403).json({ 
+      error: 'Access denied: You can only access your own company\'s data' 
+    });
+  }
+
+  // Force company scoping on all request sources
+  req.body.companyId = userCompanyId;
+  if (req.params) {
+    req.params.companyId = String(userCompanyId);
+  }
+  if (req.query) {
+    (req.query as any).companyId = String(userCompanyId);
+  }
   
   next();
 }

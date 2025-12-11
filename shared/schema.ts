@@ -109,7 +109,7 @@ export const users = pgTable("users", {
   email: varchar("email", { length: 255 }).notNull().unique(),
   passwordHash: varchar("password_hash", { length: 255 }).notNull(),
   name: varchar("name", { length: 255 }),
-  role: text("role").default("user").notNull(),
+  role: text("role").default("company_user").notNull(),
   isActive: boolean("is_active").default(true).notNull(),
   onboardingStatus: varchar("onboarding_status", { length: 20 }).default("pending").notNull(),
   brandingProfile: jsonb("branding_profile").$type<BrandingProfile>().default({}),
@@ -151,7 +151,7 @@ export const companyInvites = pgTable("company_invites", {
   id: serial("id").primaryKey(),
   companyId: integer("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
   email: varchar("email", { length: 255 }).notNull(),
-  role: text("role").default("user").notNull(),
+  role: text("role").default("company_user").notNull(),
   inviteCode: varchar("invite_code", { length: 64 }).notNull().unique(),
   invitedBy: integer("invited_by").notNull().references(() => users.id, { onDelete: "cascade" }),
   status: text("status").default("pending").notNull(), // pending, accepted, expired, revoked
@@ -606,7 +606,7 @@ export const insertUserSchema = z.object({
   email: z.string().email("Invalid email address"),
   password: z.string().min(8, "Password must be at least 8 characters"),
   name: z.string().min(1, "Name is required").optional(),
-  role: userRoleEnum.optional().default("user"),
+  role: userRoleEnum.optional().default("company_user"),
   companyName: z.string().min(1, "Company name is required").optional(),
 });
 
@@ -621,7 +621,7 @@ export type LoginInput = z.infer<typeof loginSchema>;
 // Company Invite Schemas
 export const createInviteSchema = z.object({
   email: z.string().email("Invalid email address"),
-  role: userRoleEnum.optional().default("user"),
+  role: userRoleEnum.optional().default("company_user"),
 });
 
 export const acceptInviteSchema = z.object({
