@@ -1,5 +1,6 @@
 import { BaseAgent, AgentInput, AgentOutput, AgentContext } from './base-agent';
 import { DocumentInfoType, BidWorkflowState } from './state';
+import type { CompiledContext } from './context-builder';
 import { db } from '../db';
 import { documents } from '@shared/schema';
 import { eq } from 'drizzle-orm';
@@ -7,8 +8,16 @@ import { eq } from 'drizzle-orm';
 export class IntakeAgent extends BaseAgent {
   name = 'intake';
   description = 'Processes and validates incoming documents for the bid workflow';
+  
+  constructor() {
+    super();
+  }
 
-  async execute(input: AgentInput, context: AgentContext): Promise<AgentOutput> {
+  protected async executeWithCompiledContext(
+    compiledContext: CompiledContext,
+    input: AgentInput,
+    context: AgentContext
+  ): Promise<AgentOutput> {
     return this.wrapExecution(async () => {
       const { projectId } = context;
       const state = input.data as Partial<BidWorkflowState>;

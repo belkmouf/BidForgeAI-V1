@@ -46,12 +46,26 @@ export class GenerationAgent extends BaseAgent {
         };
       }
 
-      this.log('Generating bid proposal');
+      this.log('Generating bid proposal using compiled context');
 
-      const documentContent = docs
-        .filter(d => d.content)
-        .map(d => `--- ${d.name} ---\n${d.content}`)
-        .join('\n\n');
+      // Store analysis as artifact if available
+      let analysisArtifact: string | undefined;
+      if (analysis) {
+        analysisArtifact = await this.storeIntermediateArtifact(
+          context.projectId,
+          analysis,
+          'analysis_result'
+        );
+      }
+
+      // Update working context
+      await this.updateWorkingContext(context.projectId, {
+        generationStage: 'started',
+        documentCount: docs.length,
+        hasAnalysis: !!analysis,
+        analysisArtifact,
+        reviewAttempts: state.review?.attempts || 0,
+      });
 
       const model = this.getModel('openai');
 
