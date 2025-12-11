@@ -42,7 +42,7 @@ import analyticsRoutes from "./routes/analytics";
 import reportsRoutes from "./routes/reports";
 import adminRoutes from "./routes/admin";
 import v1Routes from "./routes/v1/index";
-import { fetchWebsiteInfo, batchFetchWebsiteInfo, getWebsiteInfoCache } from "./routes/website-info.js";
+import { fetchWebsiteInfo, batchFetchWebsiteInfo, getWebsiteInfoCache, saveWebsiteInfo, fetchAndSaveWebsiteInfo } from "./routes/website-info.js";
 import { apiVersioning, API_VERSIONS, trackVersionUsage, VersionedRequest } from "./middleware/versioning";
 import { authenticateToken, optionalAuth, AuthRequest } from "./middleware/auth";
 import { requirePermission, requireRole, PERMISSIONS } from "./middleware/rbac";
@@ -246,6 +246,8 @@ export async function registerRoutes(
   app.post('/api/website-info/fetch', authenticateToken, fetchWebsiteInfo);
   app.post('/api/website-info/batch', authenticateToken, batchFetchWebsiteInfo);
   app.get('/api/website-info/cache', authenticateToken, getWebsiteInfoCache);
+  app.post('/api/website-info/save', authenticateToken, saveWebsiteInfo);
+  app.post('/api/website-info/fetch-and-save', authenticateToken, fetchAndSaveWebsiteInfo);
   
   // ==================== PROJECTS ====================
   
@@ -1681,14 +1683,14 @@ or contact details from other sources.
       const brandingSchema = z.object({
         companyName: z.string().min(2, "Company name must be at least 2 characters").max(100),
         tagline: z.string().max(200).optional().or(z.literal("")),
-        websiteUrl: z.string().url().optional().or(z.literal("")),
+        websiteUrl: z.union([z.string().url(), z.literal("")]).optional(),
         primaryColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/, "Invalid hex color"),
         logoUrl: z.string().refine((val) => val === "" || val.startsWith("/") || /^https?:\/\//.test(val), "Invalid logo URL or path").optional().or(z.literal("")),
         aboutUs: z.string().max(1000).optional(),
         contactName: z.string().max(100).optional().or(z.literal("")),
         contactTitle: z.string().max(100).optional().or(z.literal("")),
         contactPhone: z.string().max(50).optional().or(z.literal("")),
-        contactEmail: z.string().email().optional().or(z.literal("")),
+        contactEmail: z.union([z.string().email(), z.literal("")]).optional(),
         streetAddress: z.string().max(200).optional().or(z.literal("")),
         city: z.string().max(100).optional().or(z.literal("")),
         state: z.string().max(50).optional().or(z.literal("")),
@@ -1744,14 +1746,14 @@ or contact details from other sources.
       const brandingSchema = z.object({
         companyName: z.string().min(2, "Company name must be at least 2 characters").max(100),
         tagline: z.string().max(200).optional().or(z.literal("")),
-        websiteUrl: z.string().url().optional().or(z.literal("")),
+        websiteUrl: z.union([z.string().url(), z.literal("")]).optional(),
         primaryColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/, "Invalid hex color"),
         logoUrl: z.string().optional().or(z.literal("")),
         aboutUs: z.string().max(1000).optional(),
         contactName: z.string().max(100).optional().or(z.literal("")),
         contactTitle: z.string().max(100).optional().or(z.literal("")),
         contactPhone: z.string().max(50).optional().or(z.literal("")),
-        contactEmail: z.string().email().optional().or(z.literal("")),
+        contactEmail: z.union([z.string().email(), z.literal("")]).optional(),
         streetAddress: z.string().max(200).optional().or(z.literal("")),
         city: z.string().max(100).optional().or(z.literal("")),
         state: z.string().max(50).optional().or(z.literal("")),

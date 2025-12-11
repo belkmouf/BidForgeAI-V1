@@ -12,8 +12,23 @@ export const riskLevelEnum = z.enum(["Low", "Medium", "High", "Critical"]);
 export type RiskLevel = z.infer<typeof riskLevelEnum>;
 
 // User Role Enum
-export const userRoleEnum = z.enum(["admin", "manager", "user", "viewer"]);
+// Role hierarchy:
+// - system_admin: Full access to everything (all companies, all features)
+// - system_user: Platform access with partial authority (view across platform, limited actions)
+// - company_admin: Full access within their company
+// - company_user: Limited access within their company
+export const userRoleEnum = z.enum(["system_admin", "system_user", "company_admin", "company_user"]);
 export type UserRole = z.infer<typeof userRoleEnum>;
+
+// Helper to check if role is system-level (cross-company access)
+export function isSystemRole(role: UserRole): boolean {
+  return role === 'system_admin' || role === 'system_user';
+}
+
+// Helper to check if role has admin privileges (within scope)
+export function isAdminRole(role: UserRole): boolean {
+  return role === 'system_admin' || role === 'company_admin';
+}
 
 // ==================== MULTI-TENANCY ====================
 
@@ -41,7 +56,24 @@ export const insertCompanySchema = z.object({
 });
 
 // Users Table
-// Branding Profile Type
+// Product/Service Type for company branding
+export type CompanyProductService = {
+  name: string;
+  description?: string;
+  category?: string;
+  type: 'product' | 'service';
+};
+
+// Social Media Links Type
+export type SocialMediaLinks = {
+  linkedin?: string;
+  twitter?: string;
+  facebook?: string;
+  instagram?: string;
+  youtube?: string;
+};
+
+// Branding Profile Type (extended to include all website-fetched data)
 export type BrandingProfile = {
   companyName?: string;
   tagline?: string;
@@ -49,7 +81,7 @@ export type BrandingProfile = {
   primaryColor?: string;
   logoUrl?: string;
   aboutUs?: string;
-  fullAboutContent?: string;
+  fullAboutContent?: string; // Full multi-paragraph about content from website
   contactName?: string;
   contactTitle?: string;
   contactPhone?: string;
@@ -59,15 +91,16 @@ export type BrandingProfile = {
   state?: string;
   zip?: string;
   licenseNumber?: string;
+  // Extended fields for website-fetched data
   industry?: string;
   founded?: string;
   companySize?: string;
-  products?: string[];
-  services?: string[];
-  socialMedia?: Record<string, string>;
-  dataSource?: 'manual' | 'website' | 'mixed';
-  lastFetchedAt?: Date;
-  fetchConfidence?: number;
+  products?: CompanyProductService[];
+  services?: CompanyProductService[];
+  socialMedia?: SocialMediaLinks;
+  dataSource?: 'manual' | 'website' | 'mixed'; // Track where data came from
+  lastFetchedAt?: string; // ISO timestamp of last website fetch
+  fetchConfidence?: number; // Confidence score from website fetch
 };
 
 export const users = pgTable("users", {
@@ -76,7 +109,7 @@ export const users = pgTable("users", {
   email: varchar("email", { length: 255 }).notNull().unique(),
   passwordHash: varchar("password_hash", { length: 255 }).notNull(),
   name: varchar("name", { length: 255 }),
-  role: text("role").default("user").notNull(),
+  role: text("role").default("company_user").notNull(),
   isActive: boolean("is_active").default(true).notNull(),
   onboardingStatus: varchar("onboarding_status", { length: 20 }).default("pending").notNull(),
   brandingProfile: jsonb("branding_profile").$type<BrandingProfile>().default({}),
@@ -118,7 +151,7 @@ export const companyInvites = pgTable("company_invites", {
   id: serial("id").primaryKey(),
   companyId: integer("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
   email: varchar("email", { length: 255 }).notNull(),
-  role: text("role").default("user").notNull(),
+  role: text("role").default("company_user").notNull(),
   inviteCode: varchar("invite_code", { length: 64 }).notNull().unique(),
   invitedBy: integer("invited_by").notNull().references(() => users.id, { onDelete: "cascade" }),
   status: text("status").default("pending").notNull(), // pending, accepted, expired, revoked
@@ -573,7 +606,7 @@ export const insertUserSchema = z.object({
   email: z.string().email("Invalid email address"),
   password: z.string().min(8, "Password must be at least 8 characters"),
   name: z.string().min(1, "Name is required").optional(),
-  role: userRoleEnum.optional().default("user"),
+  role: userRoleEnum.optional().default("company_user"),
   companyName: z.string().min(1, "Company name is required").optional(),
 });
 
@@ -588,7 +621,7 @@ export type LoginInput = z.infer<typeof loginSchema>;
 // Company Invite Schemas
 export const createInviteSchema = z.object({
   email: z.string().email("Invalid email address"),
-  role: userRoleEnum.optional().default("user"),
+  role: userRoleEnum.optional().default("company_user"),
 });
 
 export const acceptInviteSchema = z.object({
