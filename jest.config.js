@@ -1,61 +1,69 @@
 export default {
   projects: [
     {
-      displayName: 'server',
-      preset: 'ts-jest/presets/default-esm',
-      testEnvironment: 'node',
-      roots: ['<rootDir>/server'],
-      testMatch: ['**/__tests__/**/*.test.ts', '**/*.test.ts'],
-      testPathIgnorePatterns: ['/node_modules/', '/__tests__/utils/'],
-      extensionsToTreatAsEsm: ['.ts'],
+      displayName: "server",
+      preset: "ts-jest/presets/default-esm",
+      testEnvironment: "node",
+      roots: ["<rootDir>/server"],
+      testMatch: ["**/__tests__/**/*.test.ts", "**/*.test.ts"],
+      testPathIgnorePatterns: ["/node_modules/", "/__tests__/utils/"],
+      extensionsToTreatAsEsm: [".ts"],
       moduleNameMapper: {
-        '^(\\.{1,2}/.*)\\.js$': '$1',
-        '^@shared/(.*)$': '<rootDir>/shared/$1',
+        "^(\\.{1,2}/.*)\\.js$": "$1",
+        "^@shared/(.*)$": "<rootDir>/shared/$1",
       },
-      setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
+      setupFilesAfterEnv: ["<rootDir>/jest.setup.js"],
       transform: {
-        '^.+\\.tsx?$': ['ts-jest', {
-          tsconfig: 'tsconfig.test.json',
-          useESM: true,
-          diagnostics: false,
-        }],
+        "^.+\\.tsx?$": [
+          "ts-jest",
+          {
+            tsconfig: "tsconfig.test.json",
+            useESM: true,
+            diagnostics: false,
+          },
+        ],
       },
       transformIgnorePatterns: [
-        'node_modules/(?!(@neondatabase)/)',
+        "node_modules/(?!(@neondatabase|p-queue|@langchain|eventemitter3)/)",
       ],
       collectCoverageFrom: [
-        'server/**/*.ts',
-        '!server/**/*.d.ts',
-        '!server/index.ts',
-        '!**/node_modules/**',
+        "server/**/*.ts",
+        "!server/**/*.d.ts",
+        "!server/index.ts",
+        "!**/node_modules/**",
       ],
     },
     {
-      displayName: 'client',
-      preset: 'ts-jest/presets/default-esm',
-      testEnvironment: 'jsdom',
-      roots: ['<rootDir>/client/src'],
-      testMatch: ['**/__tests__/**/*.tsx', '**/*.test.tsx'],
-      extensionsToTreatAsEsm: ['.ts', '.tsx'],
+      displayName: "client",
+      testEnvironment: "jsdom",
+      roots: ["<rootDir>/client/src"],
+      testMatch: ["**/__tests__/**/*.tsx", "**/*.test.tsx"],
       moduleNameMapper: {
-        '^(\\.{1,2}/.*)\\.js$': '$1',
-        '^@/(.*)$': '<rootDir>/client/src/$1',
-        '^@shared/(.*)$': '<rootDir>/shared/$1',
+        "^@/(.*)$": "<rootDir>/client/src/$1",
+        "^@shared/(.*)$": "<rootDir>/shared/$1",
+        "\\.(css|less|scss|sass)$": "identity-obj-proxy",
       },
       setupFilesAfterEnv: [
-        '<rootDir>/jest.setup.js',
-        '@testing-library/jest-dom',
+        "<rootDir>/jest.setup.js",
+        "@testing-library/jest-dom",
       ],
       transform: {
-        '^.+\\.tsx?$': ['ts-jest', {
-          tsconfig: 'tsconfig.json',
-          useESM: true,
-        }],
+        "^.+\\.tsx?$": [
+          "ts-jest",
+          {
+            tsconfig: {
+              jsx: "react",
+              esModuleInterop: true,
+              allowSyntheticDefaultImports: true,
+            },
+            useESM: false,
+          },
+        ],
       },
       collectCoverageFrom: [
-        'client/src/**/*.{ts,tsx}',
-        '!client/src/**/*.d.ts',
-        '!**/node_modules/**',
+        "client/src/**/*.{ts,tsx}",
+        "!client/src/**/*.d.ts",
+        "!**/node_modules/**",
       ],
     },
   ],
@@ -66,13 +74,13 @@ export default {
       lines: 70,
       statements: 70,
     },
-    './server/lib/': {
+    "./server/lib/": {
       branches: 80,
       functions: 80,
       lines: 80,
       statements: 80,
     },
-    './server/middleware/': {
+    "./server/middleware/": {
       branches: 85,
       functions: 85,
       lines: 85,
@@ -80,5 +88,5 @@ export default {
     },
   },
   collectCoverage: false,
-  coverageDirectory: 'coverage',
+  coverageDirectory: "coverage",
 };

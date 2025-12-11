@@ -1,5 +1,6 @@
 import { BaseAgent, AgentInput, AgentOutput, AgentContext } from './base-agent';
 import { AnalysisResultType, DocumentInfoType } from './state';
+import type { CompiledContext } from './context-builder';
 import { ChatOpenAI } from '@langchain/openai';
 import { ChatAnthropic } from '@langchain/anthropic';
 import { ChatGoogleGenerativeAI } from '@langchain/google-genai';
@@ -24,6 +25,10 @@ const AnalysisResponseSchema = z.object({
 export class AnalysisAgent extends BaseAgent {
   name = 'analysis';
   description = 'Analyzes RFQ documents to assess quality, risk, and feasibility';
+  
+  constructor() {
+    super();
+  }
 
   private getModel(modelName: string = 'openai') {
     switch (modelName) {
@@ -45,7 +50,11 @@ export class AnalysisAgent extends BaseAgent {
     }
   }
 
-  async execute(input: AgentInput, context: AgentContext): Promise<AgentOutput> {
+  protected async executeWithCompiledContext(
+    compiledContext: CompiledContext,
+    input: AgentInput,
+    context: AgentContext
+  ): Promise<AgentOutput> {
     return this.wrapExecution(async () => {
       const state = input.data as { documents?: DocumentInfoType[] };
       const docs = state.documents || [];
@@ -57,14 +66,41 @@ export class AnalysisAgent extends BaseAgent {
         };
       }
 
-      this.log(`Analyzing ${docs.length} documents`);
+      this.log(`Analyzing ${docs.length} documents using compiled context`);
 
-      const documentContent = docs
+      // Store document content as artifacts if large
+      const documentArtifacts: string[] = [];
+      for (const doc of docs) {
+        if (doc.content && doc.content.length > 2000) {
+          const artifactId = await this.storeIntermediateArtifact(
+            context.projectId,
+            { name: doc.name, content: doc.content },
+            'document_content'
+          );
+          documentArtifacts.push(artifactId);
+        }
+      }
+
+      // Update working context with document processing info
+      await this.updateWorkingContext(context.projectId, {
+        documentCount: docs.length,
+        documentArtifacts,
+        processingStage: 'analysis_started',
+      });
+
+      // Get smaller document summaries instead of full content
+      const documentSummaries = docs
         .filter(d => d.content)
-        .map(d => `--- Document: ${d.name} ---\n${d.content}`)
+        .map(d => {
+          const content = d.content!;
+          const summary = content.length > 1000 
+            ? `${content.substring(0, 1000)}... [Document continues - ${content.length} total chars]`
+            : content;
+          return `--- Document: ${d.name} (${d.type}) ---\n${summary}`;
+        })
         .join('\n\n');
 
-      if (!documentContent) {
+      if (!documentSummaries) {
         return {
           success: false,
           error: 'No document content available for analysis',
@@ -73,28 +109,19 @@ export class AnalysisAgent extends BaseAgent {
 
       const model = this.getModel('openai');
 
-      const systemPrompt = `You are an expert construction bid analyst. Analyze the provided RFQ (Request for Quotation) documents and provide a comprehensive assessment.
-
-Your analysis should evaluate:
-1. Quality Score (0-100): How well-organized and professional is the RFQ?
-2. Clarity Score (0-100): How clear are the requirements and expectations?
-3. Doability Score (0-100): How feasible is it to complete this project successfully?
-4. Vendor Risk Score (0-100): What is the risk level of working with this client? (higher = more risky)
-
-Also identify:
-- Key findings about the project
-- Red flags that could indicate problems
-- Opportunities for competitive advantage
-- Specific recommendations with priority levels
-
-Respond in JSON format matching the required schema.`;
-
-      const userPrompt = `Analyze these RFQ documents:\n\n${documentContent.slice(0, 50000)}`;
+      // Use static system prompt from context builder (optimizes KV caching)
+      const systemPrompt = compiledContext.staticSystemPrompt;
+      
+      // Enhance user prompt with document summaries
+      const enhancedUserPrompt = compiledContext.dynamicUserPrompt.replace(
+        '{{artifactReferences}}',
+        documentSummaries.substring(0, 30000) // Limit to prevent token overflow
+      );
 
       try {
         const response = await model.invoke([
           { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt },
+          { role: 'user', content: enhancedUserPrompt },
         ]);
 
         const content = typeof response.content === 'string' 
@@ -110,6 +137,14 @@ Respond in JSON format matching the required schema.`;
         const analysis = AnalysisResponseSchema.parse(parsed);
 
         this.log(`Analysis complete. Risk level: ${analysis.overallRiskLevel}, Doability: ${analysis.doabilityScore}`);
+
+        // Update working context with analysis results
+        await this.updateWorkingContext(context.projectId, {
+          analysisComplete: true,
+          riskLevel: analysis.overallRiskLevel,
+          doabilityScore: analysis.doabilityScore,
+          processingStage: 'analysis_completed',
+        });
 
         return {
           success: true,
@@ -138,6 +173,13 @@ Respond in JSON format matching the required schema.`;
             },
           ],
         };
+
+        // Update working context with fallback info
+        await this.updateWorkingContext(context.projectId, {
+          analysisFailed: true,
+          fallbackUsed: true,
+          processingStage: 'analysis_fallback',
+        });
 
         return {
           success: true,
