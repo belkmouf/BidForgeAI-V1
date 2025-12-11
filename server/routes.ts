@@ -1323,7 +1323,7 @@ or contact details from other sources.
   // ==================== COMPANY ADMIN ROUTES ====================
 
   // Get current company info (company_admin only)
-  app.get("/api/company", authenticateToken, requireRole(['company_admin']), async (req: AuthRequest, res) => {
+  app.get("/api/company", authenticateToken, requireRole(['company_admin', 'admin']), async (req: AuthRequest, res) => {
     try {
       const companyId = req.user?.companyId;
       if (!companyId) {
@@ -1342,7 +1342,7 @@ or contact details from other sources.
   });
 
   // List company users (company_admin only - company_user cannot see other users)
-  app.get("/api/company/users", authenticateToken, requireRole(['company_admin']), async (req: AuthRequest, res) => {
+  app.get("/api/company/users", authenticateToken, requireRole(['company_admin', 'admin']), async (req: AuthRequest, res) => {
     try {
       const companyId = req.user?.companyId;
       if (!companyId) {
@@ -1362,7 +1362,7 @@ or contact details from other sources.
     role: z.enum(['company_admin', 'company_user']).optional().default('company_user'),
   });
 
-  app.post("/api/company/invites", authenticateToken, requireRole(['company_admin']), async (req: AuthRequest, res) => {
+  app.post("/api/company/invites", authenticateToken, requireRole(['company_admin', 'admin']), async (req: AuthRequest, res) => {
     try {
       const companyId = req.user?.companyId;
       const userId = req.user?.userId;
@@ -1419,7 +1419,7 @@ or contact details from other sources.
   });
 
   // List pending invitations (company admin only)
-  app.get("/api/company/invites", authenticateToken, requireRole(['company_admin']), async (req: AuthRequest, res) => {
+  app.get("/api/company/invites", authenticateToken, requireRole(['company_admin', 'admin']), async (req: AuthRequest, res) => {
     try {
       const companyId = req.user?.companyId;
       if (!companyId) {
@@ -1462,7 +1462,7 @@ or contact details from other sources.
     role: z.enum(['admin', 'manager', 'user', 'viewer']),
   });
 
-  app.patch("/api/company/users/:userId/role", authenticateToken, requireRole(['company_admin']), async (req: AuthRequest, res) => {
+  app.patch("/api/company/users/:userId/role", authenticateToken, requireRole(['company_admin', 'admin']), async (req: AuthRequest, res) => {
     try {
       const companyId = req.user?.companyId;
       const currentUserId = req.user?.userId;
