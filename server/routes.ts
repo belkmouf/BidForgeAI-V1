@@ -1322,8 +1322,8 @@ or contact details from other sources.
 
   // ==================== COMPANY ADMIN ROUTES ====================
 
-  // Get current company info (admin only)
-  app.get("/api/company", authenticateToken, requireRole(['admin']), async (req: AuthRequest, res) => {
+  // Get current company info (company_admin only)
+  app.get("/api/company", authenticateToken, requireRole(['company_admin']), async (req: AuthRequest, res) => {
     try {
       const companyId = req.user?.companyId;
       if (!companyId) {
@@ -1341,8 +1341,8 @@ or contact details from other sources.
     }
   });
 
-  // List company users (admin only)
-  app.get("/api/company/users", authenticateToken, requireRole(['admin']), async (req: AuthRequest, res) => {
+  // List company users (company_admin only - company_user cannot see other users)
+  app.get("/api/company/users", authenticateToken, requireRole(['company_admin']), async (req: AuthRequest, res) => {
     try {
       const companyId = req.user?.companyId;
       if (!companyId) {
@@ -1462,7 +1462,7 @@ or contact details from other sources.
     role: z.enum(['admin', 'manager', 'user', 'viewer']),
   });
 
-  app.patch("/api/company/users/:userId/role", authenticateToken, requireRole(['admin']), async (req: AuthRequest, res) => {
+  app.patch("/api/company/users/:userId/role", authenticateToken, requireRole(['company_admin']), async (req: AuthRequest, res) => {
     try {
       const companyId = req.user?.companyId;
       const currentUserId = req.user?.userId;

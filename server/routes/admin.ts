@@ -11,8 +11,8 @@ const router = Router();
 
 // ==================== USER MANAGEMENT ====================
 
-// Get all users (admin only)
-router.get('/users', authenticateToken, requireRole(['admin']), async (req: AuthRequest, res) => {
+// Get all users (system_admin only)
+router.get('/users', authenticateToken, requireRole(['system_admin']), async (req: AuthRequest, res) => {
   try {
     const allUsers = await db
       .select({
@@ -34,8 +34,8 @@ router.get('/users', authenticateToken, requireRole(['admin']), async (req: Auth
   }
 });
 
-// Get user by ID
-router.get('/users/:id', authenticateToken, requireRole(['admin']), async (req: AuthRequest, res) => {
+// Get user by ID (system_admin only)
+router.get('/users/:id', authenticateToken, requireRole(['system_admin']), async (req: AuthRequest, res) => {
   try {
     const { id } = req.params;
     const [user] = await db
@@ -63,15 +63,15 @@ router.get('/users/:id', authenticateToken, requireRole(['admin']), async (req: 
   }
 });
 
-// Create new user (admin only)
+// Create new user (system_admin only)
 const createUserSchema = z.object({
   email: z.string().email(),
   password: z.string().min(8),
   name: z.string().optional(),
-  role: z.enum(['admin', 'manager', 'user', 'viewer']).default('user'),
+  role: z.enum(['system_admin', 'system_user', 'company_admin', 'company_user']).default('company_user'),
 });
 
-router.post('/users', authenticateToken, requireRole(['admin']), async (req: AuthRequest, res) => {
+router.post('/users', authenticateToken, requireRole(['system_admin']), async (req: AuthRequest, res) => {
   try {
     const data = createUserSchema.parse(req.body);
 
@@ -110,14 +110,14 @@ router.post('/users', authenticateToken, requireRole(['admin']), async (req: Aut
   }
 });
 
-// Update user
+// Update user (system_admin only)
 const updateUserSchema = z.object({
   name: z.string().optional(),
-  role: z.enum(['admin', 'manager', 'user', 'viewer']).optional(),
+  role: z.enum(['system_admin', 'system_user', 'company_admin', 'company_user']).optional(),
   isActive: z.boolean().optional(),
 });
 
-router.patch('/users/:id', authenticateToken, requireRole(['admin']), async (req: AuthRequest, res) => {
+router.patch('/users/:id', authenticateToken, requireRole(['system_admin']), async (req: AuthRequest, res) => {
   try {
     const { id } = req.params;
     const data = updateUserSchema.parse(req.body);
@@ -149,7 +149,7 @@ router.patch('/users/:id', authenticateToken, requireRole(['admin']), async (req
 });
 
 // Reset user password (admin only)
-router.post('/users/:id/reset-password', authenticateToken, requireRole(['admin']), async (req: AuthRequest, res) => {
+router.post('/users/:id/reset-password', authenticateToken, requireRole(['system_admin']), async (req: AuthRequest, res) => {
   try {
     const { id } = req.params;
     const { password } = z.object({ password: z.string().min(8) }).parse(req.body);
@@ -177,7 +177,7 @@ router.post('/users/:id/reset-password', authenticateToken, requireRole(['admin'
 });
 
 // Delete user (admin only)
-router.delete('/users/:id', authenticateToken, requireRole(['admin']), async (req: AuthRequest, res) => {
+router.delete('/users/:id', authenticateToken, requireRole(['system_admin']), async (req: AuthRequest, res) => {
   try {
     const { id } = req.params;
 
@@ -204,7 +204,7 @@ router.delete('/users/:id', authenticateToken, requireRole(['admin']), async (re
 
 // ==================== SYSTEM STATS ====================
 
-router.get('/stats', authenticateToken, requireRole(['admin', 'manager']), async (req: AuthRequest, res) => {
+router.get('/stats', authenticateToken, requireRole(['system_admin']), async (req: AuthRequest, res) => {
   try {
     // User stats
     const [userStats] = await db
@@ -271,7 +271,7 @@ router.get('/stats', authenticateToken, requireRole(['admin', 'manager']), async
 // ==================== API CONFIGURATION STATUS ====================
 
 // Get API configuration status (checks if environment variables are set)
-router.get('/api-status', authenticateToken, requireRole(['admin']), async (req: AuthRequest, res) => {
+router.get('/api-status', authenticateToken, requireRole(['system_admin']), async (req: AuthRequest, res) => {
   try {
     const status = {
       openai: {
@@ -303,8 +303,8 @@ router.get('/api-status', authenticateToken, requireRole(['admin']), async (req:
 
 // ==================== ROLES MANAGEMENT ====================
 
-// Get all roles
-router.get('/roles', authenticateToken, requireRole(['admin']), async (req: AuthRequest, res) => {
+// Get all roles (system_admin only)
+router.get('/roles', authenticateToken, requireRole(['system_admin']), async (req: AuthRequest, res) => {
   try {
     const allRoles = await db.select().from(roles).orderBy(roles.name);
     res.json(allRoles);
@@ -315,7 +315,7 @@ router.get('/roles', authenticateToken, requireRole(['admin']), async (req: Auth
 });
 
 // Create role
-router.post('/roles', authenticateToken, requireRole(['admin']), async (req: AuthRequest, res) => {
+router.post('/roles', authenticateToken, requireRole(['system_admin']), async (req: AuthRequest, res) => {
   try {
     const { name, permissions, description } = req.body;
 
