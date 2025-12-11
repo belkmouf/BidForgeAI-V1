@@ -180,15 +180,18 @@ describe('auth middleware', () => {
 
   describe('integration scenarios', () => {
     test('should handle concurrent authentication attempts', async () => {
-      const token1 = generateAccessToken({ ...mockPayload, userId: 1 });
-      const token2 = generateAccessToken({ ...mockPayload, userId: 2 });
+      const payload1: TokenPayload = { ...mockPayload, userId: 1 };
+      const payload2: TokenPayload = { ...mockPayload, userId: 2 };
 
-      // Reset mock to use actual implementation
-      mockVerifyToken.mockRestore();
-      const actualVerifyToken = jest.requireActual('../../lib/auth.js').verifyToken;
+      const req1 = { headers: { authorization: 'Bearer token1' } };
+      const req2 = { headers: { authorization: 'Bearer token2' } };
 
-      const req1 = { headers: { authorization: `Bearer ${token1}` } };
-      const req2 = { headers: { authorization: `Bearer ${token2}` } };
+      // Mock verifyToken to return different payloads for different tokens
+      mockVerifyToken.mockImplementation((token: string) => {
+        if (token === 'token1') return payload1;
+        if (token === 'token2') return payload2;
+        return null;
+      });
 
       authenticateToken(req1 as AuthRequest, res as Response, next);
       authenticateToken(req2 as AuthRequest, res as Response, next);

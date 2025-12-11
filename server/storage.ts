@@ -1,6 +1,6 @@
-import { 
-  projects, 
-  documents, 
+import {
+  projects,
+  documents,
   documentChunks,
   bids,
   rfpAnalyses,
@@ -14,7 +14,7 @@ import {
   knowledgeBaseDocuments,
   knowledgeBaseChunks,
   templates,
-  type Project, 
+  type Project,
   type InsertProject,
   type Document,
   type InsertDocument,
@@ -43,115 +43,208 @@ import {
   type AIInstruction,
   type InsertAIInstruction,
   type Template,
-  type InsertTemplate
+  type InsertTemplate,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, sql, and, isNull, or } from "drizzle-orm";
 
 export interface IStorage {
   // Projects (company-scoped)
-  createProject(project: InsertProject, companyId: number | null): Promise<Project>;
-  getProject(id: string, companyId: number | null): Promise<Project | undefined>;
-  listProjects(companyId: number | null, includeArchived?: boolean): Promise<Project[]>;
-  updateProjectStatus(id: string, status: ProjectStatus, companyId: number | null): Promise<Project | undefined>;
-  archiveProject(id: string, companyId: number | null): Promise<Project | undefined>;
-  unarchiveProject(id: string, companyId: number | null): Promise<Project | undefined>;
+  createProject(
+    project: InsertProject,
+    companyId: number | null,
+  ): Promise<Project>;
+  getProject(
+    id: string,
+    companyId: number | null,
+  ): Promise<Project | undefined>;
+  listProjects(
+    companyId: number | null,
+    includeArchived?: boolean,
+  ): Promise<Project[]>;
+  updateProjectStatus(
+    id: string,
+    status: ProjectStatus,
+    companyId: number | null,
+  ): Promise<Project | undefined>;
+  archiveProject(
+    id: string,
+    companyId: number | null,
+  ): Promise<Project | undefined>;
+  unarchiveProject(
+    id: string,
+    companyId: number | null,
+  ): Promise<Project | undefined>;
   deleteProject(id: string, companyId: number | null): Promise<boolean>;
-  
+
   // Documents
   createDocument(document: InsertDocument): Promise<Document>;
-  getDocument(id: number, companyId: number | null): Promise<Document | undefined>;
+  getDocument(
+    id: number,
+    companyId: number | null,
+  ): Promise<Document | undefined>;
   listDocumentsByProject(projectId: string): Promise<Document[]>;
   updateDocumentProcessed(id: number, isProcessed: boolean): Promise<void>;
   deleteDocument(id: number, companyId: number | null): Promise<boolean>;
-  
+
   // Document Chunks (company-scoped RAG)
   createDocumentChunk(chunk: InsertDocumentChunk): Promise<DocumentChunk>;
-  searchSimilarChunks(embedding: number[], projectId: string, companyId: number | null, limit: number): Promise<Array<DocumentChunk & { distance: number }>>;
-  searchChunksByKeywords(query: string, projectId: string, companyId: number | null, limit: number): Promise<Array<DocumentChunk & { rank: number }>>;
-  searchHybrid(
-    query: string, 
-    embedding: number[], 
-    projectId: string, 
-    companyId: number | null, 
+  searchSimilarChunks(
+    embedding: number[],
+    projectId: string,
+    companyId: number | null,
     limit: number,
-    options?: { vectorWeight?: number; textWeight?: number }
-  ): Promise<Array<DocumentChunk & { score: number; vectorScore: number; textScore: number }>>;
-  
+  ): Promise<Array<DocumentChunk & { distance: number }>>;
+  searchChunksByKeywords(
+    query: string,
+    projectId: string,
+    companyId: number | null,
+    limit: number,
+  ): Promise<Array<DocumentChunk & { rank: number }>>;
+  searchHybrid(
+    query: string,
+    embedding: number[],
+    projectId: string,
+    companyId: number | null,
+    limit: number,
+    options?: { vectorWeight?: number; textWeight?: number },
+  ): Promise<
+    Array<
+      DocumentChunk & { score: number; vectorScore: number; textScore: number }
+    >
+  >;
+
   // Dashboard Stats (company-scoped)
   getDashboardStats(companyId: number | null): Promise<{
     pipeline: Record<string, number>;
     winRate: number;
     totalProjects: number;
   }>;
-  
+
   // RFP Analysis
   getAnalysisByProject(projectId: string): Promise<RFPAnalysis | undefined>;
-  createOrUpdateAnalysis(projectId: string, data: Partial<InsertRFPAnalysis>): Promise<RFPAnalysis>;
-  
+  createOrUpdateAnalysis(
+    projectId: string,
+    data: Partial<InsertRFPAnalysis>,
+  ): Promise<RFPAnalysis>;
+
   // Analysis Alerts
   getAlertsByAnalysis(analysisId: number): Promise<AnalysisAlert[]>;
   createAlert(alert: InsertAnalysisAlert): Promise<AnalysisAlert>;
   resolveAlert(alertId: number): Promise<AnalysisAlert>;
   deleteAlertsByAnalysis(analysisId: number): Promise<void>;
-  
+
   // Vendor Database (global - not company-scoped)
   getVendorByName(name: string): Promise<Vendor | undefined>;
   listVendors(): Promise<Vendor[]>;
-  upsertVendor(data: Omit<InsertVendor, 'lastUpdated'>): Promise<Vendor>;
+  upsertVendor(data: Omit<InsertVendor, "lastUpdated">): Promise<Vendor>;
   countVendors(): Promise<number>;
-  
+
   // Analysis Helpers
-  getDocumentChunksForProject(projectId: string, limit?: number): Promise<Array<{ content: string; filename: string }>>;
-  
+  getDocumentChunksForProject(
+    projectId: string,
+    limit?: number,
+  ): Promise<Array<{ content: string; filename: string }>>;
+
   // Bids (company-scoped)
   createBid(bid: InsertBid): Promise<Bid>;
   getBid(id: number, companyId: number | null): Promise<Bid | undefined>;
-  listBidsByProject(projectId: string, companyId: number | null): Promise<Bid[]>;
-  getLatestBidForProject(projectId: string, companyId: number | null): Promise<Bid | undefined>;
-  
+  listBidsByProject(
+    projectId: string,
+    companyId: number | null,
+  ): Promise<Bid[]>;
+  getLatestBidForProject(
+    projectId: string,
+    companyId: number | null,
+  ): Promise<Bid | undefined>;
+
   // Public sharing
-  generateShareToken(bidId: number, companyId: number | null): Promise<{ shareToken: string; bid: Bid } | undefined>;
-  getBidByShareToken(token: string): Promise<{ bid: Bid; project: Project } | undefined>;
-  
+  generateShareToken(
+    bidId: number,
+    companyId: number | null,
+  ): Promise<{ shareToken: string; bid: Bid } | undefined>;
+  getBidByShareToken(
+    token: string,
+  ): Promise<{ bid: Bid; project: Project } | undefined>;
+
   // Onboarding
-  completeOnboarding(userId: number, brandingProfile: BrandingProfile): Promise<User | undefined>;
-  getUserOnboardingStatus(userId: number): Promise<{ status: string; brandingProfile: BrandingProfile | null } | undefined>;
-  
+  completeOnboarding(
+    userId: number,
+    brandingProfile: BrandingProfile,
+  ): Promise<User | undefined>;
+  getUserOnboardingStatus(
+    userId: number,
+  ): Promise<
+    { status: string; brandingProfile: BrandingProfile | null } | undefined
+  >;
+
   // Knowledge Base (company-scoped)
-  createKnowledgeBaseDocument(doc: InsertKnowledgeBaseDocument): Promise<KnowledgeBaseDocument>;
-  getKnowledgeBaseDocuments(companyId: number): Promise<KnowledgeBaseDocument[]>;
-  getKnowledgeBaseDocument(id: number, companyId: number): Promise<KnowledgeBaseDocument | undefined>;
-  updateKnowledgeBaseDocument(id: number, companyId: number, updates: Partial<KnowledgeBaseDocument>): Promise<KnowledgeBaseDocument | undefined>;
+  createKnowledgeBaseDocument(
+    doc: InsertKnowledgeBaseDocument,
+  ): Promise<KnowledgeBaseDocument>;
+  getKnowledgeBaseDocuments(
+    companyId: number,
+  ): Promise<KnowledgeBaseDocument[]>;
+  getKnowledgeBaseDocument(
+    id: number,
+    companyId: number,
+  ): Promise<KnowledgeBaseDocument | undefined>;
+  updateKnowledgeBaseDocument(
+    id: number,
+    companyId: number,
+    updates: Partial<KnowledgeBaseDocument>,
+  ): Promise<KnowledgeBaseDocument | undefined>;
   deleteKnowledgeBaseDocument(id: number, companyId: number): Promise<boolean>;
-  createKnowledgeBaseChunk(chunk: InsertKnowledgeBaseChunk): Promise<KnowledgeBaseChunk>;
-  searchKnowledgeBaseChunks(embedding: number[], companyId: number, limit: number): Promise<Array<KnowledgeBaseChunk & { distance: number }>>;
-  
+  createKnowledgeBaseChunk(
+    chunk: InsertKnowledgeBaseChunk,
+  ): Promise<KnowledgeBaseChunk>;
+  searchKnowledgeBaseChunks(
+    embedding: number[],
+    companyId: number,
+    limit: number,
+  ): Promise<Array<KnowledgeBaseChunk & { distance: number }>>;
+
   // AI Instructions (company-scoped)
   getAIInstructions(companyId: number): Promise<AIInstruction[]>;
-  getAIInstruction(id: number, companyId: number): Promise<AIInstruction | undefined>;
+  getAIInstruction(
+    id: number,
+    companyId: number,
+  ): Promise<AIInstruction | undefined>;
   createAIInstruction(instruction: InsertAIInstruction): Promise<AIInstruction>;
-  updateAIInstruction(id: number, companyId: number, updates: Partial<AIInstruction>): Promise<AIInstruction | undefined>;
+  updateAIInstruction(
+    id: number,
+    companyId: number,
+    updates: Partial<AIInstruction>,
+  ): Promise<AIInstruction | undefined>;
   deleteAIInstruction(id: number, companyId: number): Promise<boolean>;
-  
+
   // Templates (company-scoped)
   getTemplates(companyId: number): Promise<Template[]>;
   getTemplate(id: number, companyId: number): Promise<Template | undefined>;
   createTemplate(template: InsertTemplate): Promise<Template>;
-  updateTemplate(id: number, companyId: number, updates: Partial<Pick<Template, 'name' | 'description' | 'category' | 'sections'>>): Promise<Template | undefined>;
+  updateTemplate(
+    id: number,
+    companyId: number,
+    updates: Partial<
+      Pick<Template, "name" | "description" | "category" | "sections">
+    >,
+  ): Promise<Template | undefined>;
   deleteTemplate(id: number, companyId: number): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
   // Helper to build company filter condition
   private companyFilter(companyId: number | null) {
-    return companyId !== null 
+    return companyId !== null
       ? eq(projects.companyId, companyId)
       : isNull(projects.companyId);
   }
 
   // Projects (company-scoped)
-  async createProject(insertProject: InsertProject, companyId: number | null): Promise<Project> {
+  async createProject(
+    insertProject: InsertProject,
+    companyId: number | null,
+  ): Promise<Project> {
     const [project] = await db
       .insert(projects)
       .values({ ...insertProject, companyId })
@@ -159,18 +252,21 @@ export class DatabaseStorage implements IStorage {
     return project;
   }
 
-  async getProject(id: string, companyId: number | null): Promise<Project | undefined> {
+  async getProject(
+    id: string,
+    companyId: number | null,
+  ): Promise<Project | undefined> {
     const [project] = await db
       .select()
       .from(projects)
-      .where(and(
-        eq(projects.id, id),
-        this.companyFilter(companyId)
-      ));
+      .where(and(eq(projects.id, id), this.companyFilter(companyId)));
     return project || undefined;
   }
 
-  async listProjects(companyId: number | null, includeArchived: boolean = false): Promise<Project[]> {
+  async listProjects(
+    companyId: number | null,
+    includeArchived: boolean = false,
+  ): Promise<Project[]> {
     const conditions = [this.companyFilter(companyId)];
     if (!includeArchived) {
       conditions.push(eq(projects.isArchived, false));
@@ -182,38 +278,39 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(projects.createdAt));
   }
 
-  async updateProjectStatus(id: string, status: ProjectStatus, companyId: number | null): Promise<Project | undefined> {
+  async updateProjectStatus(
+    id: string,
+    status: ProjectStatus,
+    companyId: number | null,
+  ): Promise<Project | undefined> {
     const [project] = await db
       .update(projects)
       .set({ status })
-      .where(and(
-        eq(projects.id, id),
-        this.companyFilter(companyId)
-      ))
+      .where(and(eq(projects.id, id), this.companyFilter(companyId)))
       .returning();
     return project || undefined;
   }
 
-  async archiveProject(id: string, companyId: number | null): Promise<Project | undefined> {
+  async archiveProject(
+    id: string,
+    companyId: number | null,
+  ): Promise<Project | undefined> {
     const [project] = await db
       .update(projects)
       .set({ isArchived: true })
-      .where(and(
-        eq(projects.id, id),
-        this.companyFilter(companyId)
-      ))
+      .where(and(eq(projects.id, id), this.companyFilter(companyId)))
       .returning();
     return project || undefined;
   }
 
-  async unarchiveProject(id: string, companyId: number | null): Promise<Project | undefined> {
+  async unarchiveProject(
+    id: string,
+    companyId: number | null,
+  ): Promise<Project | undefined> {
     const [project] = await db
       .update(projects)
       .set({ isArchived: false })
-      .where(and(
-        eq(projects.id, id),
-        this.companyFilter(companyId)
-      ))
+      .where(and(eq(projects.id, id), this.companyFilter(companyId)))
       .returning();
     return project || undefined;
   }
@@ -221,10 +318,7 @@ export class DatabaseStorage implements IStorage {
   async deleteProject(id: string, companyId: number | null): Promise<boolean> {
     const result = await db
       .delete(projects)
-      .where(and(
-        eq(projects.id, id),
-        this.companyFilter(companyId)
-      ))
+      .where(and(eq(projects.id, id), this.companyFilter(companyId)))
       .returning();
     return result.length > 0;
   }
@@ -238,16 +332,16 @@ export class DatabaseStorage implements IStorage {
     return document;
   }
 
-  async getDocument(id: number, companyId: number | null): Promise<Document | undefined> {
+  async getDocument(
+    id: number,
+    companyId: number | null,
+  ): Promise<Document | undefined> {
     // Verify document belongs to a project owned by this company
     const [document] = await db
       .select({ document: documents })
       .from(documents)
       .innerJoin(projects, eq(documents.projectId, projects.id))
-      .where(and(
-        eq(documents.id, id),
-        this.companyFilter(companyId)
-      ));
+      .where(and(eq(documents.id, id), this.companyFilter(companyId)));
     return document?.document || undefined;
   }
 
@@ -259,11 +353,11 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(documents.uploadedAt));
   }
 
-  async updateDocumentProcessed(id: number, isProcessed: boolean): Promise<void> {
-    await db
-      .update(documents)
-      .set({ isProcessed })
-      .where(eq(documents.id, id));
+  async updateDocumentProcessed(
+    id: number,
+    isProcessed: boolean,
+  ): Promise<void> {
+    await db.update(documents).set({ isProcessed }).where(eq(documents.id, id));
   }
 
   async deleteDocument(id: number, companyId: number | null): Promise<boolean> {
@@ -272,23 +366,23 @@ export class DatabaseStorage implements IStorage {
     if (!doc) {
       return false;
     }
-    
+
     // Delete associated chunks (cascade should handle this, but being explicit)
-    await db
-      .delete(documentChunks)
-      .where(eq(documentChunks.documentId, id));
-    
+    await db.delete(documentChunks).where(eq(documentChunks.documentId, id));
+
     // Then delete the document
     const result = await db
       .delete(documents)
       .where(eq(documents.id, id))
       .returning();
-    
+
     return result.length > 0;
   }
 
   // Document Chunks (company-scoped RAG)
-  async createDocumentChunk(insertChunk: InsertDocumentChunk): Promise<DocumentChunk> {
+  async createDocumentChunk(
+    insertChunk: InsertDocumentChunk,
+  ): Promise<DocumentChunk> {
     const [chunk] = await db
       .insert(documentChunks)
       .values(insertChunk as typeof documentChunks.$inferInsert)
@@ -297,20 +391,21 @@ export class DatabaseStorage implements IStorage {
   }
 
   async searchSimilarChunks(
-    embedding: number[], 
-    projectId: string, 
+    embedding: number[],
+    projectId: string,
     companyId: number | null,
-    limit: number = 10
+    limit: number = 10,
   ): Promise<Array<DocumentChunk & { distance: number }>> {
     // Convert embedding array to string format for pgvector
-    const embeddingStr = `[${embedding.join(',')}]`;
-    
+    const embeddingStr = `[${embedding.join(",")}]`;
+
     // Search chunks from current project AND "Closed-Won" projects WITHIN THE SAME COMPANY
     // This ensures complete data isolation between tenants
-    const companyCondition = companyId !== null 
-      ? sql`p.company_id = ${companyId}`
-      : sql`p.company_id IS NULL`;
-    
+    const companyCondition =
+      companyId !== null
+        ? sql`p.company_id = ${companyId}`
+        : sql`p.company_id IS NULL`;
+
     const results = await db.execute(sql`
       SELECT 
         dc.id,
@@ -345,22 +440,23 @@ export class DatabaseStorage implements IStorage {
   }
 
   async searchChunksByKeywords(
-    query: string, 
-    projectId: string, 
+    query: string,
+    projectId: string,
     companyId: number | null,
-    limit: number = 10
+    limit: number = 10,
   ): Promise<Array<DocumentChunk & { rank: number }>> {
     // Extract keywords from query (simple word extraction)
     const keywords = query
       .toLowerCase()
-      .replace(/[^\w\s]/g, ' ')
+      .replace(/[^\w\s]/g, " ")
       .split(/\s+/)
-      .filter(word => word.length > 2);
+      .filter((word) => word.length > 2);
 
     // Build company condition for tenant isolation
-    const companyCondition = companyId !== null 
-      ? sql`p.company_id = ${companyId}`
-      : sql`p.company_id IS NULL`;
+    const companyCondition =
+      companyId !== null
+        ? sql`p.company_id = ${companyId}`
+        : sql`p.company_id IS NULL`;
 
     if (keywords.length === 0) {
       // If no valid keywords, return recent chunks from the project (company-scoped)
@@ -397,8 +493,8 @@ export class DatabaseStorage implements IStorage {
     }
 
     // Build a pattern for case-insensitive keyword matching
-    const keywordPattern = keywords.join('|');
-    
+    const keywordPattern = keywords.join("|");
+
     // Search chunks using ILIKE for keyword matching (company-scoped)
     const results = await db.execute(sql`
       SELECT 
@@ -443,21 +539,24 @@ export class DatabaseStorage implements IStorage {
     projectId: string,
     companyId: number | null,
     limit: number = 10,
-    options: { vectorWeight?: number; textWeight?: number } = {}
-  ): Promise<Array<DocumentChunk & { score: number; vectorScore: number; textScore: number }>> {
+    options: { vectorWeight?: number; textWeight?: number } = {},
+  ): Promise<
+    Array<
+      DocumentChunk & { score: number; vectorScore: number; textScore: number }
+    >
+  > {
     const vectorWeight = options.vectorWeight ?? 0.7;
     const textWeight = options.textWeight ?? 0.3;
-    
-    const embeddingStr = `[${embedding.join(',')}]`;
-    
-    const sanitizedQuery = query
-      .replace(/[^\w\s]/g, ' ')
-      .trim();
-    
-    const companyCondition = companyId !== null 
-      ? sql`p.company_id = ${companyId}`
-      : sql`p.company_id IS NULL`;
-    
+
+    const embeddingStr = `[${embedding.join(",")}]`;
+
+    const sanitizedQuery = query.replace(/[^\w\s]/g, " ").trim();
+
+    const companyCondition =
+      companyId !== null
+        ? sql`p.company_id = ${companyId}`
+        : sql`p.company_id IS NULL`;
+
     const results = await db.execute(sql`
       WITH vector_search AS (
         SELECT 
@@ -532,8 +631,8 @@ export class DatabaseStorage implements IStorage {
       .groupBy(projects.status);
 
     const pipeline: Record<string, number> = {
-      "Active": 0,
-      "Submitted": 0,
+      Active: 0,
+      Submitted: 0,
       "Closed-Won": 0,
       "Closed-Lost": 0,
     };
@@ -558,7 +657,9 @@ export class DatabaseStorage implements IStorage {
   }
 
   // RFP Analysis
-  async getAnalysisByProject(projectId: string): Promise<RFPAnalysis | undefined> {
+  async getAnalysisByProject(
+    projectId: string,
+  ): Promise<RFPAnalysis | undefined> {
     const [analysis] = await db
       .select()
       .from(rfpAnalyses)
@@ -568,9 +669,12 @@ export class DatabaseStorage implements IStorage {
     return analysis || undefined;
   }
 
-  async createOrUpdateAnalysis(projectId: string, data: Partial<InsertRFPAnalysis>): Promise<RFPAnalysis> {
+  async createOrUpdateAnalysis(
+    projectId: string,
+    data: Partial<InsertRFPAnalysis>,
+  ): Promise<RFPAnalysis> {
     const existing = await this.getAnalysisByProject(projectId);
-    
+
     if (existing) {
       const [updated] = await db
         .update(rfpAnalyses)
@@ -596,10 +700,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createAlert(alert: InsertAnalysisAlert): Promise<AnalysisAlert> {
-    const [created] = await db
-      .insert(analysisAlerts)
-      .values(alert)
-      .returning();
+    const [created] = await db.insert(analysisAlerts).values(alert).returning();
     return created;
   }
 
@@ -621,10 +722,14 @@ export class DatabaseStorage implements IStorage {
   // Vendor Database
   async getVendorByName(name: string): Promise<Vendor | undefined> {
     const cleanName = name.trim().toLowerCase();
+    // Escape SQL LIKE wildcards to prevent injection
+    const escapedName = cleanName.replace(/[%_]/g, "\\$&");
     const [vendor] = await db
       .select()
       .from(vendorDatabase)
-      .where(sql`LOWER(vendor_name) LIKE ${'%' + cleanName + '%'}`)
+      .where(
+        sql`LOWER(vendor_name) LIKE ${"%" + escapedName + "%"} ESCAPE '\\'`,
+      )
       .limit(1);
     return vendor || undefined;
   }
@@ -633,13 +738,13 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(vendorDatabase);
   }
 
-  async upsertVendor(data: Omit<InsertVendor, 'lastUpdated'>): Promise<Vendor> {
+  async upsertVendor(data: Omit<InsertVendor, "lastUpdated">): Promise<Vendor> {
     const existing = await db
       .select()
       .from(vendorDatabase)
       .where(eq(vendorDatabase.vendorName, data.vendorName))
       .limit(1);
-    
+
     if (existing.length > 0) {
       const [updated] = await db
         .update(vendorDatabase)
@@ -664,7 +769,10 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Analysis Helpers
-  async getDocumentChunksForProject(projectId: string, limit: number = 50): Promise<Array<{ content: string; filename: string }>> {
+  async getDocumentChunksForProject(
+    projectId: string,
+    limit: number = 50,
+  ): Promise<Array<{ content: string; filename: string }>> {
     const results = await db
       .select({
         content: documentChunks.content,
@@ -675,27 +783,27 @@ export class DatabaseStorage implements IStorage {
       .where(eq(documents.projectId, projectId))
       .orderBy(documentChunks.documentId, documentChunks.chunkIndex)
       .limit(limit);
-    
+
     return results;
   }
 
   // Decision Logs
   async createDecisionLog(data: InsertDecisionLog): Promise<DecisionLogRecord> {
-    const [log] = await db
-      .insert(decisionLogs)
-      .values(data)
-      .returning();
+    const [log] = await db.insert(decisionLogs).values(data).returning();
     return log;
   }
 
-  async getDecisionLogByProject(projectId: string, companyId: number | null): Promise<DecisionLogRecord | undefined> {
+  async getDecisionLogByProject(
+    projectId: string,
+    companyId: number | null,
+  ): Promise<DecisionLogRecord | undefined> {
     const conditions = [eq(decisionLogs.projectId, projectId)];
     if (companyId !== null) {
       conditions.push(eq(decisionLogs.companyId, companyId));
     } else {
       conditions.push(isNull(decisionLogs.companyId));
     }
-    
+
     const [log] = await db
       .select()
       .from(decisionLogs)
@@ -705,14 +813,17 @@ export class DatabaseStorage implements IStorage {
     return log || undefined;
   }
 
-  async getDecisionLogHistory(projectId: string, companyId: number | null): Promise<DecisionLogRecord[]> {
+  async getDecisionLogHistory(
+    projectId: string,
+    companyId: number | null,
+  ): Promise<DecisionLogRecord[]> {
     const conditions = [eq(decisionLogs.projectId, projectId)];
     if (companyId !== null) {
       conditions.push(eq(decisionLogs.companyId, companyId));
     } else {
       conditions.push(isNull(decisionLogs.companyId));
     }
-    
+
     return await db
       .select()
       .from(decisionLogs)
@@ -722,29 +833,59 @@ export class DatabaseStorage implements IStorage {
 
   // Bids - uses transaction for atomic version increment and isLatest management
   async createBid(bid: InsertBid): Promise<Bid> {
-    return await db.transaction(async (tx) => {
-      // Mark any existing bids for this project as not latest
-      if (bid.projectId) {
-        await tx
-          .update(bids)
-          .set({ isLatest: false })
-          .where(eq(bids.projectId, bid.projectId));
-      }
-      
-      // Get the next version number within the transaction
-      const existingBids = await tx
-        .select({ maxVersion: sql<number>`COALESCE(MAX(${bids.version}), 0)` })
-        .from(bids)
-        .where(eq(bids.projectId, bid.projectId));
-      
-      const nextVersion = (existingBids[0]?.maxVersion || 0) + 1;
-      
-      const [created] = await tx
-        .insert(bids)
-        .values({ ...bid, version: nextVersion, isLatest: true })
-        .returning();
-      return created;
-    });
+    try {
+      return await db.transaction(async (tx) => {
+        try {
+          // Mark any existing bids for this project as not latest
+          if (bid.projectId) {
+            await tx
+              .update(bids)
+              .set({ isLatest: false })
+              .where(eq(bids.projectId, bid.projectId));
+          }
+
+          // Get the next version number within the transaction
+          const existingBids = await tx
+            .select({
+              maxVersion: sql<number>`COALESCE(MAX(${bids.version}), 0)`,
+            })
+            .from(bids)
+            .where(eq(bids.projectId, bid.projectId));
+
+          const nextVersion = (existingBids[0]?.maxVersion || 0) + 1;
+
+          const [created] = await tx
+            .insert(bids)
+            .values({ ...bid, version: nextVersion, isLatest: true })
+            .returning();
+
+          if (!created) {
+            throw new Error("Failed to create bid: no record returned");
+          }
+
+          return created;
+        } catch (txError) {
+          // Log transaction-specific error and re-throw to trigger rollback
+          console.error("Bid creation transaction error:", {
+            projectId: bid.projectId,
+            error: txError instanceof Error ? txError.message : String(txError),
+            stack: txError instanceof Error ? txError.stack : undefined,
+          });
+          throw txError;
+        }
+      });
+    } catch (error) {
+      // Log outer error (transaction already rolled back)
+      console.error("Failed to create bid:", {
+        projectId: bid.projectId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      throw new Error(
+        `Failed to create bid for project ${bid.projectId}: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`,
+      );
+    }
   }
 
   async getBid(id: number, companyId: number | null): Promise<Bid | undefined> {
@@ -754,7 +895,7 @@ export class DatabaseStorage implements IStorage {
     } else {
       conditions.push(isNull(bids.companyId));
     }
-    
+
     const [bid] = await db
       .select()
       .from(bids)
@@ -762,14 +903,17 @@ export class DatabaseStorage implements IStorage {
     return bid || undefined;
   }
 
-  async listBidsByProject(projectId: string, companyId: number | null): Promise<Bid[]> {
+  async listBidsByProject(
+    projectId: string,
+    companyId: number | null,
+  ): Promise<Bid[]> {
     const conditions = [eq(bids.projectId, projectId)];
     if (companyId !== null) {
       conditions.push(eq(bids.companyId, companyId));
     } else {
       conditions.push(isNull(bids.companyId));
     }
-    
+
     return await db
       .select()
       .from(bids)
@@ -777,17 +921,17 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(bids.version));
   }
 
-  async getLatestBidForProject(projectId: string, companyId: number | null): Promise<Bid | undefined> {
-    const conditions = [
-      eq(bids.projectId, projectId),
-      eq(bids.isLatest, true)
-    ];
+  async getLatestBidForProject(
+    projectId: string,
+    companyId: number | null,
+  ): Promise<Bid | undefined> {
+    const conditions = [eq(bids.projectId, projectId), eq(bids.isLatest, true)];
     if (companyId !== null) {
       conditions.push(eq(bids.companyId, companyId));
     } else {
       conditions.push(isNull(bids.companyId));
     }
-    
+
     const [bid] = await db
       .select()
       .from(bids)
@@ -795,46 +939,51 @@ export class DatabaseStorage implements IStorage {
     return bid || undefined;
   }
 
-  async generateShareToken(bidId: number, companyId: number | null): Promise<{ shareToken: string; bid: Bid } | undefined> {
+  async generateShareToken(
+    bidId: number,
+    companyId: number | null,
+  ): Promise<{ shareToken: string; bid: Bid } | undefined> {
     const conditions = [eq(bids.id, bidId)];
     if (companyId !== null) {
       conditions.push(eq(bids.companyId, companyId));
     } else {
       conditions.push(isNull(bids.companyId));
     }
-    
+
     const [existingBid] = await db
       .select()
       .from(bids)
       .where(and(...conditions));
-    
+
     if (!existingBid) return undefined;
-    
+
     if (existingBid.shareToken) {
       return { shareToken: existingBid.shareToken, bid: existingBid };
     }
-    
-    const crypto = await import('crypto');
-    const shareToken = crypto.randomBytes(32).toString('hex');
-    
+
+    const crypto = await import("crypto");
+    const shareToken = crypto.randomBytes(32).toString("hex");
+
     const [updatedBid] = await db
       .update(bids)
       .set({ shareToken })
       .where(eq(bids.id, bidId))
       .returning();
-    
+
     return { shareToken, bid: updatedBid };
   }
 
-  async getBidByShareToken(token: string): Promise<{ bid: Bid; project: Project } | undefined> {
+  async getBidByShareToken(
+    token: string,
+  ): Promise<{ bid: Bid; project: Project } | undefined> {
     const [result] = await db
       .select()
       .from(bids)
       .innerJoin(projects, eq(bids.projectId, projects.id))
       .where(eq(bids.shareToken, token));
-    
+
     if (!result) return undefined;
-    
+
     return { bid: result.bids, project: result.projects };
   }
 
@@ -851,15 +1000,14 @@ export class DatabaseStorage implements IStorage {
 
   // Create a new company
   async createCompany(data: { name: string; slug: string }): Promise<Company> {
-    const [company] = await db
-      .insert(companies)
-      .values(data)
-      .returning();
+    const [company] = await db.insert(companies).values(data).returning();
     return company;
   }
 
   // List users in a company
-  async listCompanyUsers(companyId: number): Promise<Omit<User, 'passwordHash'>[]> {
+  async listCompanyUsers(
+    companyId: number,
+  ): Promise<Omit<User, "passwordHash">[]> {
     const result = await db
       .select({
         id: users.id,
@@ -881,7 +1029,11 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Update user role within company
-  async updateUserRole(userId: number, companyId: number, role: string): Promise<User | undefined> {
+  async updateUserRole(
+    userId: number,
+    companyId: number,
+    role: string,
+  ): Promise<User | undefined> {
     const [user] = await db
       .update(users)
       .set({ role, updatedAt: new Date() })
@@ -917,15 +1069,14 @@ export class DatabaseStorage implements IStorage {
     invitedBy: number;
     expiresAt: Date;
   }): Promise<CompanyInvite> {
-    const [invite] = await db
-      .insert(companyInvites)
-      .values(data)
-      .returning();
+    const [invite] = await db.insert(companyInvites).values(data).returning();
     return invite;
   }
 
   // Get invite by code
-  async getInviteByCode(inviteCode: string): Promise<CompanyInvite | undefined> {
+  async getInviteByCode(
+    inviteCode: string,
+  ): Promise<CompanyInvite | undefined> {
     const [invite] = await db
       .select()
       .from(companyInvites)
@@ -938,10 +1089,12 @@ export class DatabaseStorage implements IStorage {
     return await db
       .select()
       .from(companyInvites)
-      .where(and(
-        eq(companyInvites.companyId, companyId),
-        eq(companyInvites.status, 'pending')
-      ))
+      .where(
+        and(
+          eq(companyInvites.companyId, companyId),
+          eq(companyInvites.status, "pending"),
+        ),
+      )
       .orderBy(desc(companyInvites.createdAt));
   }
 
@@ -949,7 +1102,7 @@ export class DatabaseStorage implements IStorage {
   async acceptInvite(inviteCode: string): Promise<CompanyInvite | undefined> {
     const [invite] = await db
       .update(companyInvites)
-      .set({ status: 'accepted', acceptedAt: new Date() })
+      .set({ status: "accepted", acceptedAt: new Date() })
       .where(eq(companyInvites.inviteCode, inviteCode))
       .returning();
     return invite || undefined;
@@ -959,11 +1112,13 @@ export class DatabaseStorage implements IStorage {
   async revokeInvite(inviteId: number, companyId: number): Promise<boolean> {
     const result = await db
       .update(companyInvites)
-      .set({ status: 'revoked' })
-      .where(and(
-        eq(companyInvites.id, inviteId),
-        eq(companyInvites.companyId, companyId)
-      ));
+      .set({ status: "revoked" })
+      .where(
+        and(
+          eq(companyInvites.id, inviteId),
+          eq(companyInvites.companyId, companyId),
+        ),
+      );
     return (result.rowCount ?? 0) > 0;
   }
 
@@ -972,46 +1127,57 @@ export class DatabaseStorage implements IStorage {
     const [existing] = await db
       .select()
       .from(companyInvites)
-      .where(and(
-        eq(companyInvites.email, email),
-        eq(companyInvites.companyId, companyId),
-        eq(companyInvites.status, 'pending')
-      ));
+      .where(
+        and(
+          eq(companyInvites.email, email),
+          eq(companyInvites.companyId, companyId),
+          eq(companyInvites.status, "pending"),
+        ),
+      );
     return !!existing;
   }
 
   // Onboarding methods
-  async completeOnboarding(userId: number, brandingProfile: BrandingProfile): Promise<User | undefined> {
+  async completeOnboarding(
+    userId: number,
+    brandingProfile: BrandingProfile,
+  ): Promise<User | undefined> {
     const [user] = await db
       .update(users)
       .set({
-        onboardingStatus: 'complete',
+        onboardingStatus: "complete",
         brandingProfile,
-        updatedAt: new Date()
+        updatedAt: new Date(),
       })
       .where(eq(users.id, userId))
       .returning();
     return user || undefined;
   }
 
-  async getUserOnboardingStatus(userId: number): Promise<{ status: string; brandingProfile: BrandingProfile | null } | undefined> {
+  async getUserOnboardingStatus(
+    userId: number,
+  ): Promise<
+    { status: string; brandingProfile: BrandingProfile | null } | undefined
+  > {
     const [user] = await db
       .select({
         status: users.onboardingStatus,
-        brandingProfile: users.brandingProfile
+        brandingProfile: users.brandingProfile,
       })
       .from(users)
       .where(eq(users.id, userId));
-    
+
     if (!user) return undefined;
     return {
       status: user.status,
-      brandingProfile: user.brandingProfile || null
+      brandingProfile: user.brandingProfile || null,
     };
   }
 
   // Knowledge Base methods
-  async createKnowledgeBaseDocument(doc: InsertKnowledgeBaseDocument): Promise<KnowledgeBaseDocument> {
+  async createKnowledgeBaseDocument(
+    doc: InsertKnowledgeBaseDocument,
+  ): Promise<KnowledgeBaseDocument> {
     const [result] = await db
       .insert(knowledgeBaseDocuments)
       .values(doc)
@@ -1019,7 +1185,9 @@ export class DatabaseStorage implements IStorage {
     return result;
   }
 
-  async getKnowledgeBaseDocuments(companyId: number): Promise<KnowledgeBaseDocument[]> {
+  async getKnowledgeBaseDocuments(
+    companyId: number,
+  ): Promise<KnowledgeBaseDocument[]> {
     return await db
       .select()
       .from(knowledgeBaseDocuments)
@@ -1027,40 +1195,58 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(knowledgeBaseDocuments.uploadedAt));
   }
 
-  async getKnowledgeBaseDocument(id: number, companyId: number): Promise<KnowledgeBaseDocument | undefined> {
+  async getKnowledgeBaseDocument(
+    id: number,
+    companyId: number,
+  ): Promise<KnowledgeBaseDocument | undefined> {
     const [doc] = await db
       .select()
       .from(knowledgeBaseDocuments)
-      .where(and(
-        eq(knowledgeBaseDocuments.id, id),
-        eq(knowledgeBaseDocuments.companyId, companyId)
-      ));
+      .where(
+        and(
+          eq(knowledgeBaseDocuments.id, id),
+          eq(knowledgeBaseDocuments.companyId, companyId),
+        ),
+      );
     return doc || undefined;
   }
 
-  async updateKnowledgeBaseDocument(id: number, companyId: number, updates: Partial<KnowledgeBaseDocument>): Promise<KnowledgeBaseDocument | undefined> {
+  async updateKnowledgeBaseDocument(
+    id: number,
+    companyId: number,
+    updates: Partial<KnowledgeBaseDocument>,
+  ): Promise<KnowledgeBaseDocument | undefined> {
     const [doc] = await db
       .update(knowledgeBaseDocuments)
       .set(updates)
-      .where(and(
-        eq(knowledgeBaseDocuments.id, id),
-        eq(knowledgeBaseDocuments.companyId, companyId)
-      ))
+      .where(
+        and(
+          eq(knowledgeBaseDocuments.id, id),
+          eq(knowledgeBaseDocuments.companyId, companyId),
+        ),
+      )
       .returning();
     return doc || undefined;
   }
 
-  async deleteKnowledgeBaseDocument(id: number, companyId: number): Promise<boolean> {
+  async deleteKnowledgeBaseDocument(
+    id: number,
+    companyId: number,
+  ): Promise<boolean> {
     const result = await db
       .delete(knowledgeBaseDocuments)
-      .where(and(
-        eq(knowledgeBaseDocuments.id, id),
-        eq(knowledgeBaseDocuments.companyId, companyId)
-      ));
+      .where(
+        and(
+          eq(knowledgeBaseDocuments.id, id),
+          eq(knowledgeBaseDocuments.companyId, companyId),
+        ),
+      );
     return (result.rowCount ?? 0) > 0;
   }
 
-  async createKnowledgeBaseChunk(chunk: InsertKnowledgeBaseChunk): Promise<KnowledgeBaseChunk> {
+  async createKnowledgeBaseChunk(
+    chunk: InsertKnowledgeBaseChunk,
+  ): Promise<KnowledgeBaseChunk> {
     const [result] = await db
       .insert(knowledgeBaseChunks)
       .values(chunk)
@@ -1068,8 +1254,12 @@ export class DatabaseStorage implements IStorage {
     return result;
   }
 
-  async searchKnowledgeBaseChunks(embedding: number[], companyId: number, limit: number): Promise<Array<KnowledgeBaseChunk & { distance: number }>> {
-    const embeddingStr = `[${embedding.join(',')}]`;
+  async searchKnowledgeBaseChunks(
+    embedding: number[],
+    companyId: number,
+    limit: number,
+  ): Promise<Array<KnowledgeBaseChunk & { distance: number }>> {
+    const embeddingStr = `[${embedding.join(",")}]`;
     const results = await db.execute(sql`
       SELECT *,
         embedding <=> ${embeddingStr}::vector AS distance
@@ -1090,18 +1280,22 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(aiInstructions.isDefault), aiInstructions.name);
   }
 
-  async getAIInstruction(id: number, companyId: number): Promise<AIInstruction | undefined> {
+  async getAIInstruction(
+    id: number,
+    companyId: number,
+  ): Promise<AIInstruction | undefined> {
     const [instruction] = await db
       .select()
       .from(aiInstructions)
-      .where(and(
-        eq(aiInstructions.id, id),
-        eq(aiInstructions.companyId, companyId)
-      ));
+      .where(
+        and(eq(aiInstructions.id, id), eq(aiInstructions.companyId, companyId)),
+      );
     return instruction || undefined;
   }
 
-  async createAIInstruction(instruction: InsertAIInstruction): Promise<AIInstruction> {
+  async createAIInstruction(
+    instruction: InsertAIInstruction,
+  ): Promise<AIInstruction> {
     const [result] = await db
       .insert(aiInstructions)
       .values(instruction)
@@ -1109,14 +1303,17 @@ export class DatabaseStorage implements IStorage {
     return result;
   }
 
-  async updateAIInstruction(id: number, companyId: number, updates: Partial<AIInstruction>): Promise<AIInstruction | undefined> {
+  async updateAIInstruction(
+    id: number,
+    companyId: number,
+    updates: Partial<AIInstruction>,
+  ): Promise<AIInstruction | undefined> {
     const [instruction] = await db
       .update(aiInstructions)
       .set({ ...updates, updatedAt: new Date() })
-      .where(and(
-        eq(aiInstructions.id, id),
-        eq(aiInstructions.companyId, companyId)
-      ))
+      .where(
+        and(eq(aiInstructions.id, id), eq(aiInstructions.companyId, companyId)),
+      )
       .returning();
     return instruction || undefined;
   }
@@ -1124,10 +1321,9 @@ export class DatabaseStorage implements IStorage {
   async deleteAIInstruction(id: number, companyId: number): Promise<boolean> {
     const result = await db
       .delete(aiInstructions)
-      .where(and(
-        eq(aiInstructions.id, id),
-        eq(aiInstructions.companyId, companyId)
-      ));
+      .where(
+        and(eq(aiInstructions.id, id), eq(aiInstructions.companyId, companyId)),
+      );
     return (result.rowCount ?? 0) > 0;
   }
 
@@ -1140,39 +1336,42 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(templates.createdAt));
   }
 
-  async getTemplate(id: number, companyId: number): Promise<Template | undefined> {
+  async getTemplate(
+    id: number,
+    companyId: number,
+  ): Promise<Template | undefined> {
     const [template] = await db
       .select()
       .from(templates)
-      .where(and(
-        eq(templates.id, id),
-        eq(templates.companyId, companyId)
-      ));
+      .where(and(eq(templates.id, id), eq(templates.companyId, companyId)));
     return template || undefined;
   }
 
   async createTemplate(template: InsertTemplate): Promise<Template> {
-    const [result] = await db
-      .insert(templates)
-      .values(template)
-      .returning();
+    const [result] = await db.insert(templates).values(template).returning();
     return result;
   }
 
-  async updateTemplate(id: number, companyId: number, updates: Partial<Pick<Template, 'name' | 'description' | 'category' | 'sections'>>): Promise<Template | undefined> {
+  async updateTemplate(
+    id: number,
+    companyId: number,
+    updates: Partial<
+      Pick<Template, "name" | "description" | "category" | "sections">
+    >,
+  ): Promise<Template | undefined> {
     const allowedUpdates: Record<string, any> = { updatedAt: new Date() };
     if (updates.name !== undefined) allowedUpdates.name = updates.name;
-    if (updates.description !== undefined) allowedUpdates.description = updates.description;
-    if (updates.category !== undefined) allowedUpdates.category = updates.category;
-    if (updates.sections !== undefined) allowedUpdates.sections = updates.sections;
-    
+    if (updates.description !== undefined)
+      allowedUpdates.description = updates.description;
+    if (updates.category !== undefined)
+      allowedUpdates.category = updates.category;
+    if (updates.sections !== undefined)
+      allowedUpdates.sections = updates.sections;
+
     const [template] = await db
       .update(templates)
       .set(allowedUpdates)
-      .where(and(
-        eq(templates.id, id),
-        eq(templates.companyId, companyId)
-      ))
+      .where(and(eq(templates.id, id), eq(templates.companyId, companyId)))
       .returning();
     return template || undefined;
   }
@@ -1180,10 +1379,7 @@ export class DatabaseStorage implements IStorage {
   async deleteTemplate(id: number, companyId: number): Promise<boolean> {
     const result = await db
       .delete(templates)
-      .where(and(
-        eq(templates.id, id),
-        eq(templates.companyId, companyId)
-      ));
+      .where(and(eq(templates.id, id), eq(templates.companyId, companyId)));
     return (result.rowCount ?? 0) > 0;
   }
 }
