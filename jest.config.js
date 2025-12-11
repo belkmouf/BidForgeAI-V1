@@ -24,7 +24,7 @@ export default {
         ],
       },
       transformIgnorePatterns: [
-        "node_modules/(?!(@neondatabase|p-queue|@langchain|eventemitter3)/)",
+        "node_modules/(?!(@neondatabase|p-queue|@langchain|eventemitter3|langchain)/)",
       ],
       collectCoverageFrom: [
         "server/**/*.ts",

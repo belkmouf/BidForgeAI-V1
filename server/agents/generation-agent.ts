@@ -1,3 +1,4 @@
+import type { CompiledContext } from './context-builder';
 import { BaseAgent, AgentInput, AgentOutput, AgentContext } from './base-agent';
 import { DraftResultType, DocumentInfoType, AnalysisResultType } from './state';
 import { ChatOpenAI } from '@langchain/openai';
@@ -28,7 +29,11 @@ export class GenerationAgent extends BaseAgent {
     }
   }
 
-  async execute(input: AgentInput, context: AgentContext): Promise<AgentOutput> {
+  protected async executeWithCompiledContext(
+    compiledContext: CompiledContext,
+    input: AgentInput,
+    context: AgentContext
+  ): Promise<AgentOutput> {
     return this.wrapExecution(async () => {
       const state = input.data as {
         documents?: DocumentInfoType[];
@@ -89,6 +94,11 @@ ${analysis.opportunities.map(o => `- ${o}`).join('\n')}
       const previousFeedback = state.review?.feedback?.length
         ? `\n\nPrevious Review Feedback (attempt ${state.review.attempts}):\n${state.review.feedback.map(f => `- ${f}`).join('\n')}`
         : '';
+
+      // Build document content from docs array
+      const documentContent = docs
+        .map((doc, idx) => `Document ${idx + 1} (${doc.name}):\n${doc.content || ''}`)
+        .join('\n\n');
 
       const systemPrompt = `You are an expert construction bid writer. Generate a professional, compelling bid proposal based on the provided RFQ documents and analysis.
 

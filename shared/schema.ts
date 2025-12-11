@@ -49,6 +49,7 @@ export type BrandingProfile = {
   primaryColor?: string;
   logoUrl?: string;
   aboutUs?: string;
+  fullAboutContent?: string;
   contactName?: string;
   contactTitle?: string;
   contactPhone?: string;
@@ -58,6 +59,15 @@ export type BrandingProfile = {
   state?: string;
   zip?: string;
   licenseNumber?: string;
+  industry?: string;
+  founded?: string;
+  companySize?: string;
+  products?: string[];
+  services?: string[];
+  socialMedia?: Record<string, string>;
+  dataSource?: 'manual' | 'website' | 'mixed';
+  lastFetchedAt?: Date;
+  fetchConfidence?: number;
 };
 
 export const users = pgTable("users", {

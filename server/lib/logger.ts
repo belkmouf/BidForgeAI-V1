@@ -188,8 +188,14 @@ export const logContext = {
     ip?: string;
     userAgent?: string;
     action?: string;
-    result?: 'success' | 'failure';
+    result?: 'success' | 'failure' | 'blocked' | 'allowed_no_origin';
     reason?: string;
+    origin?: string;
+    originHost?: string;
+    contentType?: string;
+    path?: string;
+    domain?: string;
+    error?: string;
   }) => {
     securityLogger.info(message, meta);
   },
@@ -204,6 +210,11 @@ export const logContext = {
     changes?: any;
     ip?: string;
     userAgent?: string;
+    totalRequested?: number;
+    error?: string;
+    website?: string;
+    websiteCount?: number;
+    successful?: number;
   }) => {
     auditLogger.info(message, meta);
   },
@@ -215,6 +226,9 @@ export const logContext = {
     success: boolean;
     userId?: number;
     metadata?: any;
+    table?: string;
+    error?: string;
+    url?: string;
   }) => {
     performanceLogger.info(message, meta);
   },

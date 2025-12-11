@@ -85,18 +85,20 @@ export async function processBidGeneration(job: Job, data: BidGenerationData): P
     const contextText = searchResults.map(r => r.content).join('\n\n');
     const knowledgeText = knowledgeResults.map(r => r.content).join('\n\n');
 
+    const combinedContext = `${contextText}\n\n${knowledgeText}`;
+
     switch (model) {
       case 'anthropic':
-        bidResult = await generateBidWithAnthropic(instructions, contextText, knowledgeText, tone);
+        bidResult = await generateBidWithAnthropic({ instructions, context: combinedContext, tone });
         break;
       case 'gemini':
-        bidResult = await generateBidWithGemini(instructions, contextText, knowledgeText, tone);
+        bidResult = await generateBidWithGemini({ instructions, context: combinedContext, tone });
         break;
       case 'deepseek':
-        bidResult = await generateBidWithDeepSeek(instructions, contextText, knowledgeText, tone);
+        bidResult = await generateBidWithDeepSeek({ instructions, context: combinedContext, tone });
         break;
       default:
-        bidResult = await generateBidContent(instructions, contextText, knowledgeText, tone);
+        bidResult = await generateBidContent({ instructions, context: combinedContext, tone });
     }
 
     const duration = Date.now() - startTime;
@@ -107,12 +109,12 @@ export async function processBidGeneration(job: Job, data: BidGenerationData): P
       projectId,
       userId,
       duration,
-      tokenUsage: bidResult.tokenUsage || 0,
+      tokenUsage: 0,
       success: true
     });
 
     return {
-      bidContent: bidResult.content || bidResult.html,
+      bidContent: bidResult,
       model,
       chunksUsed: searchResults.length,
       knowledgeChunks: knowledgeResults.length,

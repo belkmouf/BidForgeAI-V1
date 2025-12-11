@@ -1,3 +1,4 @@
+import type { CompiledContext } from './context-builder';
 import { BaseAgent, AgentInput, AgentOutput, AgentContext } from './base-agent';
 import { ReviewResultType, DraftResultType, AnalysisResultType, BidWorkflowState } from './state';
 import { ChatOpenAI } from '@langchain/openai';
@@ -14,7 +15,11 @@ export class ReviewAgent extends BaseAgent {
   name = 'review';
   description = 'Reviews generated bid proposals for quality and completeness';
 
-  async execute(input: AgentInput, context: AgentContext): Promise<AgentOutput> {
+  protected async executeWithCompiledContext(
+    compiledContext: CompiledContext,
+    input: AgentInput,
+    context: AgentContext
+  ): Promise<AgentOutput> {
     return this.wrapExecution(async () => {
       const state = input.data as Partial<BidWorkflowState> & {
         draft?: DraftResultType;

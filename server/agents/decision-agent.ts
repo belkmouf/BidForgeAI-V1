@@ -1,3 +1,4 @@
+import type { CompiledContext } from './context-builder';
 import { BaseAgent, AgentInput, AgentOutput, AgentContext } from './base-agent';
 import { AnalysisResultType } from './state';
 import { storage } from '../storage';
@@ -8,7 +9,11 @@ export class DecisionAgent extends BaseAgent {
   name = 'decision';
   description = 'Makes strategic decisions about bid approach based on analysis';
 
-  async execute(input: AgentInput, context: AgentContext): Promise<AgentOutput> {
+  protected async executeWithCompiledContext(
+    compiledContext: CompiledContext,
+    input: AgentInput,
+    context: AgentContext
+  ): Promise<AgentOutput> {
     return this.wrapExecution(async () => {
       const state = input.data as { analysis?: AnalysisResultType; projectId?: string; companyId?: number | null };
       const analysis = state.analysis;

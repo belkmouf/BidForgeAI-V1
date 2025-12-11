@@ -168,7 +168,7 @@ export async function analyzeRFP(projectId: string): Promise<AnalysisResult> {
 }
 
 async function getClientNameFromProject(projectId: string): Promise<string | null> {
-  const project = await storage.getProject(projectId);
+  const project = await storage.getProject(projectId, null);
   return project?.clientName || null;
 }
 

@@ -34,8 +34,8 @@ export const AgentContextSchema = z.object({
 export abstract class BaseAgent {
   abstract name: string;
   abstract description: string;
-  
-  protected contextBuilder: BaseContextBuilder;
+
+  protected contextBuilder!: BaseContextBuilder;
   protected memoryManager: IMemoryManager;
 
   constructor(memoryManagerInstance?: IMemoryManager) {
