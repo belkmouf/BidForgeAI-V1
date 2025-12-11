@@ -49,6 +49,9 @@ export type SessionEntry = z.infer<typeof SessionEntrySchema>;
 export type LongTermMemory = z.infer<typeof LongTermMemorySchema>;
 export type ArtifactMetadata = z.infer<typeof ArtifactMetadataSchema>;
 
+// Export ToolOutputSummary type from tool-summarization
+export type { ToolOutputSummary } from './tool-summarization';
+
 // Memory tier interfaces
 export interface IWorkingContextManager {
   get(projectId: string, agentName: string): Promise<WorkingContext | null>;
