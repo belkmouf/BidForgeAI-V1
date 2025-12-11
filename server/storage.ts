@@ -177,8 +177,17 @@ export interface IStorage {
   ): Promise<
     { status: string; brandingProfile: BrandingProfile | null } | undefined
   >;
+  updateBrandingProfileFromWebsite(
+    userId: number,
+    websiteData: Partial<BrandingProfile>,
+  ): Promise<User | undefined>;
 
   // Knowledge Base (company-scoped)
+  findKnowledgeBaseDocumentBySource(
+    companyId: number,
+    sourceUrl: string,
+  ): Promise<KnowledgeBaseDocument | undefined>;
+  deleteKnowledgeBaseChunksByDocument(documentId: number): Promise<void>;
   createKnowledgeBaseDocument(
     doc: InsertKnowledgeBaseDocument,
   ): Promise<KnowledgeBaseDocument>;
@@ -1021,6 +1030,7 @@ export class DatabaseStorage implements IStorage {
         createdAt: users.createdAt,
         updatedAt: users.updatedAt,
         lastLoginAt: users.lastLoginAt,
+        deletedAt: users.deletedAt,
       })
       .from(users)
       .where(eq(users.companyId, companyId))
@@ -1174,7 +1184,90 @@ export class DatabaseStorage implements IStorage {
     };
   }
 
+  async updateBrandingProfileFromWebsite(userId: number, websiteData: Partial<BrandingProfile>): Promise<User | undefined> {
+    // Get existing branding profile first
+    const [existingUser] = await db
+      .select({ brandingProfile: users.brandingProfile })
+      .from(users)
+      .where(eq(users.id, userId));
+    
+    if (!existingUser) return undefined;
+
+    const currentProfile = existingUser.brandingProfile || {};
+    const hasManualData = currentProfile.dataSource === 'manual' || 
+      (currentProfile.companyName && currentProfile.dataSource !== 'website');
+
+    // Helper: only use website value if it's not empty and current is empty
+    const mergeField = <T>(current: T | undefined, website: T | undefined): T | undefined => {
+      if (current !== undefined && current !== null && current !== '') return current;
+      return website;
+    };
+
+    // Merge website data with existing profile (don't overwrite user-entered data)
+    const mergedProfile: BrandingProfile = {
+      ...currentProfile,
+      // Only update empty fields from website
+      companyName: mergeField(currentProfile.companyName, websiteData.companyName),
+      websiteUrl: websiteData.websiteUrl || currentProfile.websiteUrl, // Always update URL from source
+      aboutUs: mergeField(currentProfile.aboutUs, websiteData.aboutUs),
+      fullAboutContent: websiteData.fullAboutContent || currentProfile.fullAboutContent, // Full content from website
+      logoUrl: mergeField(currentProfile.logoUrl, websiteData.logoUrl),
+      contactEmail: mergeField(currentProfile.contactEmail, websiteData.contactEmail),
+      contactPhone: mergeField(currentProfile.contactPhone, websiteData.contactPhone),
+      streetAddress: mergeField(currentProfile.streetAddress, websiteData.streetAddress),
+      industry: mergeField(currentProfile.industry, websiteData.industry),
+      founded: mergeField(currentProfile.founded, websiteData.founded),
+      companySize: mergeField(currentProfile.companySize, websiteData.companySize),
+      // Products/services from website (additive, replace if website has them)
+      products: websiteData.products && websiteData.products.length > 0 
+        ? websiteData.products 
+        : currentProfile.products,
+      services: websiteData.services && websiteData.services.length > 0 
+        ? websiteData.services 
+        : currentProfile.services,
+      socialMedia: websiteData.socialMedia || currentProfile.socialMedia,
+      // Track metadata - set to 'mixed' if there was manual data, otherwise 'website'
+      dataSource: hasManualData ? 'mixed' : 'website',
+      lastFetchedAt: websiteData.lastFetchedAt,
+      fetchConfidence: websiteData.fetchConfidence
+    };
+
+    const [user] = await db
+      .update(users)
+      .set({
+        brandingProfile: mergedProfile,
+        updatedAt: new Date()
+      })
+      .where(eq(users.id, userId))
+      .returning();
+    return user || undefined;
+  }
+
   // Knowledge Base methods
+  async findKnowledgeBaseDocumentBySource(
+    companyId: number,
+    sourceUrl: string,
+  ): Promise<KnowledgeBaseDocument | undefined> {
+    // Look for documents that match the website source pattern
+    const sourcePattern = `website_profile_${Buffer.from(sourceUrl).toString('base64').substring(0, 20)}`;
+    const [doc] = await db
+      .select()
+      .from(knowledgeBaseDocuments)
+      .where(
+        and(
+          eq(knowledgeBaseDocuments.companyId, companyId),
+          sql`${knowledgeBaseDocuments.filename} LIKE ${sourcePattern + '%'}`,
+        ),
+      );
+    return doc || undefined;
+  }
+
+  async deleteKnowledgeBaseChunksByDocument(documentId: number): Promise<void> {
+    await db
+      .delete(knowledgeBaseChunks)
+      .where(eq(knowledgeBaseChunks.documentId, documentId));
+  }
+
   async createKnowledgeBaseDocument(
     doc: InsertKnowledgeBaseDocument,
   ): Promise<KnowledgeBaseDocument> {
