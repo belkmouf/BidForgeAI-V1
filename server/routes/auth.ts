@@ -76,14 +76,14 @@ router.post('/register', async (req, res) => {
       })
       .returning();
 
-    // Create user as admin of the new company
+    // Create user as company_admin of the new company
     const [newUser] = await db
       .insert(users)
       .values({
         email: email.toLowerCase(),
         passwordHash,
         name,
-        role: 'admin', // First user is always admin of their company
+        role: 'company_admin', // First user is always company admin of their company
         companyId: newCompany.id,
       })
       .returning();

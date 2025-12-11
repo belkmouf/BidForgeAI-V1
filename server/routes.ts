@@ -52,6 +52,7 @@ import {
   sanitizeFeedback,
   InputSanitizationError 
 } from './lib/sanitize';
+import { validateCompanyUserRole } from '@shared/schema';
 import { generateBidTemplate, wrapContentInTemplate, getCompanyConfig, getUserBrandingConfig, type BidData, type TemplateOptions } from './lib/templates/bid-template-generator';
 import { wrapContentInPremiumTemplate } from './lib/templates/gcc-premium-template';
 import { sanitizeModelHtml } from './lib/ai-output';
@@ -1355,13 +1356,13 @@ or contact details from other sources.
     }
   });
 
-  // Create invitation (admin only)
+  // Create invitation (company admin only)
   const createInviteSchema = z.object({
     email: z.string().email(),
-    role: z.enum(['admin', 'manager', 'user', 'viewer']).optional().default('user'),
+    role: z.enum(['company_admin', 'company_user']).optional().default('company_user'),
   });
 
-  app.post("/api/company/invites", authenticateToken, requireRole(['admin']), async (req: AuthRequest, res) => {
+  app.post("/api/company/invites", authenticateToken, requireRole(['company_admin']), async (req: AuthRequest, res) => {
     try {
       const companyId = req.user?.companyId;
       const userId = req.user?.userId;
@@ -1371,6 +1372,11 @@ or contact details from other sources.
       }
       
       const { email, role } = createInviteSchema.parse(req.body);
+      
+      // Validate that role is company-scoped only
+      if (!validateCompanyUserRole(role)) {
+        return res.status(400).json({ error: "Invalid role. Only company_admin or company_user roles are allowed for company invitations" });
+      }
       
       // Check if email already has pending invite
       const hasExisting = await storage.hasExistingInvite(email, companyId);
@@ -1412,8 +1418,8 @@ or contact details from other sources.
     }
   });
 
-  // List pending invitations (admin only)
-  app.get("/api/company/invites", authenticateToken, requireRole(['admin']), async (req: AuthRequest, res) => {
+  // List pending invitations (company admin only)
+  app.get("/api/company/invites", authenticateToken, requireRole(['company_admin']), async (req: AuthRequest, res) => {
     try {
       const companyId = req.user?.companyId;
       if (!companyId) {

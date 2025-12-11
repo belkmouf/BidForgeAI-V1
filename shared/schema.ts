@@ -30,6 +30,16 @@ export function isAdminRole(role: UserRole): boolean {
   return role === 'system_admin' || role === 'company_admin';
 }
 
+// Helper to check if role is company-scoped (non-system)
+export function isCompanyRole(role: UserRole): boolean {
+  return role === 'company_admin' || role === 'company_user';
+}
+
+// Validate that a role is appropriate for a company user
+export function validateCompanyUserRole(role: string): role is 'company_admin' | 'company_user' {
+  return role === 'company_admin' || role === 'company_user';
+}
+
 // ==================== MULTI-TENANCY ====================
 
 // Companies Table
