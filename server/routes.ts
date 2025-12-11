@@ -1497,13 +1497,14 @@ or contact details from other sources.
     }
   });
 
-  // Deactivate user (admin only)
-  app.post("/api/company/users/:userId/deactivate", authenticateToken, requireRole(['admin']), async (req: AuthRequest, res) => {
+  // Deactivate user (company_admin or system_admin)
+  app.post("/api/company/users/:userId/deactivate", authenticateToken, requireRole(['company_admin', 'system_admin']), async (req: AuthRequest, res) => {
     try {
       const companyId = req.user?.companyId;
       const currentUserId = req.user?.userId;
+      const userRole = req.user?.role;
       
-      if (!companyId) {
+      if (!companyId && userRole !== 'system_admin') {
         return res.status(400).json({ error: "No company associated with this account" });
       }
       
@@ -1512,14 +1513,14 @@ or contact details from other sources.
         return res.status(400).json({ error: "Invalid user ID" });
       }
       
-      // Prevent admin from deactivating themselves
+      // Prevent user from deactivating themselves
       if (targetUserId === currentUserId) {
         return res.status(400).json({ error: "Cannot deactivate your own account" });
       }
       
-      const success = await storage.deactivateUser(targetUserId, companyId);
+      const success = await storage.deactivateUser(targetUserId, companyId!);
       if (!success) {
-        return res.status(404).json({ error: "User not found in your company" });
+        return res.status(404).json({ error: "User not found" });
       }
       
       res.json({ success: true });
@@ -1528,11 +1529,13 @@ or contact details from other sources.
     }
   });
 
-  // Reactivate user (admin only)
-  app.post("/api/company/users/:userId/reactivate", authenticateToken, requireRole(['admin']), async (req: AuthRequest, res) => {
+  // Reactivate user (company_admin or system_admin)
+  app.post("/api/company/users/:userId/reactivate", authenticateToken, requireRole(['company_admin', 'system_admin']), async (req: AuthRequest, res) => {
     try {
       const companyId = req.user?.companyId;
-      if (!companyId) {
+      const userRole = req.user?.role;
+      
+      if (!companyId && userRole !== 'system_admin') {
         return res.status(400).json({ error: "No company associated with this account" });
       }
       
@@ -1541,12 +1544,44 @@ or contact details from other sources.
         return res.status(400).json({ error: "Invalid user ID" });
       }
       
-      const success = await storage.reactivateUser(targetUserId, companyId);
+      const success = await storage.reactivateUser(targetUserId, companyId!);
       if (!success) {
-        return res.status(404).json({ error: "User not found in your company" });
+        return res.status(404).json({ error: "User not found" });
       }
       
       res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Delete user permanently (company_admin or system_admin)
+  app.delete("/api/company/users/:userId", authenticateToken, requireRole(['company_admin', 'system_admin']), async (req: AuthRequest, res) => {
+    try {
+      const companyId = req.user?.companyId;
+      const currentUserId = req.user?.userId;
+      const userRole = req.user?.role;
+      
+      if (!companyId && userRole !== 'system_admin') {
+        return res.status(400).json({ error: "No company associated with this account" });
+      }
+      
+      const targetUserId = parseInt(req.params.userId, 10);
+      if (isNaN(targetUserId)) {
+        return res.status(400).json({ error: "Invalid user ID" });
+      }
+      
+      // Prevent user from deleting themselves
+      if (targetUserId === currentUserId) {
+        return res.status(400).json({ error: "Cannot delete your own account" });
+      }
+      
+      const success = await storage.deleteUser(targetUserId, companyId!);
+      if (!success) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      
+      res.json({ success: true, message: "User permanently deleted" });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }

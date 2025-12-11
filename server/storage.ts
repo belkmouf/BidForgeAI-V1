@@ -1070,6 +1070,14 @@ export class DatabaseStorage implements IStorage {
     return (result.rowCount ?? 0) > 0;
   }
 
+  // Delete user (hard delete) - removes all user data
+  async deleteUser(userId: number, companyId: number): Promise<boolean> {
+    const result = await db
+      .delete(users)
+      .where(and(eq(users.id, userId), eq(users.companyId, companyId)));
+    return (result.rowCount ?? 0) > 0;
+  }
+
   // Create company invite
   async createCompanyInvite(data: {
     companyId: number;
