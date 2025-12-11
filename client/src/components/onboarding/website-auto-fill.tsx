@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useToast } from '@/hooks/use-toast';
+import { apiRequest } from '@/lib/auth';
 import { Loader2, Globe, CheckCircle, AlertTriangle, ExternalLink, Sparkles } from 'lucide-react';
 
 interface ProductService {
@@ -67,12 +68,8 @@ export function WebsiteAutoFill({
     setError(null);
 
     try {
-      const response = await fetch('/api/website-info/fetch', {
+      const response = await apiRequest('/api/website-info/fetch', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
         body: JSON.stringify({
           website: website.trim(),
           useCache: true
