@@ -45,7 +45,7 @@ router.post(
         .limit(1);
 
       if (existingState.length > 0 && existingState[0].status === "running") {
-        return res.status(409).json({ 
+        return res.status(409).json({
           error: "Workflow already running for this project",
           currentAgent: existingState[0].currentAgent,
         });
@@ -78,39 +78,72 @@ router.post(
         currentAgent: "intake",
       });
 
-      orchestrator.execute({ projectId, userId }).then(async (result) => {
-        await db
-          .update(agentStates)
-          .set({
-            currentAgent: result.currentAgent,
-            status: result.status,
-            state: result as unknown as Record<string, unknown>,
-            updatedAt: new Date(),
-          })
-          .where(eq(agentStates.projectId, projectId));
+      orchestrator
+        .execute({ projectId, userId })
+        .then(async (result) => {
+          try {
+            await db
+              .update(agentStates)
+              .set({
+                currentAgent: result.currentAgent,
+                status: result.status,
+                state: result as unknown as Record<string, unknown>,
+                updatedAt: new Date(),
+              })
+              .where(eq(agentStates.projectId, projectId));
 
-        console.log(`[AgentRoutes] Workflow completed for project ${projectId}: ${result.status}`);
-      }).catch(async (error) => {
-        console.error(`[AgentRoutes] Workflow failed for project ${projectId}:`, error);
+            console.log(
+              `[AgentRoutes] Workflow completed for project ${projectId}: ${result.status}`,
+            );
+          } catch (dbError) {
+            console.error(
+              `[AgentRoutes] Failed to update agent state after workflow completion:`,
+              dbError,
+            );
+            // Don't throw - workflow already completed, just log the DB error
+          }
+        })
+        .catch(async (error) => {
+          console.error(
+            `[AgentRoutes] Workflow failed for project ${projectId}:`,
+            error,
+          );
 
-        await db
-          .update(agentStates)
-          .set({
-            status: "failed",
-            state: { error: (error as Error).message },
-            updatedAt: new Date(),
-          })
-          .where(eq(agentStates.projectId, projectId));
-      });
-
+          try {
+            await db
+              .update(agentStates)
+              .set({
+                status: "failed",
+                state: { error: (error as Error).message },
+                updatedAt: new Date(),
+              })
+              .where(eq(agentStates.projectId, projectId));
+          } catch (dbError) {
+            console.error(
+              `[AgentRoutes] Failed to update agent state after workflow failure:`,
+              dbError,
+            );
+            // Critical: both workflow and state update failed - log for monitoring
+          }
+        })
+        .catch((fatalError) => {
+          // Final catch for any unhandled errors in the promise chain
+          console.error(
+            `[AgentRoutes] CRITICAL: Unhandled error in workflow promise chain for project ${projectId}:`,
+            fatalError,
+          );
+          // This ensures no unhandled promise rejections
+        });
     } catch (error) {
       console.error("[AgentRoutes] Start workflow error:", error);
       if (error instanceof z.ZodError) {
-        return res.status(400).json({ error: "Invalid request", details: error.errors });
+        return res
+          .status(400)
+          .json({ error: "Invalid request", details: error.errors });
       }
       res.status(500).json({ error: "Failed to start workflow" });
     }
-  }
+  },
 );
 
 router.get(
@@ -133,14 +166,23 @@ router.get(
         .orderBy(desc(agentExecutions.startedAt))
         .limit(50);
 
-      const agentOrder = ["intake", "analysis", "decision", "generation", "review", "complete"];
+      const agentOrder = [
+        "intake",
+        "analysis",
+        "decision",
+        "generation",
+        "review",
+        "complete",
+      ];
       const completedAgents = new Set(
         executions
-          .filter(e => e.status === "completed")
-          .map(e => e.agentName)
+          .filter((e) => e.status === "completed")
+          .map((e) => e.agentName),
       );
 
-      const progress = Math.round((completedAgents.size / agentOrder.length) * 100);
+      const progress = Math.round(
+        (completedAgents.size / agentOrder.length) * 100,
+      );
 
       res.json({
         projectId,
@@ -153,7 +195,7 @@ router.get(
       console.error("[AgentRoutes] Status check error:", error);
       res.status(500).json({ error: "Failed to get workflow status" });
     }
-  }
+  },
 );
 
 router.get(
@@ -170,7 +212,9 @@ router.get(
         .limit(1);
 
       if (!currentState) {
-        return res.status(404).json({ error: "No workflow found for this project" });
+        return res
+          .status(404)
+          .json({ error: "No workflow found for this project" });
       }
 
       const state = currentState.state as Record<string, unknown>;
@@ -191,7 +235,7 @@ router.get(
       console.error("[AgentRoutes] Result fetch error:", error);
       res.status(500).json({ error: "Failed to get workflow result" });
     }
-  }
+  },
 );
 
 router.post(
@@ -214,7 +258,9 @@ router.post(
         .returning();
 
       if (!result) {
-        return res.status(404).json({ error: "No workflow found for this project" });
+        return res
+          .status(404)
+          .json({ error: "No workflow found for this project" });
       }
 
       res.json({
@@ -226,26 +272,22 @@ router.post(
       console.error("[AgentRoutes] Cancel workflow error:", error);
       res.status(500).json({ error: "Failed to cancel workflow" });
     }
-  }
+  },
 );
 
-router.get(
-  "/",
-  authenticateToken,
-  async (req: AuthRequest, res: Response) => {
-    try {
-      const allStates = await db
-        .select()
-        .from(agentStates)
-        .orderBy(desc(agentStates.updatedAt))
-        .limit(100);
+router.get("/", authenticateToken, async (req: AuthRequest, res: Response) => {
+  try {
+    const allStates = await db
+      .select()
+      .from(agentStates)
+      .orderBy(desc(agentStates.updatedAt))
+      .limit(100);
 
-      res.json(allStates);
-    } catch (error) {
-      console.error("[AgentRoutes] List workflows error:", error);
-      res.status(500).json({ error: "Failed to list workflows" });
-    }
+    res.json(allStates);
+  } catch (error) {
+    console.error("[AgentRoutes] List workflows error:", error);
+    res.status(500).json({ error: "Failed to list workflows" });
   }
-);
+});
 
 export default router;

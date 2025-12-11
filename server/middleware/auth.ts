@@ -1,5 +1,5 @@
-import { Request, Response, NextFunction } from 'express';
-import { verifyToken, TokenPayload } from '../lib/auth';
+import { Request, Response, NextFunction } from "express";
+import { verifyToken, TokenPayload } from "../lib/auth";
 
 export interface AuthRequest extends Request {
   user?: TokenPayload;
@@ -8,19 +8,25 @@ export interface AuthRequest extends Request {
 export function authenticateToken(
   req: AuthRequest,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) {
-  const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1];
+  const authHeader = req.headers["authorization"];
+
+  // Check if authorization header exists and starts with "Bearer " (case-sensitive)
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return res.status(401).json({ error: "Access token required" });
+  }
+
+  const token = authHeader.split(" ")[1];
 
   if (!token) {
-    return res.status(401).json({ error: 'Access token required' });
+    return res.status(401).json({ error: "Access token required" });
   }
 
   const payload = verifyToken(token);
-  
+
   if (!payload) {
-    return res.status(403).json({ error: 'Invalid or expired token' });
+    return res.status(403).json({ error: "Invalid or expired token" });
   }
 
   req.user = payload;
@@ -30,10 +36,10 @@ export function authenticateToken(
 export function optionalAuth(
   req: AuthRequest,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) {
-  const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1];
+  const authHeader = req.headers["authorization"];
+  const token = authHeader && authHeader.split(" ")[1];
 
   if (token) {
     const payload = verifyToken(token);
@@ -41,6 +47,6 @@ export function optionalAuth(
       req.user = payload;
     }
   }
-  
+
   next();
 }

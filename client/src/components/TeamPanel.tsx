@@ -1,43 +1,43 @@
-import { useState, useEffect } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogHeader, 
-  DialogTitle, 
+import { useState, useEffect } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
   DialogTrigger,
-  DialogFooter
-} from '@/components/ui/dialog';
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
-} from '@/components/ui/select';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { useToast } from '@/hooks/use-toast';
-import { useAuthStore } from '@/lib/auth';
-import { 
-  Users, 
-  UserPlus, 
-  Crown, 
-  Edit, 
-  Eye, 
-  Trash2, 
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { useToast } from "@/hooks/use-toast";
+import { useAuthStore } from "@/lib/auth";
+import {
+  Users,
+  UserPlus,
+  Crown,
+  Edit,
+  Eye,
+  Trash2,
   Circle,
-  MoreVertical 
-} from 'lucide-react';
+  MoreVertical,
+} from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+} from "@/components/ui/dropdown-menu";
 
 interface TeamMember {
   id: number;
@@ -79,38 +79,40 @@ const roleIcons: Record<string, typeof Crown> = {
 };
 
 const roleColors: Record<string, string> = {
-  owner: 'bg-amber-500/10 text-amber-500 border-amber-500/20',
-  editor: 'bg-blue-500/10 text-blue-500 border-blue-500/20',
-  viewer: 'bg-gray-500/10 text-gray-400 border-gray-500/20',
+  owner: "bg-amber-500/10 text-amber-500 border-amber-500/20",
+  editor: "bg-blue-500/10 text-blue-500 border-blue-500/20",
+  viewer: "bg-gray-500/10 text-gray-400 border-gray-500/20",
 };
 
 export function TeamPanel({ projectId }: TeamPanelProps) {
   const [isAddMemberOpen, setIsAddMemberOpen] = useState(false);
-  const [selectedUserId, setSelectedUserId] = useState<string>('');
-  const [selectedRole, setSelectedRole] = useState<string>('viewer');
+  const [selectedUserId, setSelectedUserId] = useState<string>("");
+  const [selectedRole, setSelectedRole] = useState<string>("viewer");
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { accessToken: token } = useAuthStore();
 
-  const { data: members = [], isLoading: loadingMembers } = useQuery<TeamMember[]>({
-    queryKey: ['team-members', projectId],
+  const { data: members = [], isLoading: loadingMembers } = useQuery<
+    TeamMember[]
+  >({
+    queryKey: ["team-members", projectId],
     queryFn: async () => {
       const res = await fetch(`/api/team/projects/${projectId}/members`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      if (!res.ok) throw new Error('Failed to fetch team members');
+      if (!res.ok) throw new Error("Failed to fetch team members");
       return res.json();
     },
     enabled: !!token,
   });
 
   const { data: onlineUsers = [] } = useQuery<OnlineUser[]>({
-    queryKey: ['presence', projectId],
+    queryKey: ["presence", projectId],
     queryFn: async () => {
       const res = await fetch(`/api/team/projects/${projectId}/presence`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      if (!res.ok) throw new Error('Failed to fetch presence');
+      if (!res.ok) throw new Error("Failed to fetch presence");
       return res.json();
     },
     enabled: !!token,
@@ -118,12 +120,12 @@ export function TeamPanel({ projectId }: TeamPanelProps) {
   });
 
   const { data: allUsers = [] } = useQuery<User[]>({
-    queryKey: ['users'],
+    queryKey: ["users"],
     queryFn: async () => {
-      const res = await fetch('/api/team/users', {
+      const res = await fetch("/api/team/users", {
         headers: { Authorization: `Bearer ${token}` },
       });
-      if (!res.ok) throw new Error('Failed to fetch users');
+      if (!res.ok) throw new Error("Failed to fetch users");
       return res.json();
     },
     enabled: !!token && isAddMemberOpen,
@@ -132,62 +134,78 @@ export function TeamPanel({ projectId }: TeamPanelProps) {
   const addMemberMutation = useMutation({
     mutationFn: async ({ userId, role }: { userId: number; role: string }) => {
       const res = await fetch(`/api/team/projects/${projectId}/members`, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({ userId, role }),
       });
       if (!res.ok) {
         const error = await res.json();
-        throw new Error(error.error || 'Failed to add member');
+        throw new Error(error.error || "Failed to add member");
       }
       return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['team-members', projectId] });
+      queryClient.invalidateQueries({ queryKey: ["team-members", projectId] });
       setIsAddMemberOpen(false);
-      setSelectedUserId('');
-      setSelectedRole('viewer');
-      toast({ title: 'Team member added successfully' });
+      setSelectedUserId("");
+      setSelectedRole("viewer");
+      toast({ title: "Team member added successfully" });
     },
     onError: (error: Error) => {
-      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
     },
   });
 
   const updateRoleMutation = useMutation({
-    mutationFn: async ({ memberId, role }: { memberId: number; role: string }) => {
-      const res = await fetch(`/api/team/projects/${projectId}/members/${memberId}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
+    mutationFn: async ({
+      memberId,
+      role,
+    }: {
+      memberId: number;
+      role: string;
+    }) => {
+      const res = await fetch(
+        `/api/team/projects/${projectId}/members/${memberId}`,
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ role }),
         },
-        body: JSON.stringify({ role }),
-      });
-      if (!res.ok) throw new Error('Failed to update role');
+      );
+      if (!res.ok) throw new Error("Failed to update role");
       return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['team-members', projectId] });
-      toast({ title: 'Role updated' });
+      queryClient.invalidateQueries({ queryKey: ["team-members", projectId] });
+      toast({ title: "Role updated" });
     },
   });
 
   const removeMemberMutation = useMutation({
     mutationFn: async (memberId: number) => {
-      const res = await fetch(`/api/team/projects/${projectId}/members/${memberId}`, {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!res.ok) throw new Error('Failed to remove member');
+      const res = await fetch(
+        `/api/team/projects/${projectId}/members/${memberId}`,
+        {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
+      if (!res.ok) throw new Error("Failed to remove member");
       return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['team-members', projectId] });
-      toast({ title: 'Team member removed' });
+      queryClient.invalidateQueries({ queryKey: ["team-members", projectId] });
+      toast({ title: "Team member removed" });
     },
   });
 
@@ -197,20 +215,20 @@ export function TeamPanel({ projectId }: TeamPanelProps) {
 
     const updatePresence = async () => {
       try {
-        await fetch('/api/team/presence', {
-          method: 'POST',
+        await fetch("/api/team/presence", {
+          method: "POST",
           headers: {
-            'Content-Type': 'application/json',
+            "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify({
             projectId,
             currentPage: window.location.pathname,
-            status: 'online',
+            status: "online",
           }),
         });
       } catch (error) {
-        console.error('Failed to update presence:', error);
+        console.error("Failed to update presence:", error);
       }
     };
 
@@ -219,14 +237,19 @@ export function TeamPanel({ projectId }: TeamPanelProps) {
     return () => clearInterval(interval);
   }, [token, projectId]);
 
-  const onlineUserIds = new Set(onlineUsers.map(u => u.userId));
+  const onlineUserIds = new Set(onlineUsers.map((u) => u.userId));
   const availableUsers = allUsers.filter(
-    u => !members.some(m => m.userId === u.id)
+    (u) => !members.some((m) => m.userId === u.id),
   );
 
   const getInitials = (name: string | null, email: string) => {
     if (name) {
-      return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+      return name
+        .split(" ")
+        .map((n) => n[0])
+        .join("")
+        .toUpperCase()
+        .slice(0, 2);
     }
     return email.slice(0, 2).toUpperCase();
   };
@@ -256,12 +279,15 @@ export function TeamPanel({ projectId }: TeamPanelProps) {
               <div className="space-y-4 py-4">
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Select User</label>
-                  <Select value={selectedUserId} onValueChange={setSelectedUserId}>
+                  <Select
+                    value={selectedUserId}
+                    onValueChange={setSelectedUserId}
+                  >
                     <SelectTrigger>
                       <SelectValue placeholder="Choose a user..." />
                     </SelectTrigger>
                     <SelectContent>
-                      {availableUsers.map(user => (
+                      {availableUsers.map((user) => (
                         <SelectItem key={user.id} value={user.id.toString()}>
                           {user.name || user.email}
                         </SelectItem>
@@ -285,13 +311,15 @@ export function TeamPanel({ projectId }: TeamPanelProps) {
               </div>
               <DialogFooter>
                 <Button
-                  onClick={() => addMemberMutation.mutate({
-                    userId: parseInt(selectedUserId),
-                    role: selectedRole,
-                  })}
+                  onClick={() =>
+                    addMemberMutation.mutate({
+                      userId: parseInt(selectedUserId, 10),
+                      role: selectedRole,
+                    })
+                  }
                   disabled={!selectedUserId || addMemberMutation.isPending}
                 >
-                  {addMemberMutation.isPending ? 'Adding...' : 'Add Member'}
+                  {addMemberMutation.isPending ? "Adding..." : "Add Member"}
                 </Button>
               </DialogFooter>
             </DialogContent>
@@ -304,12 +332,14 @@ export function TeamPanel({ projectId }: TeamPanelProps) {
             {loadingMembers ? (
               <div className="text-center text-gray-500 py-4">Loading...</div>
             ) : members.length === 0 ? (
-              <div className="text-center text-gray-500 py-4">No team members yet</div>
+              <div className="text-center text-gray-500 py-4">
+                No team members yet
+              </div>
             ) : (
-              members.map(member => {
+              members.map((member) => {
                 const RoleIcon = roleIcons[member.role] || Eye;
                 const isOnline = onlineUserIds.has(member.userId);
-                
+
                 return (
                   <div
                     key={member.id}
@@ -325,7 +355,9 @@ export function TeamPanel({ projectId }: TeamPanelProps) {
                         </Avatar>
                         <Circle
                           className={`absolute -bottom-0.5 -right-0.5 h-3 w-3 ${
-                            isOnline ? 'text-green-500 fill-green-500' : 'text-gray-500 fill-gray-500'
+                            isOnline
+                              ? "text-green-500 fill-green-500"
+                              : "text-gray-500 fill-gray-500"
                           }`}
                         />
                       </div>
@@ -333,51 +365,68 @@ export function TeamPanel({ projectId }: TeamPanelProps) {
                         <p className="text-sm font-medium">
                           {member.userName || member.userEmail}
                         </p>
-                        <p className="text-xs text-gray-500">{member.userEmail}</p>
+                        <p className="text-xs text-gray-500">
+                          {member.userEmail}
+                        </p>
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Badge variant="outline" className={`${roleColors[member.role]} text-xs`}>
+                      <Badge
+                        variant="outline"
+                        className={`${roleColors[member.role]} text-xs`}
+                      >
                         <RoleIcon className="h-3 w-3 mr-1" />
                         {member.role}
                       </Badge>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-7 w-7">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7"
+                          >
                             <MoreVertical className="h-4 w-4" />
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem
-                            onClick={() => updateRoleMutation.mutate({
-                              memberId: member.id,
-                              role: 'owner',
-                            })}
+                            onClick={() =>
+                              updateRoleMutation.mutate({
+                                memberId: member.id,
+                                role: "owner",
+                              })
+                            }
                           >
                             <Crown className="h-4 w-4 mr-2" />
                             Make Owner
                           </DropdownMenuItem>
                           <DropdownMenuItem
-                            onClick={() => updateRoleMutation.mutate({
-                              memberId: member.id,
-                              role: 'editor',
-                            })}
+                            onClick={() =>
+                              updateRoleMutation.mutate({
+                                memberId: member.id,
+                                role: "editor",
+                              })
+                            }
                           >
                             <Edit className="h-4 w-4 mr-2" />
                             Make Editor
                           </DropdownMenuItem>
                           <DropdownMenuItem
-                            onClick={() => updateRoleMutation.mutate({
-                              memberId: member.id,
-                              role: 'viewer',
-                            })}
+                            onClick={() =>
+                              updateRoleMutation.mutate({
+                                memberId: member.id,
+                                role: "viewer",
+                              })
+                            }
                           >
                             <Eye className="h-4 w-4 mr-2" />
                             Make Viewer
                           </DropdownMenuItem>
                           <DropdownMenuItem
                             className="text-red-500"
-                            onClick={() => removeMemberMutation.mutate(member.id)}
+                            onClick={() =>
+                              removeMemberMutation.mutate(member.id)
+                            }
                           >
                             <Trash2 className="h-4 w-4 mr-2" />
                             Remove
@@ -391,13 +440,16 @@ export function TeamPanel({ projectId }: TeamPanelProps) {
             )}
           </div>
         </ScrollArea>
-        
+
         {onlineUsers.length > 0 && (
           <div className="mt-4 pt-4 border-t border-white/10">
             <p className="text-xs text-gray-500 mb-2">Currently online</p>
             <div className="flex -space-x-2">
-              {onlineUsers.slice(0, 5).map(user => (
-                <Avatar key={user.id} className="h-6 w-6 border-2 border-[#1a1a1a]">
+              {onlineUsers.slice(0, 5).map((user) => (
+                <Avatar
+                  key={user.id}
+                  className="h-6 w-6 border-2 border-[#1a1a1a]"
+                >
                   <AvatarFallback className="bg-green-500/20 text-green-500 text-[10px]">
                     {getInitials(user.userName, user.userEmail)}
                   </AvatarFallback>
