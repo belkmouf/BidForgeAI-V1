@@ -6,8 +6,10 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2, Building2, Globe, Palette, Image, FileText, CheckCircle, Upload, ExternalLink, User, Phone, Mail, MapPin, Award } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Loader2, Building2, Globe, Palette, Image, FileText, CheckCircle, Upload, ExternalLink, User, Phone, Mail, MapPin, Award, Sparkles } from 'lucide-react';
 import { useAuthStore, apiRequest } from '@/lib/auth';
+import { WebsiteAutoFill } from '@/components/onboarding/website-auto-fill';
 import bidForgeLogo from '@assets/generated_images/bidforge_ai_premium_logo.png';
 
 export default function OnboardingWizard() {
@@ -36,7 +38,19 @@ export default function OnboardingWizard() {
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingBranding, setIsLoadingBranding] = useState(true);
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
+  const [showAutoFill, setShowAutoFill] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleAutoFillData = (data: any) => {
+    if (data.name) setCompanyName(data.name);
+    if (data.description) setAboutUs(data.description);
+    if (data.website) setWebsiteUrl(data.website);
+    if (data.email) setContactEmail(data.email);
+    if (data.phone) setContactPhone(data.phone);
+    if (data.address) setStreetAddress(data.address);
+    if (data.logo) setLogoUrl(data.logo);
+    setShowAutoFill(false);
+  };
 
   useEffect(() => {
     const fetchBranding = async () => {
@@ -201,7 +215,33 @@ export default function OnboardingWizard() {
               )}
               
               <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-slate-700 border-b pb-2">Company Information</h3>
+                <div className="flex items-center justify-between border-b pb-2">
+                  <h3 className="text-lg font-semibold text-slate-700">Company Information</h3>
+                  <Dialog open={showAutoFill} onOpenChange={setShowAutoFill}>
+                    <DialogTrigger asChild>
+                      <Button 
+                        type="button" 
+                        variant="outline" 
+                        size="sm"
+                        className="text-deep-teal border-deep-teal/50 hover:bg-deep-teal/10"
+                        data-testid="button-auto-fill"
+                      >
+                        <Sparkles className="h-4 w-4 mr-2" />
+                        Auto-Fill from Website
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                      <DialogHeader>
+                        <DialogTitle>Auto-Fill Company Information</DialogTitle>
+                      </DialogHeader>
+                      <WebsiteAutoFill
+                        onDataExtracted={handleAutoFillData}
+                        onCancel={() => setShowAutoFill(false)}
+                        initialWebsite={websiteUrl}
+                      />
+                    </DialogContent>
+                  </Dialog>
+                </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
