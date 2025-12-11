@@ -14,6 +14,7 @@ export interface ProductService {
 export interface CompanyInfo {
   name?: string;
   description?: string;
+  fullAboutContent?: string; // Full multi-paragraph about content
   website?: string;
   email?: string;
   phone?: string;
@@ -160,9 +161,15 @@ export class WebsiteFetcher {
     info.name = this.extractCompanyName($, title, url);
     if (info.name) confidenceScore += 0.3;
 
-    // Description extraction
+    // Description extraction (short version for meta/preview)
     info.description = metaDescription || ogDescription || this.extractDescriptionFromContent($);
     if (info.description) confidenceScore += 0.2;
+
+    // Full About content extraction (multi-paragraph for RAG)
+    info.fullAboutContent = this.extractFullAboutContent($);
+    if (info.fullAboutContent && info.fullAboutContent.length > 200) {
+      confidenceScore += 0.15; // Bonus for comprehensive about content
+    }
 
     // Contact information
     const contactInfo = this.extractContactInfo($);
@@ -436,7 +443,7 @@ export class WebsiteFetcher {
   }
 
   private extractDescriptionFromContent($: cheerio.CheerioAPI): string | undefined {
-    // Look for about sections
+    // Look for about sections - return short description for meta purposes
     const aboutSelectors = [
       '.about',
       '#about',
@@ -455,6 +462,172 @@ export class WebsiteFetcher {
     }
 
     return undefined;
+  }
+
+  /**
+   * Extract full About Us content - multiple paragraphs for comprehensive company description
+   * This is used for RAG and detailed company profile
+   */
+  private extractFullAboutContent($: cheerio.CheerioAPI): string | undefined {
+    const contentParts: string[] = [];
+    
+    // Priority 1: Look for dedicated about sections with multiple paragraphs
+    const aboutSectionSelectors = [
+      '#about',
+      '.about-us',
+      '.about-section',
+      '[data-section="about"]',
+      'section.about',
+      'div.about',
+      '.company-about',
+      '.who-we-are',
+      '.about-company'
+    ];
+
+    for (const selector of aboutSectionSelectors) {
+      const section = $(selector);
+      if (section.length > 0) {
+        // Get all paragraphs within the section
+        const paragraphs: string[] = [];
+        section.find('p').each((_, el) => {
+          const text = $(el).text().trim();
+          if (text.length > 30 && !this.isNavigationText(text)) {
+            paragraphs.push(text);
+          }
+        });
+        
+        // Also check for div content if no paragraphs
+        if (paragraphs.length === 0) {
+          section.find('div').each((_, el) => {
+            const text = $(el).text().trim();
+            if (text.length > 50 && text.length < 2000 && !this.isNavigationText(text)) {
+              paragraphs.push(text);
+            }
+          });
+        }
+        
+        if (paragraphs.length > 0) {
+          contentParts.push(...paragraphs);
+        }
+      }
+    }
+
+    // Priority 2: Look for hero/intro sections with detailed content
+    const heroSelectors = [
+      '.hero-content',
+      '.hero-text',
+      '.intro-section',
+      '.welcome-section',
+      '.main-content'
+    ];
+
+    for (const selector of heroSelectors) {
+      const section = $(selector);
+      if (section.length > 0 && contentParts.length < 3) {
+        section.find('p').each((_, el) => {
+          const text = $(el).text().trim();
+          if (text.length > 50 && !this.isNavigationText(text) && !contentParts.includes(text)) {
+            contentParts.push(text);
+          }
+        });
+      }
+    }
+
+    // Priority 3: Look for article schema content
+    $('script[type="application/ld+json"]').each((_, element) => {
+      try {
+        const data = JSON.parse($(element).text());
+        if (data['@type'] === 'Organization' && data.description && data.description.length > 100) {
+          if (!contentParts.includes(data.description)) {
+            contentParts.unshift(data.description); // Add at beginning as most authoritative
+          }
+        }
+        if (data['@type'] === 'AboutPage' && data.mainEntity?.description) {
+          if (!contentParts.includes(data.mainEntity.description)) {
+            contentParts.push(data.mainEntity.description);
+          }
+        }
+      } catch (e) {
+        // Ignore JSON parse errors
+      }
+    });
+
+    // Priority 4: Get main content paragraphs if we still don't have much
+    if (contentParts.length < 2) {
+      $('main p, article p, .content p, section p, .container p').each((index, el) => {
+        if (index < 8) { // Check more paragraphs
+          const text = $(el).text().trim();
+          if (text.length > 50 && !this.isNavigationText(text) && !contentParts.includes(text)) {
+            contentParts.push(text);
+          }
+        }
+      });
+    }
+
+    // Priority 5: Look for any substantial text blocks in body sections
+    if (contentParts.length < 2) {
+      const bodySelectors = [
+        'body section',
+        '.page-content',
+        '.site-content',
+        '.wrapper',
+        '#main',
+        'main',
+        '[role="main"]'
+      ];
+      
+      for (const selector of bodySelectors) {
+        if (contentParts.length >= 3) break;
+        $(selector).find('p, h2 + p, h3 + p, .text, .description').each((index, el) => {
+          if (index < 5 && contentParts.length < 5) {
+            const text = $(el).text().trim();
+            if (text.length > 60 && text.length < 1500 && !this.isNavigationText(text) && !contentParts.includes(text)) {
+              contentParts.push(text);
+            }
+          }
+        });
+      }
+    }
+
+    // Priority 6: Use meta description if we have nothing else
+    if (contentParts.length === 0) {
+      const metaDesc = $('meta[name="description"]').attr('content')?.trim();
+      const ogDesc = $('meta[property="og:description"]').attr('content')?.trim();
+      if (metaDesc && metaDesc.length > 50) {
+        contentParts.push(metaDesc);
+      } else if (ogDesc && ogDesc.length > 50) {
+        contentParts.push(ogDesc);
+      }
+    }
+
+    // Clean and deduplicate
+    const uniqueParts = Array.from(new Set(contentParts))
+      .filter(text => text.length > 30)
+      .slice(0, 10); // Limit to 10 paragraphs max
+
+    if (uniqueParts.length === 0) {
+      return undefined;
+    }
+
+    // Join with double newline for clear paragraph separation
+    const fullContent = uniqueParts.join('\n\n');
+    
+    // Limit total content to ~5000 chars for RAG efficiency
+    return fullContent.length > 5000 ? fullContent.substring(0, 5000) + '...' : fullContent;
+  }
+
+  /**
+   * Check if text appears to be navigation/menu text rather than content
+   */
+  private isNavigationText(text: string): boolean {
+    const navPatterns = [
+      /^(home|about|services?|products?|contact|login|sign up|menu|go back)$/i,
+      /^(read more|learn more|click here|view all)$/i,
+      /^[\d\s\-\(\)]+$/, // Phone number patterns
+      /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/, // Email patterns
+    ];
+    
+    return navPatterns.some(pattern => pattern.test(text.trim()));
   }
 
   private extractCompanyDetails($: cheerio.CheerioAPI): Partial<CompanyInfo> {

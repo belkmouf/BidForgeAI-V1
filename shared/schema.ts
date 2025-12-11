@@ -41,7 +41,24 @@ export const insertCompanySchema = z.object({
 });
 
 // Users Table
-// Branding Profile Type
+// Product/Service Type for company branding
+export type CompanyProductService = {
+  name: string;
+  description?: string;
+  category?: string;
+  type: 'product' | 'service';
+};
+
+// Social Media Links Type
+export type SocialMediaLinks = {
+  linkedin?: string;
+  twitter?: string;
+  facebook?: string;
+  instagram?: string;
+  youtube?: string;
+};
+
+// Branding Profile Type (extended to include all website-fetched data)
 export type BrandingProfile = {
   companyName?: string;
   tagline?: string;
@@ -49,6 +66,7 @@ export type BrandingProfile = {
   primaryColor?: string;
   logoUrl?: string;
   aboutUs?: string;
+  fullAboutContent?: string; // Full multi-paragraph about content from website
   contactName?: string;
   contactTitle?: string;
   contactPhone?: string;
@@ -58,6 +76,16 @@ export type BrandingProfile = {
   state?: string;
   zip?: string;
   licenseNumber?: string;
+  // Extended fields for website-fetched data
+  industry?: string;
+  founded?: string;
+  companySize?: string;
+  products?: CompanyProductService[];
+  services?: CompanyProductService[];
+  socialMedia?: SocialMediaLinks;
+  dataSource?: 'manual' | 'website' | 'mixed'; // Track where data came from
+  lastFetchedAt?: string; // ISO timestamp of last website fetch
+  fetchConfidence?: number; // Confidence score from website fetch
 };
 
 export const users = pgTable("users", {

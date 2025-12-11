@@ -42,7 +42,7 @@ import analyticsRoutes from "./routes/analytics";
 import reportsRoutes from "./routes/reports";
 import adminRoutes from "./routes/admin";
 import v1Routes from "./routes/v1/index";
-import { fetchWebsiteInfo, batchFetchWebsiteInfo, getWebsiteInfoCache } from "./routes/website-info.js";
+import { fetchWebsiteInfo, batchFetchWebsiteInfo, getWebsiteInfoCache, saveWebsiteInfo, fetchAndSaveWebsiteInfo } from "./routes/website-info.js";
 import { apiVersioning, API_VERSIONS, trackVersionUsage, VersionedRequest } from "./middleware/versioning";
 import { authenticateToken, optionalAuth, AuthRequest } from "./middleware/auth";
 import { requirePermission, requireRole, PERMISSIONS } from "./middleware/rbac";
@@ -246,6 +246,8 @@ export async function registerRoutes(
   app.post('/api/website-info/fetch', authenticateToken, fetchWebsiteInfo);
   app.post('/api/website-info/batch', authenticateToken, batchFetchWebsiteInfo);
   app.get('/api/website-info/cache', authenticateToken, getWebsiteInfoCache);
+  app.post('/api/website-info/save', authenticateToken, saveWebsiteInfo);
+  app.post('/api/website-info/fetch-and-save', authenticateToken, fetchAndSaveWebsiteInfo);
   
   // ==================== PROJECTS ====================
   
