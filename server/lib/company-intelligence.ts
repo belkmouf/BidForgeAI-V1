@@ -117,6 +117,7 @@ export class CompanyIntelligenceService {
 
   /**
    * Convert CompanyInfo to BrandingProfile format
+   * Builds a comprehensive about statement that includes products and services
    */
   private convertToBrandingProfile(info: CompanyInfo): BrandingProfile {
     const products: CompanyProductService[] = (info.products || []).map(p => ({
@@ -140,10 +141,13 @@ export class CompanyIntelligenceService {
     if (info.instagram) socialMedia.instagram = info.instagram;
     if (info.youtube) socialMedia.youtube = info.youtube;
 
+    // Build comprehensive about statement including products and services
+    const comprehensiveAbout = this.buildComprehensiveAbout(info, services, products);
+
     return {
       companyName: info.name,
       websiteUrl: info.website,
-      aboutUs: info.description,
+      aboutUs: comprehensiveAbout,
       fullAboutContent: info.fullAboutContent,
       logoUrl: info.logo,
       contactEmail: info.email,
@@ -159,6 +163,54 @@ export class CompanyIntelligenceService {
       lastFetchedAt: new Date().toISOString(),
       fetchConfidence: info.confidence
     };
+  }
+
+  /**
+   * Build a comprehensive about statement that includes company description,
+   * products, and services for use in bid generation
+   */
+  private buildComprehensiveAbout(
+    info: CompanyInfo, 
+    services: CompanyProductService[], 
+    products: CompanyProductService[]
+  ): string {
+    const parts: string[] = [];
+
+    // Start with the company description
+    if (info.description) {
+      parts.push(info.description);
+    }
+
+    // Add services section if available
+    if (services.length > 0) {
+      const serviceNames = services
+        .filter(s => s.name && s.name.length > 2)
+        .map(s => s.name)
+        .slice(0, 15); // Limit to 15 services
+      
+      if (serviceNames.length > 0) {
+        parts.push(`\n\nOur Services: ${serviceNames.join(', ')}.`);
+      }
+    }
+
+    // Add products section if available
+    if (products.length > 0) {
+      const productNames = products
+        .filter(p => p.name && p.name.length > 2)
+        .map(p => p.name)
+        .slice(0, 15); // Limit to 15 products
+      
+      if (productNames.length > 0) {
+        parts.push(`\n\nOur Products & Capabilities: ${productNames.join(', ')}.`);
+      }
+    }
+
+    // Add industry context if available
+    if (info.industry) {
+      parts.push(`\n\nIndustry: ${info.industry}.`);
+    }
+
+    return parts.join('') || info.description || '';
   }
 
   /**
