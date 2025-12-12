@@ -125,10 +125,17 @@ export function CompanyOnboardingForm({
     }
   };
 
-  const errorsList = Object.entries(errors).map(([field, error]) => ({
-    field: field.charAt(0).toUpperCase() + field.slice(1).replace(/([A-Z])/g, ' $1'),
-    message: error?.message || 'Invalid value'
-  }));
+  const errorsList = Object.entries(errors).map(([field, error]) => {
+    const fieldName = field.charAt(0).toUpperCase() + field.slice(1).replace(/([A-Z])/g, ' $1');
+    let message = error?.message || 'Invalid value';
+    
+    // Format message for clarity
+    if (!message || message === 'Invalid value') {
+      message = `${fieldName} is invalid`;
+    }
+    
+    return { field: fieldName, message };
+  });
 
   if (showAutoFill) {
     return (
