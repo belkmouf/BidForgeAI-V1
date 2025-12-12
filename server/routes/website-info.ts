@@ -55,8 +55,8 @@ export async function fetchWebsiteInfo(req: Request, res: Response): Promise<voi
     const userId = (req as any).user?.userId;
     
     logContext.audit('Website info fetch requested', {
+      action: 'website_info_fetch',
       userId,
-      website,
       userAgent: req.get('User-Agent'),
       ip: req.ip
     });
@@ -67,10 +67,10 @@ export async function fetchWebsiteInfo(req: Request, res: Response): Promise<voi
     });
 
     logContext.audit('Website info fetch completed', {
+      action: 'website_info_fetch',
       userId,
-      website,
-      confidence: result.confidence,
-      fieldsFound: Object.keys(result).filter(k => result[k as keyof typeof result]).length
+      userAgent: req.get('User-Agent'),
+      ip: req.ip
     });
 
     res.json({
@@ -81,11 +81,11 @@ export async function fetchWebsiteInfo(req: Request, res: Response): Promise<voi
 
   } catch (error: any) {
     logContext.security('Website info fetch failed', {
-      userId: (req as any).user?.userId,
-      error: error.message,
-      website: req.body?.website,
       action: 'website_info_fetch',
-      result: 'failure'
+      result: 'failure',
+      error: error.message,
+      ip: req.ip,
+      userAgent: req.get('User-Agent')
     });
 
     if (error instanceof z.ZodError) {
@@ -110,8 +110,8 @@ export async function batchFetchWebsiteInfo(req: Request, res: Response): Promis
     const userId = (req as any).user?.userId;
 
     logContext.audit('Batch website info fetch requested', {
+      action: 'batch_website_info_fetch',
       userId,
-      websiteCount: websites.length,
       userAgent: req.get('User-Agent'),
       ip: req.ip
     });
@@ -143,10 +143,10 @@ export async function batchFetchWebsiteInfo(req: Request, res: Response): Promis
       }));
 
     logContext.audit('Batch website info fetch completed', {
+      action: 'batch_website_info_fetch',
       userId,
-      totalRequested: websites.length,
-      successful: successfulResults.length,
-      failed: failedResults.length
+      userAgent: req.get('User-Agent'),
+      ip: req.ip
     });
 
     res.json({
@@ -232,11 +232,10 @@ export async function saveWebsiteInfo(req: Request, res: Response): Promise<void
     }
 
     logContext.audit('Website info save requested', {
+      action: 'website_info_save',
       userId,
-      companyId,
-      website: websiteInfo.website,
-      saveToRag,
-      fieldsProvided: Object.keys(websiteInfo).filter(k => websiteInfo[k as keyof typeof websiteInfo]).length
+      userAgent: req.get('User-Agent'),
+      ip: req.ip
     });
 
     // Save to branding profile and optionally to RAG
@@ -247,11 +246,10 @@ export async function saveWebsiteInfo(req: Request, res: Response): Promise<void
     );
 
     logContext.audit('Website info saved successfully', {
+      action: 'website_info_save',
       userId,
-      companyId,
-      documentId: result.documentId,
-      chunksCreated: result.chunksCreated,
-      brandingUpdated: result.brandingProfileUpdated
+      userAgent: req.get('User-Agent'),
+      ip: req.ip
     });
 
     res.json({
@@ -306,9 +304,10 @@ export async function fetchAndSaveWebsiteInfo(req: Request, res: Response): Prom
     }
 
     logContext.audit('Website fetch and save requested', {
+      action: 'website_fetch_and_save',
       userId,
-      companyId,
-      website
+      userAgent: req.get('User-Agent'),
+      ip: req.ip
     });
 
     // Fetch website info
@@ -325,12 +324,10 @@ export async function fetchAndSaveWebsiteInfo(req: Request, res: Response): Prom
     );
 
     logContext.audit('Website fetch and save completed', {
+      action: 'website_fetch_and_save',
       userId,
-      companyId,
-      website,
-      confidence: websiteInfo.confidence,
-      documentId: saveResult.documentId,
-      chunksCreated: saveResult.chunksCreated
+      ip: req.ip,
+      userAgent: req.get('User-Agent')
     });
 
     res.json({
@@ -347,11 +344,11 @@ export async function fetchAndSaveWebsiteInfo(req: Request, res: Response): Prom
 
   } catch (error: any) {
     logContext.security('Website fetch and save failed', {
-      userId: (req as any).user?.userId,
-      error: error.message,
-      website: req.body?.website,
       action: 'website_fetch_and_save',
-      result: 'failure'
+      result: 'failure',
+      error: error.message,
+      ip: req.ip,
+      userAgent: req.get('User-Agent')
     });
 
     if (error instanceof z.ZodError) {

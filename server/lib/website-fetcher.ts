@@ -952,7 +952,7 @@ export class WebsiteFetcher {
         
         if (cacheAge > maxAge) {
           // Cache expired, remove it
-          await cache.del(cacheKey);
+          await cache.delete(cacheKey);
           return null;
         }
         
@@ -981,10 +981,8 @@ export class WebsiteFetcher {
       
       logContext.performance('Website info cached', {
         operation: 'website_cache_set',
-        url,
-        confidence: info.confidence,
-        ttl,
-        fieldsCount: Object.keys(info).length
+        duration: 0,
+        success: true
       });
       
     } catch (error: any) {
@@ -1036,11 +1034,10 @@ export class WebsiteFetcher {
       const waitTime = domainLimits.resetTime - now;
       
       logContext.security('Rate limit exceeded for domain', {
-        domain,
-        count: domainLimits.count,
-        waitTime,
         action: 'rate_limit_exceeded',
-        result: 'blocked'
+        result: 'blocked',
+        ip: '',
+        userAgent: ''
       });
       
       throw new Error(`Rate limit exceeded for ${domain}. Try again in ${Math.ceil(waitTime / 60000)} minutes.`);

@@ -210,11 +210,11 @@ export async function registerRoutes(
   
   // For backwards compatibility, also serve v1 routes on the base /api path
   // This maintains compatibility while allowing explicit versioning
-  app.use('/api', (req: VersionedRequest, res, next) => {
+  app.use('/api', ((req: VersionedRequest, res, next) => {
     // Track version usage for analytics
     trackVersionUsage(req);
     next();
-  });
+  }) as any);
   
   // ==================== AUTHENTICATION ====================
   app.use('/api/auth', authRoutes);
