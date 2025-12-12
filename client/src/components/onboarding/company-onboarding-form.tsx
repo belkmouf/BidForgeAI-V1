@@ -9,9 +9,10 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { WebsiteAutoFill } from './website-auto-fill';
 import { useToast } from '@/hooks/use-toast';
-import { Building, Sparkles, UserPlus, Save, CheckCircle, AlertTriangle } from 'lucide-react';
+import { Building, Sparkles, UserPlus, Save, CheckCircle, AlertTriangle, AlertCircle } from 'lucide-react';
 
 const companySchema = z.object({
   name: z.string().min(2, 'Company name must be at least 2 characters'),
@@ -42,6 +43,7 @@ export function CompanyOnboardingForm({
 }: CompanyOnboardingFormProps) {
   const [showAutoFill, setShowAutoFill] = useState(false);
   const [autoFilledFields, setAutoFilledFields] = useState<Set<string>>(new Set());
+  const [showValidationErrors, setShowValidationErrors] = useState(false);
   const { toast } = useToast();
 
   const {
@@ -108,6 +110,10 @@ export function CompanyOnboardingForm({
   };
 
   const handleFormSubmit = async (data: CompanyFormData) => {
+    if (Object.keys(errors).length > 0) {
+      setShowValidationErrors(true);
+      return;
+    }
     try {
       await onSubmit(data);
     } catch (error: any) {
@@ -118,6 +124,11 @@ export function CompanyOnboardingForm({
       });
     }
   };
+
+  const errorsList = Object.entries(errors).map(([field, error]) => ({
+    field: field.charAt(0).toUpperCase() + field.slice(1).replace(/([A-Z])/g, ' $1'),
+    message: error?.message || 'Invalid value'
+  }));
 
   if (showAutoFill) {
     return (
@@ -400,6 +411,37 @@ export function CompanyOnboardingForm({
           </form>
         </CardContent>
       </Card>
+
+      {/* Validation Error Dialog */}
+      <Dialog open={showValidationErrors} onOpenChange={setShowValidationErrors}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-600">
+              <AlertCircle className="h-5 w-5" />
+              Validation Failed
+            </DialogTitle>
+            <DialogDescription>
+              Please fix the following errors before submitting:
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            {errorsList.map((error, idx) => (
+              <div key={idx} className="flex items-start gap-3 p-2 rounded-lg bg-red-50 border border-red-200">
+                <AlertTriangle className="h-4 w-4 text-red-600 mt-0.5 flex-shrink-0" />
+                <div>
+                  <p className="font-medium text-sm text-red-900">{error.field}</p>
+                  <p className="text-xs text-red-700">{error.message}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="flex justify-end gap-2 pt-4">
+            <Button onClick={() => setShowValidationErrors(false)} variant="outline">
+              Close
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
