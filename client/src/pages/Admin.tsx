@@ -142,7 +142,7 @@ export default function Admin() {
   const { accessToken: token, user: currentUser } = useAuthStore();
 
   // Check if user is admin
-  if (currentUser?.role !== 'admin') {
+  if (currentUser?.role !== 'admin' && currentUser?.role !== 'system_admin') {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center">
         <Card className="border-red-200 bg-white p-8 text-center shadow-lg">
