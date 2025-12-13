@@ -141,22 +141,6 @@ export default function Admin() {
   const queryClient = useQueryClient();
   const { accessToken: token, user: currentUser } = useAuthStore();
 
-  // Check if user is admin
-  if (currentUser?.role !== 'admin' && currentUser?.role !== 'system_admin') {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center">
-        <Card className="border-red-200 bg-white p-8 text-center shadow-lg">
-          <Shield className="h-12 w-12 text-red-500 mx-auto mb-4" />
-          <h2 className="text-xl font-bold mb-2 text-slate-800">Access Denied</h2>
-          <p className="text-slate-600">You need admin privileges to access this page.</p>
-          <Link href="/dashboard">
-            <Button className="mt-4">Go to Dashboard</Button>
-          </Link>
-        </Card>
-      </div>
-    );
-  }
-
   const { data: allUsers = [], isLoading: loadingUsers } = useQuery<User[]>({
     queryKey: ['admin-users'],
     queryFn: async () => {
@@ -434,6 +418,22 @@ export default function Admin() {
       toast({ title: 'User deleted' });
     },
   });
+
+  // Check if user is admin
+  if (currentUser?.role !== 'admin' && currentUser?.role !== 'system_admin') {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center">
+        <Card className="border-red-200 bg-white p-8 text-center shadow-lg">
+          <Shield className="h-12 w-12 text-red-500 mx-auto mb-4" />
+          <h2 className="text-xl font-bold mb-2 text-slate-800">Access Denied</h2>
+          <p className="text-slate-600">You need admin privileges to access this page.</p>
+          <Link href="/dashboard">
+            <Button className="mt-4">Go to Dashboard</Button>
+          </Link>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
