@@ -1,4 +1,4 @@
-import type { Express } from "express";
+import type { Express, Response, NextFunction, RequestHandler } from "express";
 import { createServer, type Server } from "http";
 import * as crypto from "crypto";
 import { storage } from "./storage";
@@ -97,7 +97,8 @@ async function processKnowledgeBaseDocument(
       textContent = buffer.toString('utf-8');
     } else if (fileType === 'pdf') {
       try {
-        const pdfParse = (await import('pdf-parse')).default;
+        const pdfModule = await import('pdf-parse');
+        const pdfParse = (pdfModule as any).default || (pdfModule as any);
         const { text } = await pdfParse(buffer);
         textContent = text || '';
       } catch (pdfError: any) {
@@ -203,18 +204,18 @@ export async function registerRoutes(
   
   // ==================== API VERSIONING ====================
   // Apply API versioning middleware to all API routes
-  app.use('/api', apiVersioning);
+  app.use('/api', apiVersioning as any);
   
   // Version-specific routes
   app.use('/api/v1', v1Routes);
   
   // For backwards compatibility, also serve v1 routes on the base /api path
   // This maintains compatibility while allowing explicit versioning
-  app.use('/api', ((req: VersionedRequest, res, next) => {
+  app.use('/api', ((req: VersionedRequest, res: Response, next: NextFunction) => {
     // Track version usage for analytics
     trackVersionUsage(req);
     next();
-  }) as any);
+  }) as unknown as RequestHandler);
   
   // ==================== AUTHENTICATION ====================
   app.use('/api/auth', authRoutes);
