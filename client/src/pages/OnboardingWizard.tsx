@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Loader2, Building2, Globe, Palette, Image, FileText, CheckCircle, Upload, ExternalLink, User, Phone, Mail, MapPin, Award, Sparkles, AlertTriangle, AlertCircle } from 'lucide-react';
 import { useAuthStore, apiRequest } from '@/lib/auth';
 import { WebsiteAutoFill } from '@/components/onboarding/website-auto-fill';
-import bidForgeLogo from '@assets/generated_images/bidforge_ai_premium_logo.png';
+import bidForgeLogo from '@assets/bidforge_logo.png';
 
 export default function OnboardingWizard() {
   const [, setLocation] = useLocation();

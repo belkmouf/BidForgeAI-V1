@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2, Mail, Lock, User, UserPlus, Building2 } from "lucide-react";
 import { register } from "@/lib/auth";
-import bidForgeLogo from "@assets/generated_images/bidforge_ai_premium_logo.png";
+import bidForgeLogo from "@assets/bidforge_logo.png";
 
 export default function Register() {
   const [, setLocation] = useLocation();

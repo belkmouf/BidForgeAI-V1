@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuthStore, apiRequest } from "@/lib/auth";
-import bidForgeLogo from "@assets/generated_images/bidforge_ai_premium_logo.png";
+import bidForgeLogo from "@assets/bidforge_logo.png";
 
 import _1764979718 from "@assets/1764979718.png";
 
