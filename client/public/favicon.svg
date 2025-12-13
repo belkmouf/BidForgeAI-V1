@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- Dark blue background -->
+  <rect width="64" height="64" fill="#193D6D"/>
+  <!-- Golden gear circle -->
+  <circle cx="32" cy="32" r="24" fill="none" stroke="#DAA520" stroke-width="3"/>
+  <!-- Center circle -->
+  <circle cx="32" cy="32" r="8" fill="#DAA520"/>
+  <!-- Gear teeth -->
+  <circle cx="32" cy="10" r="4" fill="#DAA520"/>
+  <circle cx="52" cy="32" r="4" fill="#DAA520"/>
+  <circle cx="32" cy="54" r="4" fill="#DAA520"/>
+  <circle cx="12" cy="32" r="4" fill="#DAA520"/>
+</svg>
