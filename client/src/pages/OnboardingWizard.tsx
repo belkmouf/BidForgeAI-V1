@@ -6,8 +6,8 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Loader2, Building2, Globe, Palette, Image, FileText, CheckCircle, Upload, ExternalLink, User, Phone, Mail, MapPin, Award, Sparkles } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
+import { Loader2, Building2, Globe, Palette, Image, FileText, CheckCircle, Upload, ExternalLink, User, Phone, Mail, MapPin, Award, Sparkles, AlertTriangle, AlertCircle } from 'lucide-react';
 import { useAuthStore, apiRequest } from '@/lib/auth';
 import { WebsiteAutoFill } from '@/components/onboarding/website-auto-fill';
 import bidForgeLogo from '@assets/generated_images/bidforge_ai_premium_logo.png';
@@ -39,6 +39,8 @@ export default function OnboardingWizard() {
   const [isLoadingBranding, setIsLoadingBranding] = useState(true);
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
   const [showAutoFill, setShowAutoFill] = useState(false);
+  const [showValidationErrors, setShowValidationErrors] = useState(false);
+  const [validationErrors, setValidationErrors] = useState<Array<{field: string; message: string}>>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleAutoFillData = (data: any) => {
@@ -132,6 +134,7 @@ export default function OnboardingWizard() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setValidationErrors([]);
     setIsLoading(true);
 
     try {
@@ -163,7 +166,21 @@ export default function OnboardingWizard() {
       const data = await res.json();
 
       if (!res.ok) {
-        setError(data.error || data.details?.[0]?.message || 'Failed to complete setup');
+        // Handle validation errors from Zod
+        if (data.details && Array.isArray(data.details)) {
+          const errors = data.details.map((err: any) => {
+            const fieldName = err.path?.[0] || 'Field';
+            const capitalizedField = String(fieldName).charAt(0).toUpperCase() + String(fieldName).slice(1).replace(/([A-Z])/g, ' $1');
+            return {
+              field: capitalizedField,
+              message: err.message || 'Invalid value'
+            };
+          });
+          setValidationErrors(errors);
+          setShowValidationErrors(true);
+        } else {
+          setError(data.error || 'Failed to complete setup');
+        }
       } else {
         updateUser({ onboardingStatus: 'complete' });
         setLocation('/');
@@ -658,6 +675,37 @@ export default function OnboardingWizard() {
           </div>
         </div>
       </div>
+
+      {/* Validation Error Dialog */}
+      <Dialog open={showValidationErrors} onOpenChange={setShowValidationErrors}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-600">
+              <AlertCircle className="h-5 w-5" />
+              Validation Failed
+            </DialogTitle>
+            <DialogDescription>
+              Please fix the following errors before submitting:
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            {validationErrors.map((error, idx) => (
+              <div key={idx} className="flex items-start gap-3 p-2 rounded-lg bg-red-50 border border-red-200">
+                <AlertTriangle className="h-4 w-4 text-red-600 mt-0.5 flex-shrink-0" />
+                <div>
+                  <p className="font-medium text-sm text-red-900">{error.field}</p>
+                  <p className="text-xs text-red-700">{error.message}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="flex justify-end gap-2 pt-4">
+            <Button onClick={() => setShowValidationErrors(false)} variant="outline">
+              Close
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
