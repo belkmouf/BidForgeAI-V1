@@ -144,13 +144,6 @@ export function GeneratePanel({ onGenerate, isGenerating }: GeneratePanelProps) 
           </Button>
         </div>
       </Card>
-
-      <div className="bg-primary/5 rounded-lg p-4 border border-primary/10">
-        <h4 className="text-xs font-bold text-primary uppercase tracking-wider mb-2">RAG Context Active</h4>
-        <p className="text-xs text-muted-foreground">
-          The AI will automatically retrieve relevant sections from the uploaded RFP documents and your historical "Closed-Won" projects to ensure accuracy.
-        </p>
-      </div>
     </div>
   );
 }
