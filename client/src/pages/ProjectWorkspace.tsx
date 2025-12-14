@@ -298,6 +298,8 @@ export default function ProjectWorkspace() {
     }
   };
 
+  const isCollapsed = useSidebarStore((state) => state.isCollapsed);
+
   if (isLoading) {
     return (
       <div className="flex h-screen items-center justify-center bg-background">
@@ -320,8 +322,6 @@ export default function ProjectWorkspace() {
       </div>
     );
   }
-
-  const isCollapsed = useSidebarStore((state) => state.isCollapsed);
 
   return (
     <div className="flex h-screen bg-background overflow-hidden">
