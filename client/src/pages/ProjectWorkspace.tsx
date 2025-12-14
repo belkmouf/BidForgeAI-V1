@@ -464,7 +464,7 @@ export default function ProjectWorkspace() {
             <ResizableHandle />
 
             {/* Right: AI Controls */}
-            <ResizablePanel defaultSize={25} minSize={20} maxSize={40} className="bg-card border-l border-border">
+            <ResizablePanel defaultSize={25} minSize={20} maxSize={40} className="bg-primary/10 border-l border-border">
               <div className="h-full flex flex-col p-4">
                 <div className="flex-1 flex flex-col min-h-0 gap-6">
                   <GeneratePanel onGenerate={handleGenerate} isGenerating={isGenerating} />
