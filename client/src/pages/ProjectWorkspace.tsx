@@ -390,7 +390,7 @@ export default function ProjectWorkspace() {
           <ResizablePanelGroup direction="horizontal">
             
             {/* Left: Upload Zone + Bid History */}
-            <ResizablePanel defaultSize={20} minSize={15} maxSize={30} className="bg-primary/10">
+            <ResizablePanel defaultSize={20} minSize={15} maxSize={30} className="bg-primary/20">
               <div className="h-full p-4 flex flex-col gap-4">
                 <div className="flex-shrink-0">
                   <h2 className="font-semibold text-sm mb-4 flex items-center gap-2">
@@ -464,7 +464,7 @@ export default function ProjectWorkspace() {
             <ResizableHandle />
 
             {/* Right: AI Controls */}
-            <ResizablePanel defaultSize={25} minSize={20} maxSize={40} className="bg-primary/10 border-l border-border">
+            <ResizablePanel defaultSize={25} minSize={20} maxSize={40} className="bg-primary/20 border-l border-border">
               <div className="h-full flex flex-col p-4">
                 <div className="flex-1 flex flex-col min-h-0 gap-6">
                   <GeneratePanel onGenerate={handleGenerate} isGenerating={isGenerating} />
