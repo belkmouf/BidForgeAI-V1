@@ -214,6 +214,7 @@ export const documents = pgTable("documents", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   projectId: varchar("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
   filename: text("filename").notNull(),
+  description: text("description"),
   content: text("content"),
   isProcessed: boolean("is_processed").default(false).notNull(),
   uploadedAt: timestamp("uploaded_at").defaultNow().notNull(),

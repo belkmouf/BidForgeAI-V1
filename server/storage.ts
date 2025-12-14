@@ -85,6 +85,7 @@ export interface IStorage {
   ): Promise<Document | undefined>;
   listDocumentsByProject(projectId: string): Promise<Document[]>;
   updateDocumentProcessed(id: number, isProcessed: boolean): Promise<void>;
+  updateDocument(id: number, companyId: number | null, updates: Partial<Document>): Promise<Document | undefined>;
   deleteDocument(id: number, companyId: number | null): Promise<boolean>;
 
   // Document Chunks (company-scoped RAG)
@@ -367,6 +368,24 @@ export class DatabaseStorage implements IStorage {
     isProcessed: boolean,
   ): Promise<void> {
     await db.update(documents).set({ isProcessed }).where(eq(documents.id, id));
+  }
+
+  async updateDocument(
+    id: number,
+    companyId: number | null,
+    updates: Partial<Document>,
+  ): Promise<Document | undefined> {
+    // Verify document belongs to this company's project
+    const doc = await this.getDocument(id, companyId);
+    if (!doc) {
+      return undefined;
+    }
+    const [updated] = await db
+      .update(documents)
+      .set(updates)
+      .where(eq(documents.id, id))
+      .returning();
+    return updated || undefined;
   }
 
   async deleteDocument(id: number, companyId: number | null): Promise<boolean> {

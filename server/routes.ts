@@ -425,6 +425,36 @@ export async function registerRoutes(
     }
   });
 
+  // Update document description (requires authentication, company-scoped)
+  app.patch("/api/documents/:documentId", authenticateToken, async (req: AuthRequest, res) => {
+    try {
+      const documentId = parseInt(req.params.documentId, 10);
+      if (isNaN(documentId)) {
+        return res.status(400).json({ error: "Invalid document ID" });
+      }
+
+      const { description } = req.body;
+      const companyId = req.user?.companyId ?? null;
+      
+      // Verify document exists and belongs to this company's project
+      const document = await storage.getDocument(documentId, companyId);
+      if (!document) {
+        return res.status(404).json({ error: "Document not found" });
+      }
+
+      // Update the document
+      const updated = await storage.updateDocument(documentId, companyId, { description });
+      if (updated) {
+        res.json(updated);
+      } else {
+        res.status(500).json({ error: "Failed to update document" });
+      }
+    } catch (error: any) {
+      console.error('Update document error:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // Delete a document (requires authentication, company-scoped)
   app.delete("/api/documents/:documentId", authenticateToken, async (req: AuthRequest, res) => {
     try {
