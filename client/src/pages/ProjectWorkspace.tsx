@@ -390,7 +390,7 @@ export default function ProjectWorkspace() {
           <ResizablePanelGroup direction="horizontal">
             
             {/* Left: Upload Zone + Bid History */}
-            <ResizablePanel defaultSize={20} minSize={15} maxSize={30} className="bg-muted/20">
+            <ResizablePanel defaultSize={20} minSize={15} maxSize={30} className="bg-primary/10">
               <div className="h-full p-4 flex flex-col gap-4">
                 <div className="flex-shrink-0">
                   <h2 className="font-semibold text-sm mb-4 flex items-center gap-2">
