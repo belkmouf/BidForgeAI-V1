@@ -100,7 +100,7 @@ export function DropZone({ onUpload, onDelete, files: initialFiles = [] }: DropZ
         {...getRootProps()}
         className={cn(
           "border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors mb-4",
-          isDragActive ? "border-primary bg-primary/5" : "border-border hover:border-primary/50 hover:bg-muted/50"
+          isDragActive ? "border-primary bg-primary/5" : "border-primary/30 hover:border-primary/50 hover:bg-muted/50"
         )}
       >
         <input {...getInputProps()} />
@@ -121,7 +121,7 @@ export function DropZone({ onUpload, onDelete, files: initialFiles = [] }: DropZ
       <ScrollArea className="flex-1 -mx-2 px-2">
         <div className="space-y-2">
           {allFiles.map((file) => (
-            <div key={file.id} className="p-3 rounded-md border border-border bg-card hover:shadow-sm transition-all">
+            <div key={file.id} className="p-3 rounded-md border-2 border-primary/30 bg-card hover:shadow-sm transition-all">
               <div className="flex items-start gap-3">
                 <div className="mt-1">
                   {getFileIcon(file.type)}

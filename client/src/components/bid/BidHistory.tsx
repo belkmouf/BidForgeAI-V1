@@ -93,7 +93,7 @@ export function BidHistory({ projectId, onSelectBid, refreshTrigger }: BidHistor
   }
 
   return (
-    <Card className="h-full flex flex-col">
+    <Card className="h-full flex flex-col border-2 border-primary/30">
       <CardHeader className="pb-3 flex-shrink-0">
         <CardTitle className="text-sm font-medium flex items-center gap-2">
           <History className="h-4 w-4" />
@@ -118,7 +118,7 @@ export function BidHistory({ projectId, onSelectBid, refreshTrigger }: BidHistor
               {bids.map((bid) => (
                 <div
                   key={bid.id}
-                  className="p-3 rounded-lg border bg-card hover:bg-accent/50 cursor-pointer transition-colors group"
+                  className="p-3 rounded-lg border-2 border-primary/30 bg-card hover:bg-accent/50 cursor-pointer transition-colors group"
                   onClick={() => onSelectBid(bid.rawContent || bid.content, bid.id)}
                   data-testid={`bid-history-item-${bid.id}`}
                 >

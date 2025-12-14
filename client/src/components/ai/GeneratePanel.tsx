@@ -54,7 +54,7 @@ export function GeneratePanel({ onGenerate, isGenerating }: GeneratePanelProps) 
         <h3>AI Bid Generator</h3>
       </div>
 
-      <Card className="p-4 bg-card border-border shadow-sm">
+      <Card className="p-4 bg-card border-2 border-primary/30 shadow-sm">
         <div className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="model">AI Model</Label>
@@ -124,7 +124,7 @@ export function GeneratePanel({ onGenerate, isGenerating }: GeneratePanelProps) 
           </div>
 
           <Button 
-            className="w-full gap-2 font-medium" 
+            className="w-full gap-2 font-medium border-2 border-primary/50" 
             size="lg" 
             onClick={handleGenerate}
             disabled={isGenerating || !selectedInstructionId || isLoading}

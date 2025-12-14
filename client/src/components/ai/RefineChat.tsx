@@ -89,10 +89,10 @@ export function RefineChat({ onRefine }: RefineChatProps) {
               </Avatar>
               <div
                 className={cn(
-                  "rounded-lg px-3 py-2 max-w-[80%]",
+                  "rounded-lg px-3 py-2 max-w-[80%] border-2",
                   msg.role === 'user' 
-                    ? "bg-primary text-primary-foreground" 
-                    : "bg-muted text-foreground"
+                    ? "bg-primary text-primary-foreground border-primary" 
+                    : "bg-muted text-foreground border-primary/30"
                 )}
               >
                 {msg.content}
@@ -109,9 +109,9 @@ export function RefineChat({ onRefine }: RefineChatProps) {
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-          className="flex-1"
+          className="flex-1 border-2 border-primary/30"
         />
-        <Button size="icon" onClick={handleSend} disabled={!input.trim()}>
+        <Button size="icon" onClick={handleSend} disabled={!input.trim()} className="border-2 border-primary/30">
           <Send className="h-4 w-4" />
         </Button>
       </div>
