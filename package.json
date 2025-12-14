@@ -17,7 +17,11 @@
     "test:client": "jest client/",
     "test:e2e": "playwright test",
     "lint": "eslint . --ext .ts,.tsx --fix",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "sketch:setup": "cd sketch-agent && python3 -m pip install -r requirements.txt",
+    "sketch:test": "cd sketch-agent && python3 main_standalone.py",
+    "sketch:health": "python3 --version && echo 'Python is available'",
+    "postinstall": "npm run sketch:setup || echo 'Warning: Python sketch agent setup failed. Install Python dependencies manually.'"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.71.0",

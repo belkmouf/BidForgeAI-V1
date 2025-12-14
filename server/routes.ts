@@ -57,6 +57,7 @@ import { validateCompanyUserRole } from '@shared/schema';
 import { generateBidTemplate, wrapContentInTemplate, getCompanyConfig, getUserBrandingConfig, type BidData, type TemplateOptions } from './lib/templates/bid-template-generator';
 import { wrapContentInPremiumTemplate } from './lib/templates/gcc-premium-template';
 import { sanitizeModelHtml } from './lib/ai-output';
+import { pythonSketchClient } from './lib/pythonSketchClient';
 import multer from "multer";
 import { z } from "zod";
 
@@ -352,60 +353,142 @@ export async function registerRoutes(
   // ==================== DOCUMENTS ====================
 
   // Upload a document to a project with recursive file processing (requires authentication, company-scoped)
-  app.post("/api/projects/:id/upload", authenticateToken, upload.single('file'), async (req: AuthRequest, res) => {
+  // ENHANCED: Now supports multiple files and sketch analysis
+  app.post("/api/projects/:id/upload", authenticateToken, upload.array('files', 10), async (req: AuthRequest, res) => {
     try {
-      if (!req.file) {
-        return res.status(400).json({ error: "No file uploaded" });
+      const files = req.files as Express.Multer.File[];
+
+      if (!files || files.length === 0) {
+        return res.status(400).json({ error: "No files uploaded" });
       }
 
       const projectId = req.params.id;
       const companyId = req.user?.companyId ?? null;
-      
+
       // Verify project exists and belongs to this company
       const project = await storage.getProject(projectId, companyId);
       if (!project) {
         return res.status(404).json({ error: "Project not found" });
       }
 
-      // Sanitize filename to prevent path traversal
-      const originalName = req.file.originalname;
-      const safeFilename = originalName.replace(/[^\w\s.-]/g, '_').replace(/\.{2,}/g, '.').trim();
-      if (!safeFilename || safeFilename.length === 0) {
-        return res.status(400).json({ error: 'Invalid filename' });
+      // Classify files into sketches (images) and documents (text)
+      const imageExtensions = ['.png', '.jpg', '.jpeg', '.gif', '.tiff', '.bmp', '.webp'];
+      const documentExtensions = ['.pdf', '.msg', '.zip', '.txt', '.doc', '.docx'];
+
+      const sketches: Express.Multer.File[] = [];
+      const documents: Express.Multer.File[] = [];
+
+      for (const file of files) {
+        // Sanitize filename
+        const originalName = file.originalname;
+        const safeFilename = originalName.replace(/[^\w\s.-]/g, '_').replace(/\.{2,}/g, '.').trim();
+
+        if (!safeFilename || safeFilename.length === 0) {
+          console.warn(`Skipping file with invalid name: ${originalName}`);
+          continue;
+        }
+
+        // Validate file size
+        const maxSize = 50 * 1024 * 1024; // 50MB
+        if (file.size > maxSize || file.size === 0) {
+          console.warn(`Skipping file ${safeFilename}: invalid size`);
+          continue;
+        }
+
+        // Classify by extension
+        const fileExt = safeFilename.toLowerCase().match(/\.[^.]*$/)?.[0] || '';
+
+        if (imageExtensions.includes(fileExt)) {
+          sketches.push(file);
+        } else if (documentExtensions.includes(fileExt)) {
+          documents.push(file);
+        } else {
+          console.warn(`Skipping file ${safeFilename}: unsupported type`);
+        }
       }
 
-      // Validate file size
-      const maxSize = 50 * 1024 * 1024; // 50MB
-      if (req.file.size > maxSize) {
-        return res.status(400).json({ 
-          error: `File too large. Maximum size is ${maxSize / 1024 / 1024}MB` 
-        });
-      }
-      if (req.file.size === 0) {
-        return res.status(400).json({ error: 'Empty file not allowed' });
+      let workflow: string;
+      let sketchResults: any[] = [];
+
+      // Conditional triggering: ONLY run Python agent if sketches present
+      if (sketches.length > 0) {
+        workflow = 'with-sketches';
+        console.log(`Processing ${sketches.length} sketches with Python vision agent...`);
+
+        const fs = await import('fs/promises');
+        const path = await import('path');
+        const os = await import('os');
+
+        // Save sketches to temp files for Python processing
+        const tempPaths: string[] = [];
+
+        try {
+          for (const sketch of sketches) {
+            const tempPath = path.join(os.tmpdir(), `sketch_${Date.now()}_${sketch.originalname}`);
+            await fs.writeFile(tempPath, sketch.buffer);
+            tempPaths.push(tempPath);
+          }
+
+          // Analyze sketches using Python agent
+          const context = req.body.context || `Project ${project.title || projectId}`;
+          const analysisResults = await pythonSketchClient.analyzeMultiple(tempPaths, context);
+
+          // Extract successful results
+          sketchResults = analysisResults
+            .filter(r => r.success)
+            .map(r => r.result);
+
+          // Log failures
+          analysisResults
+            .filter(r => !r.success)
+            .forEach((r, i) => {
+              console.error(`Sketch analysis failed for ${sketches[i].originalname}: ${r.error}`);
+            });
+
+        } finally {
+          // Clean up temp files
+          for (const tempPath of tempPaths) {
+            try {
+              await fs.unlink(tempPath);
+            } catch (err) {
+              console.error(`Failed to delete temp file: ${tempPath}`);
+            }
+          }
+        }
+      } else {
+        workflow = 'text-only';
+        console.log('No sketches detected, using text-only workflow');
       }
 
-      // Validate file type
-      const allowedExtensions = ['.pdf', '.msg', '.zip', '.txt', '.doc', '.docx'];
-      const fileExt = safeFilename.toLowerCase().match(/\.[^.]*$/)?.[0] || '';
-      
-      if (!allowedExtensions.includes(fileExt)) {
-        return res.status(400).json({ 
-          error: `Unsupported file type. Allowed: ${allowedExtensions.join(', ')}` 
-        });
-      }
+      // Process documents with existing ingestion service
+      const processedFiles: any[] = [];
+      for (const doc of documents) {
+        const safeFilename = doc.originalname.replace(/[^\w\s.-]/g, '_').replace(/\.{2,}/g, '.').trim();
 
-      // Process file with recursive extraction (ZIP→MSG→PDF chains)
-      const processedFiles = await ingestionService.processFile(
-        req.file.buffer,
-        safeFilename,
-        projectId
-      );
+        try {
+          const processed = await ingestionService.processFile(
+            doc.buffer,
+            safeFilename,
+            projectId
+          );
+          processedFiles.push(...processed);
+        } catch (error: any) {
+          console.error(`Failed to process document ${safeFilename}:`, error.message);
+        }
+      }
 
       const totalChunks = processedFiles.reduce((sum, f) => sum + f.chunksCreated, 0);
 
       res.json({
-        message: "File uploaded and processed successfully",
+        success: true,
+        workflow,
+        message: workflow === 'with-sketches'
+          ? `Processed ${sketches.length} sketches and ${documents.length} documents`
+          : `Processed ${documents.length} documents`,
+        has_sketches: sketches.length > 0,
+        sketch_count: sketches.length,
+        document_count: documents.length,
+        sketch_results: sketchResults,
         filesProcessed: processedFiles.length,
         totalChunks,
         documents: processedFiles,
