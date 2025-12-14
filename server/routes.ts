@@ -52,7 +52,7 @@ import {
   sanitizeFeedback,
   InputSanitizationError 
 } from './lib/sanitize';
-import { estimateBidGenerationCost } from './lib/pricing';
+import { calculateLMMCost } from './lib/pricing';
 import { validateCompanyUserRole } from '@shared/schema';
 import { generateBidTemplate, wrapContentInTemplate, getCompanyConfig, getUserBrandingConfig, type BidData, type TemplateOptions } from './lib/templates/bid-template-generator';
 import { wrapContentInPremiumTemplate } from './lib/templates/gcc-premium-template';
@@ -488,11 +488,17 @@ export async function registerRoutes(
 
   // ==================== BID GENERATION ====================
 
+  interface AIGenerationResult {
+    content: string;
+    inputTokens: number;
+    outputTokens: number;
+  }
+
   // Helper function to generate bid with a specific model
   async function generateBidWithModel(
     modelName: string,
     params: { instructions: string; context: string; tone: string }
-  ): Promise<string> {
+  ): Promise<AIGenerationResult> {
     switch (modelName) {
       case 'anthropic':
         return generateBidWithAnthropic(params);
@@ -657,8 +663,8 @@ or contact details from other sources.
         const generatedBids = await Promise.all(
           models.map(async (modelName) => {
             try {
-              const rawOutput = await generateBidWithModel(modelName, generationParams);
-              const cleanedHtml = sanitizeModelHtml(rawOutput);
+              const result = await generateBidWithModel(modelName, generationParams);
+              const cleanedHtml = sanitizeModelHtml(result.content);
               // Wrap AI-generated content with premium GCC Gulf template
               const html = wrapContentInPremiumTemplate(
                 cleanedHtml,
@@ -667,9 +673,10 @@ or contact details from other sources.
                 {},
                 companyConfigForTemplate
               );
-              return { model: modelName, html, rawContent: cleanedHtml, success: true };
+              const lmmCost = calculateLMMCost(modelName, result.inputTokens, result.outputTokens);
+              return { model: modelName, html, rawContent: cleanedHtml, success: true, inputTokens: result.inputTokens, outputTokens: result.outputTokens, lmmCost };
             } catch (error: any) {
-              return { model: modelName, html: '', success: false, error: error.message };
+              return { model: modelName, html: '', success: false, error: error.message, inputTokens: 0, outputTokens: 0, lmmCost: 0 };
             }
           })
         );
@@ -679,7 +686,6 @@ or contact details from other sources.
         for (const genResult of generatedBids) {
           if (genResult.success && genResult.html) {
             try {
-              const lmmCost = estimateBidGenerationCost(genResult.model);
               const savedBid = await storage.createBid({
                 projectId,
                 companyId: companyId,
@@ -691,7 +697,7 @@ or contact details from other sources.
                 model: genResult.model,
                 searchMethod,
                 chunksUsed,
-                lmmCost,
+                lmmCost: genResult.lmmCost,
               });
               results.push({ ...genResult, bidId: savedBid.id, version: savedBid.version });
             } catch (saveError: any) {
@@ -711,8 +717,8 @@ or contact details from other sources.
       } else {
         // Single model generation (original behavior)
         const selectedModel = models?.[0] || model;
-        const rawOutput = await generateBidWithModel(selectedModel, generationParams);
-        const cleanedHtml = sanitizeModelHtml(rawOutput);
+        const result = await generateBidWithModel(selectedModel, generationParams);
+        const cleanedHtml = sanitizeModelHtml(result.content);
         
         // Wrap AI-generated content with premium GCC Gulf template
         const html = wrapContentInPremiumTemplate(
@@ -723,8 +729,10 @@ or contact details from other sources.
           companyConfigForTemplate
         );
 
+        // Calculate real LMM cost based on actual token usage
+        const lmmCost = calculateLMMCost(selectedModel, result.inputTokens, result.outputTokens);
+        
         // Save the generated bid to database
-        const lmmCost = estimateBidGenerationCost(selectedModel);
         const savedBid = await storage.createBid({
           projectId,
           companyId: companyId,
@@ -739,7 +747,7 @@ or contact details from other sources.
           lmmCost,
         });
 
-        console.log(`Bid saved with ID: ${savedBid.id}, version: ${savedBid.version}`);
+        console.log(`Bid saved with ID: ${savedBid.id}, version: ${savedBid.version}, LMM cost: $${lmmCost} (${result.inputTokens} input + ${result.outputTokens} output tokens)`);
 
         res.json({
           bid: savedBid,
@@ -748,6 +756,11 @@ or contact details from other sources.
           chunksUsed,
           model: selectedModel,
           searchMethod,
+          tokenUsage: {
+            inputTokens: result.inputTokens,
+            outputTokens: result.outputTokens,
+            lmmCost,
+          },
         });
       }
     } catch (error: any) {
@@ -843,27 +856,39 @@ or contact details from other sources.
       }
 
       // Refine using selected model with sanitized feedback
-      let rawOutput: string;
+      let result: AIGenerationResult;
       switch (model) {
         case 'anthropic':
-          rawOutput = await refineBidWithAnthropic({ currentHtml, feedback: sanitizedFeedback });
+          result = await refineBidWithAnthropic({ currentHtml, feedback: sanitizedFeedback });
           break;
         case 'gemini':
-          rawOutput = await refineBidWithGemini({ currentHtml, feedback: sanitizedFeedback });
+          result = await refineBidWithGemini({ currentHtml, feedback: sanitizedFeedback });
           break;
         case 'deepseek':
-          rawOutput = await refineBidWithDeepSeek({ currentHtml, feedback: sanitizedFeedback });
+          result = await refineBidWithDeepSeek({ currentHtml, feedback: sanitizedFeedback });
           break;
         case 'openai':
         default:
-          rawOutput = await refineBidContent({ currentHtml, feedback: sanitizedFeedback });
+          result = await refineBidContent({ currentHtml, feedback: sanitizedFeedback });
           break;
       }
       
       // Sanitize AI output to remove any markdown code fences
-      const cleanedHtml = sanitizeModelHtml(rawOutput);
+      const cleanedHtml = sanitizeModelHtml(result.content);
+      
+      // Calculate real LMM cost
+      const lmmCost = calculateLMMCost(model, result.inputTokens, result.outputTokens);
 
-      res.json({ html: cleanedHtml, rawContent: cleanedHtml, model });
+      res.json({ 
+        html: cleanedHtml, 
+        rawContent: cleanedHtml, 
+        model,
+        tokenUsage: {
+          inputTokens: result.inputTokens,
+          outputTokens: result.outputTokens,
+          lmmCost,
+        }
+      });
     } catch (error: any) {
       console.error('Refinement error:', error);
       res.status(500).json({ error: error.message });
