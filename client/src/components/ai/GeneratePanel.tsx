@@ -59,7 +59,7 @@ export function GeneratePanel({ onGenerate, isGenerating }: GeneratePanelProps) 
           <div className="space-y-2">
             <Label htmlFor="model">AI Model</Label>
             <Select value={model} onValueChange={(v) => setModel(v as AIModel)}>
-              <SelectTrigger id="model" data-testid="select-ai-model">
+              <SelectTrigger id="model" data-testid="select-ai-model" className="border-2 border-primary/30">
                 <SelectValue placeholder="Select AI model" />
               </SelectTrigger>
               <SelectContent>
@@ -74,7 +74,7 @@ export function GeneratePanel({ onGenerate, isGenerating }: GeneratePanelProps) 
           <div className="space-y-2">
             <Label htmlFor="tone">Tone & Style</Label>
             <Select value={tone} onValueChange={setTone}>
-              <SelectTrigger id="tone" data-testid="select-tone">
+              <SelectTrigger id="tone" data-testid="select-tone" className="border-2 border-primary/30">
                 <SelectValue placeholder="Select tone" />
               </SelectTrigger>
               <SelectContent>
@@ -101,7 +101,7 @@ export function GeneratePanel({ onGenerate, isGenerating }: GeneratePanelProps) 
             ) : (
               <>
                 <Select value={selectedInstructionId} onValueChange={setSelectedInstructionId}>
-                  <SelectTrigger id="instructions" data-testid="select-instructions">
+                  <SelectTrigger id="instructions" data-testid="select-instructions" className="border-2 border-primary/30">
                     <SelectValue placeholder="Select instruction preset" />
                   </SelectTrigger>
                   <SelectContent>
@@ -114,7 +114,7 @@ export function GeneratePanel({ onGenerate, isGenerating }: GeneratePanelProps) 
                   </SelectContent>
                 </Select>
                 {selectedInstruction && (
-                  <div className="p-3 bg-muted/50 rounded-md border text-xs text-muted-foreground max-h-[100px] overflow-y-auto">
+                  <div className="p-3 bg-muted/50 rounded-md border-2 border-primary/30 text-xs text-muted-foreground max-h-[100px] overflow-y-auto">
                     {selectedInstruction.instructions.substring(0, 300)}
                     {selectedInstruction.instructions.length > 300 && '...'}
                   </div>
