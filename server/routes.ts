@@ -52,6 +52,7 @@ import {
   sanitizeFeedback,
   InputSanitizationError 
 } from './lib/sanitize';
+import { estimateBidGenerationCost } from './lib/pricing';
 import { validateCompanyUserRole } from '@shared/schema';
 import { generateBidTemplate, wrapContentInTemplate, getCompanyConfig, getUserBrandingConfig, type BidData, type TemplateOptions } from './lib/templates/bid-template-generator';
 import { wrapContentInPremiumTemplate } from './lib/templates/gcc-premium-template';
@@ -678,6 +679,7 @@ or contact details from other sources.
         for (const genResult of generatedBids) {
           if (genResult.success && genResult.html) {
             try {
+              const lmmCost = estimateBidGenerationCost(genResult.model);
               const savedBid = await storage.createBid({
                 projectId,
                 companyId: companyId,
@@ -689,6 +691,7 @@ or contact details from other sources.
                 model: genResult.model,
                 searchMethod,
                 chunksUsed,
+                lmmCost,
               });
               results.push({ ...genResult, bidId: savedBid.id, version: savedBid.version });
             } catch (saveError: any) {
@@ -721,6 +724,7 @@ or contact details from other sources.
         );
 
         // Save the generated bid to database
+        const lmmCost = estimateBidGenerationCost(selectedModel);
         const savedBid = await storage.createBid({
           projectId,
           companyId: companyId,
@@ -732,6 +736,7 @@ or contact details from other sources.
           model: selectedModel,
           searchMethod,
           chunksUsed,
+          lmmCost,
         });
 
         console.log(`Bid saved with ID: ${savedBid.id}, version: ${savedBid.version}`);

@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { db } from '../db';
-import { users, roles, userRoles, auditLogs, projects, documents } from '@shared/schema';
+import { users, roles, userRoles, auditLogs, projects, documents, bids } from '@shared/schema';
 import { eq, sql, desc, count } from 'drizzle-orm';
 import { authenticateToken, AuthRequest } from '../middleware/auth';
 import { requireRole } from '../middleware/rbac';
@@ -242,6 +242,14 @@ router.get('/stats', authenticateToken, requireRole(['system_admin']), async (re
       .from(auditLogs)
       .where(sql`${auditLogs.createdAt} > ${dayAgo}`);
 
+    // LMM Cost stats
+    const [costStats] = await db
+      .select({
+        totalCost: sql<number>`coalesce(sum(lmm_cost), 0)`,
+        totalBids: sql<number>`count(*)`,
+      })
+      .from(bids);
+
     res.json({
       users: {
         total: Number(userStats?.total || 0),
@@ -260,6 +268,11 @@ router.get('/stats', authenticateToken, requireRole(['system_admin']), async (re
       },
       activity: {
         last24h: Number(activityStats?.last24h || 0),
+      },
+      lmm: {
+        totalCost: Number(costStats?.totalCost || 0),
+        totalBids: Number(costStats?.totalBids || 0),
+        averageCostPerBid: Number(costStats?.totalBids || 0) > 0 ? Math.round((Number(costStats?.totalCost || 0) / Number(costStats?.totalBids || 0)) * 10000) / 10000 : 0,
       },
     });
   } catch (error: any) {
