@@ -21,6 +21,12 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
   MoreHorizontal,
   Plus,
   ArrowUpRight,
@@ -28,6 +34,7 @@ import {
   Calendar,
   Search,
   Filter,
+  DollarSign,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import {
@@ -39,9 +46,9 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Link } from "wouter";
-import { listProjects, getDashboardStats, getProjectCosts } from "@/lib/api";
+import { listProjects, getDashboardStats, getProjectCosts, listBids } from "@/lib/api";
 import { useAuthStore } from "@/lib/auth";
-import type { Project } from "@shared/schema";
+import type { Project, Bid } from "@shared/schema";
 
 export default function Dashboard() {
   const user = useAuthStore((state) => state.user);
@@ -53,6 +60,37 @@ export default function Dashboard() {
   } | null>(null);
   const [projectCosts, setProjectCosts] = useState<Record<string, number>>({});
   const [isLoading, setIsLoading] = useState(true);
+  const [costModalOpen, setCostModalOpen] = useState(false);
+  const [selectedProject, setSelectedProject] = useState<Project | null>(null);
+  const [projectBids, setProjectBids] = useState<Bid[]>([]);
+  const [loadingBids, setLoadingBids] = useState(false);
+
+  const handleCostClick = async (project: Project, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setSelectedProject(project);
+    setCostModalOpen(true);
+    setLoadingBids(true);
+    try {
+      const bids = await listBids(project.id);
+      setProjectBids(bids);
+    } catch (error) {
+      console.error("Failed to load bids:", error);
+      setProjectBids([]);
+    } finally {
+      setLoadingBids(false);
+    }
+  };
+
+  const getModelDisplayName = (model: string | null) => {
+    if (!model) return "Unknown";
+    const names: Record<string, string> = {
+      anthropic: "Claude (Anthropic)",
+      openai: "GPT-4 (OpenAI)",
+      gemini: "Gemini (Google)",
+      deepseek: "DeepSeek",
+    };
+    return names[model] || model;
+  };
 
   useEffect(() => {
     async function loadData() {
@@ -275,8 +313,15 @@ export default function Dashboard() {
                               {project.status}
                             </Badge>
                           </TableCell>
-                          <TableCell className="font-mono text-sm">
-                            ${(projectCosts[project.id] || 0).toFixed(4)}
+                          <TableCell>
+                            <button
+                              onClick={(e) => handleCostClick(project, e)}
+                              className="font-mono text-sm text-primary hover:text-primary/80 hover:underline cursor-pointer flex items-center gap-1"
+                              data-testid={`link-llm-cost-${project.id}`}
+                            >
+                              <DollarSign className="h-3 w-3" />
+                              {(projectCosts[project.id] || 0).toFixed(4)}
+                            </button>
                           </TableCell>
                           <TableCell>
                             <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -369,6 +414,75 @@ export default function Dashboard() {
           </div>
         </div>
       </main>
+
+      <Dialog open={costModalOpen} onOpenChange={setCostModalOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <DollarSign className="h-5 w-5 text-primary" />
+              LLM Costs - {selectedProject?.name}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="mt-4">
+            {loadingBids ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+              </div>
+            ) : projectBids.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                No bids generated for this project yet.
+              </div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Bid Version</TableHead>
+                    <TableHead>AI Model</TableHead>
+                    <TableHead className="text-right">Cost</TableHead>
+                    <TableHead>Generated</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {projectBids.map((bid) => (
+                    <TableRow key={bid.id} data-testid={`row-bid-${bid.id}`}>
+                      <TableCell className="font-medium">
+                        v{bid.version}
+                        {bid.isLatest && (
+                          <Badge variant="outline" className="ml-2 text-xs">
+                            Latest
+                          </Badge>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="secondary" className="font-normal">
+                          {getModelDisplayName(bid.model)}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right font-mono">
+                        ${(bid.lmmCost || 0).toFixed(4)}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground text-sm">
+                        {new Date(bid.createdAt).toLocaleDateString()}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+            <div className="mt-4 pt-4 border-t flex justify-between items-center">
+              <div className="text-sm text-muted-foreground">
+                Total Bids: {projectBids.length}
+              </div>
+              <div className="text-sm font-semibold">
+                Total Cost: $
+                {projectBids
+                  .reduce((sum, bid) => sum + (bid.lmmCost || 0), 0)
+                  .toFixed(4)}
+              </div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
