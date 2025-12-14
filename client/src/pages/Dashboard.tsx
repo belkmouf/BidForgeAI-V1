@@ -9,7 +9,7 @@ import {
   ResponsiveContainer,
   Cell,
 } from "recharts";
-import { AppSidebar } from "@/components/layout/AppSidebar";
+import { AppSidebar, useSidebarStore } from "@/components/layout/AppSidebar";
 import {
   Card,
   CardContent,
@@ -52,6 +52,7 @@ import type { Project, Bid } from "@shared/schema";
 
 export default function Dashboard() {
   const user = useAuthStore((state) => state.user);
+  const isCollapsed = useSidebarStore((state) => state.isCollapsed);
   const [projects, setProjects] = useState<Project[]>([]);
   const [stats, setStats] = useState<{
     pipeline: Record<string, number>;
@@ -167,7 +168,7 @@ export default function Dashboard() {
   return (
     <div className="flex min-h-screen bg-gray-100">
       <AppSidebar />
-      <main className="flex-1 ml-64 p-8 overflow-auto">
+      <main className={`flex-1 p-8 overflow-auto transition-all duration-300 ${isCollapsed ? 'ml-16' : 'ml-64'}`}>
         <div className="max-w-7xl mx-auto space-y-8">
           {/* Header */}
           <div className="flex items-center justify-between">

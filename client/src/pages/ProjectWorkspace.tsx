@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRoute } from 'wouter';
-import { AppSidebar } from '@/components/layout/AppSidebar';
+import { AppSidebar, useSidebarStore } from '@/components/layout/AppSidebar';
 import { DropZone } from '@/components/upload/DropZone';
 import { TiptapEditor } from '@/components/editor/TiptapEditor';
 import { GeneratePanel } from '@/components/ai/GeneratePanel';
@@ -321,11 +321,13 @@ export default function ProjectWorkspace() {
     );
   }
 
+  const isCollapsed = useSidebarStore((state) => state.isCollapsed);
+
   return (
     <div className="flex h-screen bg-background overflow-hidden">
       <AppSidebar />
       
-      <div className="flex-1 flex flex-col ml-64 h-full">
+      <div className={`flex-1 flex flex-col h-full transition-all duration-300 ${isCollapsed ? 'ml-16' : 'ml-64'}`}>
         {/* Header */}
         <header className="h-14 border-b border-border flex items-center justify-between px-4 bg-card z-10">
           <div className="flex items-center gap-4">
