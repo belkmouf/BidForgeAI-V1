@@ -5,7 +5,7 @@ import { storage } from "./storage";
 import { insertProjectSchema, insertDocumentSchema, users } from "@shared/schema";
 import { hashPassword, generateAccessToken } from "./lib/auth";
 import { db } from "./db";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { generateBidContent, refineBidContent, generateEmbedding } from "./lib/openai";
 import { generateBidWithAnthropic, refineBidWithAnthropic } from "./lib/anthropic";
 import { generateBidWithGemini, refineBidWithGemini } from "./lib/gemini";
@@ -980,6 +980,34 @@ or contact details from other sources.
       const companyId = req.user?.companyId ?? null;
       const stats = await storage.getDashboardStats(companyId);
       res.json(stats);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get LLM costs per project (requires authentication, company-scoped)
+  app.get("/api/dashboard/project-costs", authenticateToken, async (req: AuthRequest, res) => {
+    try {
+      const companyId = req.user?.companyId ?? null;
+      
+      // Get total LLM cost per project from bids table
+      const result = await db.execute(sql`
+        SELECT 
+          b.project_id,
+          COALESCE(SUM(b.lmm_cost), 0) as total_cost
+        FROM bids b
+        JOIN projects p ON b.project_id = p.id
+        WHERE ${companyId !== null ? sql`p.company_id = ${companyId}` : sql`p.company_id IS NULL`}
+        GROUP BY b.project_id
+      `);
+      
+      // Convert to a map for easy lookup
+      const costs: Record<string, number> = {};
+      for (const row of result.rows as any[]) {
+        costs[row.project_id] = parseFloat(row.total_cost) || 0;
+      }
+      
+      res.json(costs);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }

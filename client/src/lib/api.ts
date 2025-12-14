@@ -164,6 +164,12 @@ export async function getDashboardStats() {
   }>;
 }
 
+export async function getProjectCosts() {
+  const res = await apiRequest(`${API_BASE}/dashboard/project-costs`);
+  if (!res.ok) throw new Error(await res.text());
+  return res.json() as Promise<Record<string, number>>;
+}
+
 // Public Sharing API
 export async function generateShareLink(bidId: number) {
   const res = await apiRequest(`${API_BASE}/bids/${bidId}/share`, {

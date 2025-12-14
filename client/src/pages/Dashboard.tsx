@@ -39,7 +39,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Link } from "wouter";
-import { listProjects, getDashboardStats } from "@/lib/api";
+import { listProjects, getDashboardStats, getProjectCosts } from "@/lib/api";
 import { useAuthStore } from "@/lib/auth";
 import type { Project } from "@shared/schema";
 
@@ -51,17 +51,20 @@ export default function Dashboard() {
     winRate: number;
     totalProjects: number;
   } | null>(null);
+  const [projectCosts, setProjectCosts] = useState<Record<string, number>>({});
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     async function loadData() {
       try {
-        const [projectsData, statsData] = await Promise.all([
+        const [projectsData, statsData, costsData] = await Promise.all([
           listProjects(),
           getDashboardStats(),
+          getProjectCosts(),
         ]);
         setProjects(projectsData);
         setStats(statsData);
+        setProjectCosts(costsData);
       } catch (error) {
         console.error("Failed to load dashboard data:", error);
       } finally {
@@ -227,7 +230,7 @@ export default function Dashboard() {
                       <TableRow className="hover:bg-transparent">
                         <TableHead>Project Name</TableHead>
                         <TableHead>Status</TableHead>
-                        <TableHead>Value</TableHead>
+                        <TableHead>LLM Cost</TableHead>
                         <TableHead>Due Date</TableHead>
                         <TableHead className="text-right">Action</TableHead>
                       </TableRow>
@@ -273,7 +276,7 @@ export default function Dashboard() {
                             </Badge>
                           </TableCell>
                           <TableCell className="font-mono text-sm">
-                            TBD
+                            ${(projectCosts[project.id] || 0).toFixed(4)}
                           </TableCell>
                           <TableCell>
                             <div className="flex items-center gap-2 text-sm text-muted-foreground">
