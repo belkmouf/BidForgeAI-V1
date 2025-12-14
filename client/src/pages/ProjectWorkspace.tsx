@@ -34,6 +34,7 @@ export default function ProjectWorkspace() {
   const [currentBidId, setCurrentBidId] = useState<number | null>(null);
   const [isSharing, setIsSharing] = useState(false);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+  const isCollapsed = useSidebarStore((state) => state.isCollapsed);
 
   const handleStatusChange = async (newStatus: string) => {
     if (!project) return;
@@ -297,8 +298,6 @@ export default function ProjectWorkspace() {
       });
     }
   };
-
-  const isCollapsed = useSidebarStore((state) => state.isCollapsed);
 
   if (isLoading) {
     return (
