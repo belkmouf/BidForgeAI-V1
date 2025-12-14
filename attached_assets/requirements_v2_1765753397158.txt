@@ -1,0 +1,47 @@
+# FastAPI and server
+fastapi==0.109.0
+uvicorn[standard]==0.27.0
+python-multipart==0.0.6
+
+# Vision Model Providers
+openai==1.12.0                    # OpenAI GPT-4 Vision
+anthropic==0.18.1                  # Anthropic Claude Vision
+google-generativeai==0.3.2         # Google Gemini
+# DeepSeek uses OpenAI-compatible API (no separate SDK needed)
+# Qwen uses OpenAI-compatible API via DashScope
+
+# LangChain
+langchain==0.1.5
+langchain-openai==0.0.5
+langchain-community==0.0.19
+langgraph==0.0.20
+
+# Vector store
+pgvector==0.2.4
+psycopg2-binary==2.9.9
+
+# Image processing
+Pillow==10.2.0
+pdf2image==1.17.0
+
+# Data validation
+pydantic==2.5.3
+pydantic-settings==2.1.0
+
+# Environment and config
+python-dotenv==1.0.0
+
+# Database (optional - if using SQLAlchemy)
+sqlalchemy==2.0.25
+alembic==1.13.1
+
+# Utilities
+python-dateutil==2.8.2
+
+# Testing
+pytest==7.4.4
+pytest-asyncio==0.23.3
+httpx==0.26.0
+
+# Logging and monitoring
+structlog==24.1.0
