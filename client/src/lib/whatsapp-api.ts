@@ -17,6 +17,10 @@ export async function sendMessage(to: string, message: string): Promise<{ succes
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ to, message }),
   });
+  if (!res.ok) {
+    const errorText = await res.text();
+    return { success: false, error: errorText || res.statusText };
+  }
   return res.json();
 }
 
@@ -31,6 +35,10 @@ export async function sendDocument(
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ to, documentUrl, filename, caption }),
   });
+  if (!res.ok) {
+    const errorText = await res.text();
+    return { success: false, error: errorText || res.statusText };
+  }
   return res.json();
 }
 
@@ -45,5 +53,9 @@ export async function sendTemplateMessage(
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ to, templateName, languageCode, components }),
   });
+  if (!res.ok) {
+    const errorText = await res.text();
+    return { success: false, error: errorText || res.statusText };
+  }
   return res.json();
 }
