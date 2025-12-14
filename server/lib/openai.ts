@@ -63,12 +63,18 @@ export async function generateEmbedding(text: string): Promise<number[]> {
   }
 }
 
+export interface AIGenerationResult {
+  content: string;
+  inputTokens: number;
+  outputTokens: number;
+}
+
 // Generate bid content using OpenAI
 export async function generateBidContent(params: {
   instructions: string;
   context: string;
   tone?: string;
-}): Promise<string> {
+}): Promise<AIGenerationResult> {
   const systemPrompt = `You are an expert construction bid writer. You MUST follow these strict rules:
 
 CRITICAL DATA RULES:
@@ -104,14 +110,18 @@ OUTPUT REQUIREMENTS:
     max_tokens: 4000,
   });
 
-  return response.choices[0].message.content || "";
+  return {
+    content: response.choices[0].message.content || "",
+    inputTokens: response.usage?.prompt_tokens || 0,
+    outputTokens: response.usage?.completion_tokens || 0,
+  };
 }
 
 // Refine existing bid content
 export async function refineBidContent(params: {
   currentHtml: string;
   feedback: string;
-}): Promise<string> {
+}): Promise<AIGenerationResult> {
   const systemPrompt = `You are an expert construction bid writer. 
 Apply the user's feedback to improve the bid response.
 Maintain the HTML structure and professional styling.
@@ -130,5 +140,9 @@ CRITICAL: Output ONLY raw HTML content. Do NOT wrap your response in markdown co
     max_tokens: 4000,
   });
 
-  return response.choices[0].message.content || "";
+  return {
+    content: response.choices[0].message.content || "",
+    inputTokens: response.usage?.prompt_tokens || 0,
+    outputTokens: response.usage?.completion_tokens || 0,
+  };
 }

@@ -15,11 +15,17 @@ export const anthropic = new Anthropic({
   baseURL: userAnthropicKey ? undefined : integrationBaseUrl,
 });
 
+export interface AIGenerationResult {
+  content: string;
+  inputTokens: number;
+  outputTokens: number;
+}
+
 export async function generateBidWithAnthropic(params: {
   instructions: string;
   context: string;
   tone?: string;
-}): Promise<string> {
+}): Promise<AIGenerationResult> {
   const systemPrompt = `You are an expert construction bid writer. You MUST follow these strict rules:
 
 CRITICAL DATA RULES:
@@ -55,13 +61,17 @@ OUTPUT REQUIREMENTS:
   });
 
   const textBlock = response.content.find(block => block.type === 'text');
-  return textBlock?.text || '';
+  return {
+    content: textBlock?.text || '',
+    inputTokens: response.usage.input_tokens,
+    outputTokens: response.usage.output_tokens,
+  };
 }
 
 export async function refineBidWithAnthropic(params: {
   currentHtml: string;
   feedback: string;
-}): Promise<string> {
+}): Promise<AIGenerationResult> {
   const systemPrompt = `You are an expert construction bid writer. 
 Apply the user's feedback to improve the bid response.
 Maintain the HTML structure and professional styling.
@@ -80,5 +90,9 @@ CRITICAL: Output ONLY raw HTML content. Do NOT wrap your response in markdown co
   });
 
   const textBlock = response.content.find(block => block.type === 'text');
-  return textBlock?.text || '';
+  return {
+    content: textBlock?.text || '',
+    inputTokens: response.usage.input_tokens,
+    outputTokens: response.usage.output_tokens,
+  };
 }

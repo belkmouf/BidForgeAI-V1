@@ -17,11 +17,17 @@ function getModelName(): string {
   return process.env.DEEPSEEK_API_KEY ? 'deepseek-chat' : 'deepseek/deepseek-chat';
 }
 
+export interface AIGenerationResult {
+  content: string;
+  inputTokens: number;
+  outputTokens: number;
+}
+
 export async function generateBidWithDeepSeek(params: {
   instructions: string;
   context: string;
   tone?: string;
-}): Promise<string> {
+}): Promise<AIGenerationResult> {
   const client = getDeepSeekClient();
   const model = getModelName();
   
@@ -59,13 +65,17 @@ OUTPUT REQUIREMENTS:
     ],
   });
 
-  return response.choices[0]?.message?.content || '';
+  return {
+    content: response.choices[0]?.message?.content || '',
+    inputTokens: response.usage?.prompt_tokens || 0,
+    outputTokens: response.usage?.completion_tokens || 0,
+  };
 }
 
 export async function refineBidWithDeepSeek(params: {
   currentHtml: string;
   feedback: string;
-}): Promise<string> {
+}): Promise<AIGenerationResult> {
   const client = getDeepSeekClient();
   const model = getModelName();
   
@@ -86,5 +96,9 @@ CRITICAL: Output ONLY raw HTML content. Do NOT wrap your response in markdown co
     ],
   });
 
-  return response.choices[0]?.message?.content || '';
+  return {
+    content: response.choices[0]?.message?.content || '',
+    inputTokens: response.usage?.prompt_tokens || 0,
+    outputTokens: response.usage?.completion_tokens || 0,
+  };
 }

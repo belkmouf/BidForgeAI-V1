@@ -34,11 +34,17 @@ export async function generateEmbeddingWithGemini(text: string): Promise<number[
   }
 }
 
+export interface AIGenerationResult {
+  content: string;
+  inputTokens: number;
+  outputTokens: number;
+}
+
 export async function generateBidWithGemini(params: {
   instructions: string;
   context: string;
   tone?: string;
-}): Promise<string> {
+}): Promise<AIGenerationResult> {
   const systemPrompt = `You are an expert construction bid writer. You MUST follow these strict rules:
 
 CRITICAL DATA RULES:
@@ -71,13 +77,17 @@ OUTPUT REQUIREMENTS:
     ],
   });
 
-  return response.text || '';
+  return {
+    content: response.text || '',
+    inputTokens: response.usageMetadata?.promptTokenCount || 0,
+    outputTokens: response.usageMetadata?.candidatesTokenCount || 0,
+  };
 }
 
 export async function refineBidWithGemini(params: {
   currentHtml: string;
   feedback: string;
-}): Promise<string> {
+}): Promise<AIGenerationResult> {
   const systemPrompt = `You are an expert construction bid writer. 
 Apply the user's feedback to improve the bid response.
 Maintain the HTML structure and professional styling.
@@ -93,5 +103,9 @@ CRITICAL: Output ONLY raw HTML content. Do NOT wrap your response in markdown co
     ],
   });
 
-  return response.text || '';
+  return {
+    content: response.text || '',
+    inputTokens: response.usageMetadata?.promptTokenCount || 0,
+    outputTokens: response.usageMetadata?.candidatesTokenCount || 0,
+  };
 }
