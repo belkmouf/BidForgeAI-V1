@@ -77,6 +77,11 @@ export interface IStorage {
     companyId: number | null,
   ): Promise<Project | undefined>;
   deleteProject(id: string, companyId: number | null): Promise<boolean>;
+  updateProjectMetadata(
+    id: string,
+    companyId: number | null,
+    metadata: Record<string, any>,
+  ): Promise<Project | undefined>;
 
   // Documents
   createDocument(document: InsertDocument): Promise<Document>;
@@ -361,6 +366,25 @@ export class DatabaseStorage implements IStorage {
       .where(and(eq(projects.id, id), this.companyFilter(companyId)))
       .returning();
     return result.length > 0;
+  }
+
+  async updateProjectMetadata(
+    id: string,
+    companyId: number | null,
+    metadata: Record<string, any>,
+  ): Promise<Project | undefined> {
+    const existingProject = await this.getProject(id, companyId);
+    if (!existingProject) return undefined;
+    
+    const existingMetadata = (existingProject.metadata as Record<string, any>) || {};
+    const mergedMetadata = { ...existingMetadata, ...metadata };
+    
+    const [project] = await db
+      .update(projects)
+      .set({ metadata: mergedMetadata })
+      .where(and(eq(projects.id, id), this.companyFilter(companyId)))
+      .returning();
+    return project || undefined;
   }
 
   // Documents (company access verified through project ownership)

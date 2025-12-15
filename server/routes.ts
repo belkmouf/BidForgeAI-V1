@@ -493,6 +493,15 @@ export async function registerRoutes(
 
       const totalChunks = processedFiles.reduce((sum, f) => sum + f.chunksCreated, 0);
 
+      // Save sketch analysis results to project metadata for use in bid generation
+      if (sketchResults.length > 0) {
+        await storage.updateProjectMetadata(projectId, companyId, {
+          sketchAnalysis: sketchResults,
+          sketchAnalysisDate: new Date().toISOString(),
+        });
+        console.log(`Saved ${sketchResults.length} sketch analysis results to project metadata`);
+      }
+
       res.json({
         success: true,
         workflow,
@@ -695,7 +704,63 @@ export async function registerRoutes(
           }
         }
         
-        context = projectContext + knowledgeBaseContext;
+        // Include sketch analysis data from project metadata
+        let sketchAnalysisContext = '';
+        const projectMetadata = project.metadata as Record<string, any> | null;
+        if (projectMetadata?.sketchAnalysis && Array.isArray(projectMetadata.sketchAnalysis)) {
+          const sketchResults = projectMetadata.sketchAnalysis;
+          console.log(`Found ${sketchResults.length} sketch analysis results in project metadata`);
+          
+          sketchAnalysisContext = '\n\n--- SKETCH/DRAWING ANALYSIS (Use this technical data in the bid) ---\n';
+          sketchAnalysisContext += sketchResults.map((sketch: any, i: number) => {
+            const parts: string[] = [];
+            parts.push(`\n[Sketch ${i + 1}: ${sketch.document_type || 'Technical Drawing'}]`);
+            parts.push(`Project Phase: ${sketch.project_phase || 'Not specified'}`);
+            
+            if (sketch.dimensions?.length > 0) {
+              parts.push(`Dimensions: ${sketch.dimensions.map((d: any) => 
+                `${d.type}: ${d.value} ${d.unit}${d.location ? ` (${d.location})` : ''}`
+              ).join(', ')}`);
+            }
+            
+            if (sketch.materials?.length > 0) {
+              parts.push(`Materials: ${sketch.materials.map((m: any) => 
+                `${m.name}${m.grade ? ` (${m.grade})` : ''}${m.specification ? ` - ${m.specification}` : ''}${m.quantity ? ` x${m.quantity} ${m.unit || ''}` : ''}`
+              ).join(', ')}`);
+            }
+            
+            if (sketch.specifications?.length > 0) {
+              parts.push(`Specifications: ${sketch.specifications.join(', ')}`);
+            }
+            
+            if (sketch.components?.length > 0) {
+              parts.push(`Components: ${sketch.components.map((c: any) => 
+                `${c.type}${c.size ? ` (${c.size})` : ''}${c.count ? ` x${c.count}` : ''}${c.location ? ` at ${c.location}` : ''}`
+              ).join(', ')}`);
+            }
+            
+            if (sketch.standards?.length > 0) {
+              parts.push(`Standards: ${sketch.standards.join(', ')}`);
+            }
+            
+            if (sketch.regional_codes?.length > 0) {
+              parts.push(`Regional Codes: ${sketch.regional_codes.join(', ')}`);
+            }
+            
+            if (sketch.annotations?.length > 0) {
+              parts.push(`Annotations: ${sketch.annotations.join(', ')}`);
+            }
+            
+            if (sketch.notes) {
+              parts.push(`Notes: ${sketch.notes}`);
+            }
+            
+            return parts.join('\n');
+          }).join('\n');
+          sketchAnalysisContext += '\n--- END SKETCH ANALYSIS ---';
+        }
+        
+        context = projectContext + knowledgeBaseContext + sketchAnalysisContext;
       } catch (embeddingError: any) {
         // Fallback to direct document content if embedding fails
         console.warn('RAG search failed, falling back to direct document content:', embeddingError.message);
