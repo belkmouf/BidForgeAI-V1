@@ -61,6 +61,7 @@ export interface IStorage {
   listProjects(
     companyId: number | null,
     includeArchived?: boolean,
+    showAll?: boolean,
   ): Promise<Project[]>;
   updateProjectStatus(
     id: string,
@@ -276,15 +277,19 @@ export class DatabaseStorage implements IStorage {
   async listProjects(
     companyId: number | null,
     includeArchived: boolean = false,
+    showAll: boolean = false,
   ): Promise<Project[]> {
-    const conditions = [this.companyFilter(companyId)];
+    const conditions: any[] = [];
+    if (!showAll) {
+      conditions.push(this.companyFilter(companyId));
+    }
     if (!includeArchived) {
       conditions.push(eq(projects.isArchived, false));
     }
     return await db
       .select()
       .from(projects)
-      .where(and(...conditions))
+      .where(conditions.length > 0 ? and(...conditions) : undefined)
       .orderBy(desc(projects.createdAt));
   }
 

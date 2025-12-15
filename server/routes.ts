@@ -272,7 +272,8 @@ export async function registerRoutes(
     try {
       const companyId = req.user?.companyId ?? null;
       const includeArchived = req.query.includeArchived === 'true';
-      const projects = await storage.listProjects(companyId, includeArchived);
+      const isSystemAdmin = req.user?.role === 'system_admin';
+      const projects = await storage.listProjects(companyId, includeArchived, isSystemAdmin);
       res.json(projects);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
