@@ -3,7 +3,7 @@ import { Link } from 'wouter';
 import { FileText, Brain, Zap, Shield, Menu, X, ChevronRight, ArrowRight } from 'lucide-react';
 import gsap from 'gsap';
 import constructionBg from '@assets/stock_images/construction_site_bu_f0afb754.jpg';
-import bidForgeLogo from '@assets/BidForgeAi_Logo_1765758884941.jpeg';
+import bidForgeLogo from '@assets/BidForgeAi_Logo_1765759428971.jpeg';
 import { useAuthStore, apiRequest } from '@/lib/auth';
 
 import _1764979718 from "@assets/1764979718.png";
