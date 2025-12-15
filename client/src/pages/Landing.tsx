@@ -105,6 +105,10 @@ export default function Landing() {
 
 We reject the choice between "fast and generic" or "slow and accurate." By leveraging our proprietary "Resonance Engine" and "Live Ingestion" technology, we transform your company's unique chaos—whether it's a founder's folder of PDFs or a global SharePoint library—into a precision revenue engine. We act as the "Iron Man Suit" for your revenue team, providing the velocity to clear backlogs instantly and the rigorous "Anchored Truth" required to withstand complex scrutiny. Whether you are fighting for your first major contract or defending market dominance, the Forge scales to your ambition.`;
 
+  const privacyPolicy = `Cognitive Sovereignty for Every Scale — We believe that enterprise-grade security is a fundamental right, not just a feature for the Fortune 500. Your intellectual property is your competitive advantage, and whether you are a team of five or five thousand, BidForge AI acts as your "Vault," not a marketplace.
+
+Our "Sovereign Shield" architecture guarantees that your data is isolated in a private tenant and protected by a strict "No-Peeking" policy: your data trains your specific model exclusively and never bleeds into public AI models (like GPT or Gemini). We combine the friction-free deployment needed by fast-moving growth teams with the "Military-Grade" security standards (SOC 2 Type II readiness, AES-256 encryption) demanded by the world's strictest CISOs.`;
+
   return (
     <div className="min-h-screen bg-background" data-testid="landing-page">
       <nav 
@@ -427,6 +431,27 @@ We reject the choice between "fast and generic" or "slow and accurate." By lever
           </Link>
         </div>
       </section>
+
+      {/* Privacy Policy Section */}
+      <section id="privacy" className="py-24 md:py-32 bg-charcoal-800">
+        <div className="max-w-5xl mx-auto px-6 lg:px-8">
+          <div className="text-center mb-12">
+            <h2 className="font-display text-4xl md:text-5xl font-bold text-white mb-4">
+              Privacy Policy
+            </h2>
+            <div 
+              className="w-24 h-1 mx-auto"
+              style={{ backgroundColor: primaryColor }}
+            />
+          </div>
+          <div className="text-gray-300 leading-relaxed space-y-6 text-lg">
+            {privacyPolicy.split('\n\n').map((paragraph, index) => (
+              <p key={index}>{paragraph}</p>
+            ))}
+          </div>
+        </div>
+      </section>
+
       <footer className="bg-charcoal-900 border-t border-charcoal-800 py-16">
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
           <div className="grid md:grid-cols-4 gap-12 mb-12">
@@ -458,7 +483,7 @@ We reject the choice between "fast and generic" or "slow and accurate." By lever
               <ul className="space-y-3 text-gray-400">
                 <li><a href="#" className="transition-colors" onMouseEnter={(e) => e.currentTarget.style.color = primaryColor} onMouseLeave={(e) => e.currentTarget.style.color = ''}>About</a></li>
                 <li><a href="#" className="transition-colors" onMouseEnter={(e) => e.currentTarget.style.color = primaryColor} onMouseLeave={(e) => e.currentTarget.style.color = ''}>Contact</a></li>
-                <li><a href="#" className="transition-colors" onMouseEnter={(e) => e.currentTarget.style.color = primaryColor} onMouseLeave={(e) => e.currentTarget.style.color = ''}>Privacy</a></li>
+                <li><a href="#privacy" className="transition-colors" onMouseEnter={(e) => e.currentTarget.style.color = primaryColor} onMouseLeave={(e) => e.currentTarget.style.color = ''}>Privacy</a></li>
               </ul>
             </div>
           </div>
