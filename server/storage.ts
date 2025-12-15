@@ -360,10 +360,15 @@ export class DatabaseStorage implements IStorage {
     return project || undefined;
   }
 
-  async deleteProject(id: string, companyId: number | null): Promise<boolean> {
+  async deleteProject(id: string, companyId: number | null, bypassCompanyFilter: boolean = false): Promise<boolean> {
+    const conditions = [eq(projects.id, id)];
+    // If not bypassing (system admin), apply company filter
+    if (!bypassCompanyFilter && companyId !== null) {
+      conditions.push(this.companyFilter(companyId));
+    }
     const result = await db
       .delete(projects)
-      .where(and(eq(projects.id, id), this.companyFilter(companyId)))
+      .where(and(...conditions))
       .returning();
     return result.length > 0;
   }

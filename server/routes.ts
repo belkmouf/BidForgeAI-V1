@@ -45,7 +45,7 @@ import v1Routes from "./routes/v1/index";
 import { fetchWebsiteInfo, batchFetchWebsiteInfo, getWebsiteInfoCache, saveWebsiteInfo, fetchAndSaveWebsiteInfo } from "./routes/website-info.js";
 import { apiVersioning, API_VERSIONS, trackVersionUsage, VersionedRequest } from "./middleware/versioning";
 import { authenticateToken, optionalAuth, AuthRequest } from "./middleware/auth";
-import { requirePermission, requireRole, PERMISSIONS } from "./middleware/rbac";
+import { requirePermission, requireRole, requireAdmin, PERMISSIONS } from "./middleware/rbac";
 import { 
   sanitizeInstructions, 
   sanitizeTone, 
@@ -377,11 +377,13 @@ export async function registerRoutes(
     }
   });
 
-  // Delete a project (requires admin role only)
-  app.delete("/api/projects/:id", authenticateToken, requireRole(['admin']), async (req: AuthRequest, res) => {
+  // Delete a project (requires admin role - system_admin or company_admin)
+  app.delete("/api/projects/:id", authenticateToken, requireAdmin, async (req: AuthRequest, res) => {
     try {
+      // System admins can delete any project, company admins only their company's
+      const isSystemAdmin = req.user?.role === 'system_admin';
       const companyId = req.user?.companyId ?? null;
-      const deleted = await storage.deleteProject(req.params.id, companyId);
+      const deleted = await storage.deleteProject(req.params.id, companyId, isSystemAdmin);
       if (!deleted) {
         return res.status(404).json({ error: "Project not found" });
       }
