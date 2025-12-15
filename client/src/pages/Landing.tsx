@@ -236,15 +236,14 @@ export default function Landing() {
         <div className="relative z-10 max-w-6xl mx-auto px-6 lg:px-8 text-center">
           <div className="animate-in mb-6">
             <span 
-              className="uppercase tracking-[0.25em] text-sm font-medium"
-              style={{ color: primaryColor }}
+              className="uppercase tracking-[0.25em] text-sm font-medium text-white"
             >
               Intelligent Bidding Platform
             </span>
           </div>
           
           <h1 className="animate-in font-display text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-bold text-white mb-8 leading-[1.1] tracking-tight">
-            <span style={{ color: primaryColor }}>Win More Bids.</span>
+            <span className="text-white">Win More Bids.</span>
           </h1>
           
           <p className="animate-in text-lg md:text-xl lg:text-2xl text-gray-300 mb-12 max-w-3xl mx-auto leading-relaxed font-light">
