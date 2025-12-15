@@ -281,10 +281,22 @@ export async function registerRoutes(
   });
 
   // Get a specific project (requires authentication, company-scoped)
+  // System admins can access any project
   app.get("/api/projects/:id", authenticateToken, async (req: AuthRequest, res) => {
     try {
-      const companyId = req.user?.companyId ?? null;
-      const project = await storage.getProject(req.params.id, companyId);
+      const isSystemAdmin = req.user?.role === 'system_admin';
+      const companyId = isSystemAdmin ? null : (req.user?.companyId ?? null);
+      
+      // For system admins, try to get project without company filter
+      let project;
+      if (isSystemAdmin) {
+        // System admin can access any project - search across all companies
+        const allProjects = await storage.listProjects(null, true, true);
+        project = allProjects.find(p => p.id === req.params.id);
+      } else {
+        project = await storage.getProject(req.params.id, companyId);
+      }
+      
       if (!project) {
         return res.status(404).json({ error: "Project not found" });
       }
