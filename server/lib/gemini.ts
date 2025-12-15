@@ -1,38 +1,15 @@
-import { GoogleGenAI } from '@google/genai';
+import OpenAI from 'openai';
 
 const userGeminiKey = process.env.GEMINI_API_KEY;
 const integrationGeminiKey = process.env.AI_INTEGRATIONS_GEMINI_API_KEY;
 const integrationBaseUrl = process.env.AI_INTEGRATIONS_GEMINI_BASE_URL;
 
-const geminiApiKey = userGeminiKey || integrationGeminiKey;
+const useIntegration = !userGeminiKey && integrationGeminiKey && integrationBaseUrl;
 
-if (!geminiApiKey) {
-  throw new Error('GEMINI_API_KEY is not set');
-}
-
-export const gemini = new GoogleGenAI({
-  apiKey: geminiApiKey,
-  httpOptions: userGeminiKey ? undefined : {
-    baseUrl: integrationBaseUrl,
-  },
+const openai = new OpenAI({
+  apiKey: useIntegration ? integrationGeminiKey : userGeminiKey,
+  baseURL: useIntegration ? integrationBaseUrl : 'https://generativelanguage.googleapis.com/v1beta/openai/',
 });
-
-export async function generateEmbeddingWithGemini(text: string): Promise<number[]> {
-  try {
-    const result = await gemini.models.embedContent({
-      model: 'gemini-embedding-exp-03-07',
-      contents: text,
-      config: {
-        outputDimensionality: 1536,
-      },
-    });
-    
-    return result.embeddings?.[0]?.values || [];
-  } catch (error: any) {
-    console.error('Gemini embedding error:', error);
-    throw new Error(`Gemini embedding failed: ${error.message}`);
-  }
-}
 
 export interface AIGenerationResult {
   content: string;
@@ -67,20 +44,19 @@ OUTPUT REQUIREMENTS:
 - Mark any missing required information as [TO BE PROVIDED]
 - CRITICAL: Output ONLY raw HTML content. Do NOT wrap your response in markdown code blocks (like \`\`\`html or \`\`\`). Start directly with <div> or other HTML tags.`;
 
-  const response = await gemini.models.generateContent({
+  const response = await openai.chat.completions.create({
     model: 'gemini-2.5-flash',
-    contents: [
-      {
-        role: 'user',
-        parts: [{ text: `${systemPrompt}\n\nUser Instructions: ${params.instructions}\n\nRelevant Context from Documents and Past Winning Bids:\n${params.context}\n\nGenerate a complete, professional bid response. Output ONLY raw HTML - do NOT use markdown code blocks.` }]
-      }
+    messages: [
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: `User Instructions: ${params.instructions}\n\nRelevant Context from Documents and Past Winning Bids:\n${params.context}\n\nGenerate a complete, professional bid response. Output ONLY raw HTML - do NOT use markdown code blocks.` }
     ],
+    max_tokens: 8192,
   });
 
   return {
-    content: response.text || '',
-    inputTokens: response.usageMetadata?.promptTokenCount || 0,
-    outputTokens: response.usageMetadata?.candidatesTokenCount || 0,
+    content: response.choices[0]?.message?.content || '',
+    inputTokens: response.usage?.prompt_tokens || 0,
+    outputTokens: response.usage?.completion_tokens || 0,
   };
 }
 
@@ -93,19 +69,23 @@ Apply the user's feedback to improve the bid response.
 Maintain the HTML structure and professional styling.
 CRITICAL: Output ONLY raw HTML content. Do NOT wrap your response in markdown code blocks (like \`\`\`html or \`\`\`).`;
 
-  const response = await gemini.models.generateContent({
+  const response = await openai.chat.completions.create({
     model: 'gemini-2.5-flash',
-    contents: [
-      {
-        role: 'user',
-        parts: [{ text: `${systemPrompt}\n\nCurrent Bid HTML:\n${params.currentHtml}\n\nUser Feedback: ${params.feedback}\n\nApply the feedback and return the updated complete HTML. Output ONLY raw HTML - do NOT use markdown code blocks.` }]
-      }
+    messages: [
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: `Current Bid HTML:\n${params.currentHtml}\n\nUser Feedback: ${params.feedback}\n\nApply the feedback and return the updated complete HTML. Output ONLY raw HTML - do NOT use markdown code blocks.` }
     ],
+    max_tokens: 8192,
   });
 
   return {
-    content: response.text || '',
-    inputTokens: response.usageMetadata?.promptTokenCount || 0,
-    outputTokens: response.usageMetadata?.candidatesTokenCount || 0,
+    content: response.choices[0]?.message?.content || '',
+    inputTokens: response.usage?.prompt_tokens || 0,
+    outputTokens: response.usage?.completion_tokens || 0,
   };
+}
+
+export async function generateEmbeddingWithGemini(text: string): Promise<number[]> {
+  console.warn('Gemini embeddings not supported via AI integrations - returning empty array');
+  return [];
 }
