@@ -367,7 +367,8 @@ export async function registerRoutes(
 
   // Upload a document to a project with recursive file processing (requires authentication, company-scoped)
   // ENHANCED: Now supports multiple files and sketch analysis
-  app.post("/api/projects/:id/upload", authenticateToken, upload.array('files', 10), async (req: AuthRequest, res) => {
+  // Accept both 'file' (single) and 'files' (multiple) field names for compatibility
+  app.post("/api/projects/:id/upload", authenticateToken, upload.any(), async (req: AuthRequest, res) => {
     try {
       const files = req.files as Express.Multer.File[];
 
