@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuthStore, apiRequest } from "@/lib/auth";
-import bidForgeLogo from "@assets/BidForgeAi_Logo_1765759428971.jpeg";
+import bidForgeLogo from "@assets/Gemini_Generated_Image_mb26x1mb26x1mb26_1765805920806.png";
 import { create } from 'zustand';
 
 interface SidebarStore {

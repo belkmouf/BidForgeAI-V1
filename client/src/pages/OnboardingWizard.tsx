@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Loader2, Building2, Globe, Palette, Image, FileText, CheckCircle, Upload, ExternalLink, User, Phone, Mail, MapPin, Award, Sparkles, AlertTriangle, AlertCircle } from 'lucide-react';
 import { useAuthStore, apiRequest } from '@/lib/auth';
 import { WebsiteAutoFill } from '@/components/onboarding/website-auto-fill';
-import bidForgeLogo from '@assets/BidForgeAi_Logo_1765759428971.jpeg';
+import bidForgeLogo from '@assets/Gemini_Generated_Image_mb26x1mb26x1mb26_1765805920806.png';
 
 export default function OnboardingWizard() {
   const [, setLocation] = useLocation();

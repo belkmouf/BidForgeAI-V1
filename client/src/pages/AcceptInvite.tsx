@@ -8,7 +8,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, Lock, User, Building2, UserCheck, AlertCircle } from "lucide-react";
 import { useAuthStore } from "@/lib/auth";
-import bidForgeLogo from "@assets/BidForgeAi_Logo_1765759428971.jpeg";
+import bidForgeLogo from "@assets/Gemini_Generated_Image_mb26x1mb26x1mb26_1765805920806.png";
 
 interface InviteDetails {
   email: string;
