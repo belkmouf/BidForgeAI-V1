@@ -491,6 +491,31 @@ export async function registerRoutes(
         }
       }
 
+      // Save sketches as documents so they appear in Project Files list
+      for (let i = 0; i < sketches.length; i++) {
+        const sketch = sketches[i];
+        const safeFilename = sketch.originalname.replace(/[^\w\s.-]/g, '_').replace(/\.{2,}/g, '.').trim();
+        const sketchResult = sketchResults[i];
+        
+        // Create document record for the sketch with extracted info as content
+        const sketchContent = sketchResult ? 
+          `[Sketch Analysis]\nDocument Type: ${sketchResult.document_type || 'Technical Drawing'}\nProject Phase: ${sketchResult.project_phase || 'Not specified'}\n${sketchResult.notes || ''}` :
+          '[Image file - analysis pending]';
+        
+        try {
+          await storage.createDocument({
+            projectId,
+            filename: safeFilename,
+            description: sketchResult?.document_type || 'Uploaded sketch/drawing',
+            content: sketchContent,
+            isProcessed: true,
+          });
+          processedFiles.push({ filename: safeFilename, chunksCreated: 0 });
+        } catch (error: any) {
+          console.error(`Failed to save sketch document ${safeFilename}:`, error.message);
+        }
+      }
+
       const totalChunks = processedFiles.reduce((sum, f) => sum + f.chunksCreated, 0);
 
       // Save sketch analysis results to project metadata for use in bid generation
