@@ -246,8 +246,7 @@ export default function Landing() {
           </div>
           
           <h1 className="animate-in font-display text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-bold text-white mb-8 leading-[1.1] tracking-tight">
-            Win More Bids.<br />
-            <span style={{ color: primaryColor }}>Work Less.</span>
+            <span style={{ color: primaryColor }}>Win More Bids.</span>
           </h1>
           
           <p className="animate-in text-lg md:text-xl lg:text-2xl text-gray-300 mb-12 max-w-3xl mx-auto leading-relaxed font-light">
