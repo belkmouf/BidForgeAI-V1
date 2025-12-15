@@ -1,20 +1,64 @@
-import { GoogleGenAI } from '@google/genai';
-
 const userGeminiKey = process.env.GEMINI_API_KEY;
 const integrationGeminiKey = process.env.AI_INTEGRATIONS_GEMINI_API_KEY;
 const integrationBaseUrl = process.env.AI_INTEGRATIONS_GEMINI_BASE_URL;
 
 const useIntegration = !userGeminiKey && integrationGeminiKey && integrationBaseUrl;
 
-const genai = new GoogleGenAI({
-  apiKey: useIntegration ? integrationGeminiKey : userGeminiKey,
-  httpOptions: useIntegration ? { baseUrl: integrationBaseUrl } : undefined,
-});
-
 export interface AIGenerationResult {
   content: string;
   inputTokens: number;
   outputTokens: number;
+}
+
+async function callGeminiAPI(contents: { role: string; parts: { text: string }[] }[], maxOutputTokens: number = 8192): Promise<{ text: string; promptTokenCount: number; candidatesTokenCount: number }> {
+  if (useIntegration) {
+    const response = await fetch(`${integrationBaseUrl}/models/gemini-2.5-flash:generateContent`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${integrationGeminiKey}`,
+      },
+      body: JSON.stringify({
+        contents,
+        generationConfig: {
+          maxOutputTokens,
+        },
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Gemini API error: ${response.status} ${errorText}`);
+    }
+
+    const data = await response.json() as {
+      candidates?: { content?: { parts?: { text?: string }[] } }[];
+      usageMetadata?: { promptTokenCount?: number; candidatesTokenCount?: number };
+    };
+    
+    return {
+      text: data.candidates?.[0]?.content?.parts?.[0]?.text || '',
+      promptTokenCount: data.usageMetadata?.promptTokenCount || 0,
+      candidatesTokenCount: data.usageMetadata?.candidatesTokenCount || 0,
+    };
+  } else {
+    const { GoogleGenAI } = await import('@google/genai');
+    const genai = new GoogleGenAI({ apiKey: userGeminiKey });
+    
+    const response = await genai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents,
+      config: {
+        maxOutputTokens,
+      },
+    });
+    
+    return {
+      text: response.text || '',
+      promptTokenCount: response.usageMetadata?.promptTokenCount || 0,
+      candidatesTokenCount: response.usageMetadata?.candidatesTokenCount || 0,
+    };
+  }
 }
 
 export async function generateBidWithGemini(params: {
@@ -46,20 +90,14 @@ OUTPUT REQUIREMENTS:
 
   const userContent = `User Instructions: ${params.instructions}\n\nRelevant Context from Documents and Past Winning Bids:\n${params.context}\n\nGenerate a complete, professional bid response. Output ONLY raw HTML - do NOT use markdown code blocks.`;
 
-  const response = await genai.models.generateContent({
-    model: 'gemini-2.5-flash',
-    contents: [
-      { role: 'user', parts: [{ text: systemPrompt + '\n\n' + userContent }] }
-    ],
-    config: {
-      maxOutputTokens: 8192,
-    },
-  });
+  const result = await callGeminiAPI([
+    { role: 'user', parts: [{ text: systemPrompt + '\n\n' + userContent }] }
+  ], 8192);
 
   return {
-    content: response.text || '',
-    inputTokens: response.usageMetadata?.promptTokenCount || 0,
-    outputTokens: response.usageMetadata?.candidatesTokenCount || 0,
+    content: result.text,
+    inputTokens: result.promptTokenCount,
+    outputTokens: result.candidatesTokenCount,
   };
 }
 
@@ -74,20 +112,14 @@ CRITICAL: Output ONLY raw HTML content. Do NOT wrap your response in markdown co
 
   const userContent = `Current Bid HTML:\n${params.currentHtml}\n\nUser Feedback: ${params.feedback}\n\nApply the feedback and return the updated complete HTML. Output ONLY raw HTML - do NOT use markdown code blocks.`;
 
-  const response = await genai.models.generateContent({
-    model: 'gemini-2.5-flash',
-    contents: [
-      { role: 'user', parts: [{ text: systemPrompt + '\n\n' + userContent }] }
-    ],
-    config: {
-      maxOutputTokens: 8192,
-    },
-  });
+  const result = await callGeminiAPI([
+    { role: 'user', parts: [{ text: systemPrompt + '\n\n' + userContent }] }
+  ], 8192);
 
   return {
-    content: response.text || '',
-    inputTokens: response.usageMetadata?.promptTokenCount || 0,
-    outputTokens: response.usageMetadata?.candidatesTokenCount || 0,
+    content: result.text,
+    inputTokens: result.promptTokenCount,
+    outputTokens: result.candidatesTokenCount,
   };
 }
 
