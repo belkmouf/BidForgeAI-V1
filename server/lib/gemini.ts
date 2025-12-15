@@ -1,8 +1,14 @@
-const userGeminiKey = process.env.GEMINI_API_KEY;
-const integrationGeminiKey = process.env.AI_INTEGRATIONS_GEMINI_API_KEY;
-const integrationBaseUrl = process.env.AI_INTEGRATIONS_GEMINI_BASE_URL;
+import OpenAI from 'openai';
 
-const useIntegration = !userGeminiKey && integrationGeminiKey && integrationBaseUrl;
+const userGeminiKey = process.env.GEMINI_API_KEY;
+const openaiApiKey = process.env.AI_INTEGRATIONS_OPENAI_API_KEY;
+const openaiBaseUrl = process.env.AI_INTEGRATIONS_OPENAI_BASE_URL;
+
+const useOpenAI = !userGeminiKey && openaiApiKey && openaiBaseUrl;
+
+const openai = useOpenAI 
+  ? new OpenAI({ apiKey: openaiApiKey, baseURL: openaiBaseUrl })
+  : null;
 
 export interface AIGenerationResult {
   content: string;
@@ -10,48 +16,30 @@ export interface AIGenerationResult {
   outputTokens: number;
 }
 
-async function callGeminiAPI(contents: { role: string; parts: { text: string }[] }[], maxOutputTokens: number = 8192): Promise<{ text: string; promptTokenCount: number; candidatesTokenCount: number }> {
-  if (useIntegration) {
-    const response = await fetch(integrationBaseUrl!, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${integrationGeminiKey}`,
-      },
-      body: JSON.stringify({
-        model: 'gemini-2.5-flash',
-        contents,
-        generationConfig: {
-          maxOutputTokens,
-        },
-      }),
+async function callAI(systemPrompt: string, userContent: string, maxTokens: number = 8192): Promise<{ text: string; promptTokenCount: number; candidatesTokenCount: number }> {
+  if (useOpenAI && openai) {
+    const response = await openai.chat.completions.create({
+      model: 'gpt-4o',
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userContent }
+      ],
+      max_tokens: maxTokens,
     });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Gemini API error: ${response.status} ${errorText}`);
-    }
-
-    const data = await response.json() as {
-      candidates?: { content?: { parts?: { text?: string }[] } }[];
-      usageMetadata?: { promptTokenCount?: number; candidatesTokenCount?: number };
-    };
     
     return {
-      text: data.candidates?.[0]?.content?.parts?.[0]?.text || '',
-      promptTokenCount: data.usageMetadata?.promptTokenCount || 0,
-      candidatesTokenCount: data.usageMetadata?.candidatesTokenCount || 0,
+      text: response.choices[0]?.message?.content || '',
+      promptTokenCount: response.usage?.prompt_tokens || 0,
+      candidatesTokenCount: response.usage?.completion_tokens || 0,
     };
-  } else {
+  } else if (userGeminiKey) {
     const { GoogleGenAI } = await import('@google/genai');
     const genai = new GoogleGenAI({ apiKey: userGeminiKey });
     
     const response = await genai.models.generateContent({
       model: 'gemini-2.5-flash',
-      contents,
-      config: {
-        maxOutputTokens,
-      },
+      contents: [{ role: 'user', parts: [{ text: systemPrompt + '\n\n' + userContent }] }],
+      config: { maxOutputTokens: maxTokens },
     });
     
     return {
@@ -59,6 +47,8 @@ async function callGeminiAPI(contents: { role: string; parts: { text: string }[]
       promptTokenCount: response.usageMetadata?.promptTokenCount || 0,
       candidatesTokenCount: response.usageMetadata?.candidatesTokenCount || 0,
     };
+  } else {
+    throw new Error('No AI provider configured. Please provide GEMINI_API_KEY or ensure AI integrations are set up.');
   }
 }
 
@@ -91,9 +81,7 @@ OUTPUT REQUIREMENTS:
 
   const userContent = `User Instructions: ${params.instructions}\n\nRelevant Context from Documents and Past Winning Bids:\n${params.context}\n\nGenerate a complete, professional bid response. Output ONLY raw HTML - do NOT use markdown code blocks.`;
 
-  const result = await callGeminiAPI([
-    { role: 'user', parts: [{ text: systemPrompt + '\n\n' + userContent }] }
-  ], 8192);
+  const result = await callAI(systemPrompt, userContent, 8192);
 
   return {
     content: result.text,
@@ -113,9 +101,7 @@ CRITICAL: Output ONLY raw HTML content. Do NOT wrap your response in markdown co
 
   const userContent = `Current Bid HTML:\n${params.currentHtml}\n\nUser Feedback: ${params.feedback}\n\nApply the feedback and return the updated complete HTML. Output ONLY raw HTML - do NOT use markdown code blocks.`;
 
-  const result = await callGeminiAPI([
-    { role: 'user', parts: [{ text: systemPrompt + '\n\n' + userContent }] }
-  ], 8192);
+  const result = await callAI(systemPrompt, userContent, 8192);
 
   return {
     content: result.text,
@@ -125,6 +111,6 @@ CRITICAL: Output ONLY raw HTML content. Do NOT wrap your response in markdown co
 }
 
 export async function generateEmbeddingWithGemini(text: string): Promise<number[]> {
-  console.warn('Gemini embeddings not supported via AI integrations - returning empty array');
+  console.warn('Embeddings not supported via AI integrations - returning empty array');
   return [];
 }
