@@ -5,6 +5,7 @@ import gsap from 'gsap';
 import constructionBg from '@assets/stock_images/construction_site_bu_f0afb754.jpg';
 import bidForgeLogo from '@assets/Gemini_Generated_Image_mb26x1mb26x1mb26_1765805920806.png';
 import { useAuthStore, apiRequest } from '@/lib/auth';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 interface CompanyBranding {
   companyName?: string;
@@ -57,6 +58,8 @@ export default function Landing() {
   const [scrolled, setScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [branding, setBranding] = useState<CompanyBranding | null>(null);
+  const [aboutOpen, setAboutOpen] = useState(false);
+  const [privacyOpen, setPrivacyOpen] = useState(false);
   const { isAuthenticated, user } = useAuthStore();
 
   useEffect(() => {
@@ -432,26 +435,6 @@ Our "Sovereign Shield" architecture guarantees that your data is isolated in a p
         </div>
       </section>
 
-      {/* Privacy Policy Section */}
-      <section id="privacy" className="py-24 md:py-32 bg-charcoal-800">
-        <div className="max-w-5xl mx-auto px-6 lg:px-8">
-          <div className="text-center mb-12">
-            <h2 className="font-display text-4xl md:text-5xl font-bold text-white mb-4">
-              Privacy Policy
-            </h2>
-            <div 
-              className="w-24 h-1 mx-auto"
-              style={{ backgroundColor: primaryColor }}
-            />
-          </div>
-          <div className="text-gray-300 leading-relaxed space-y-6 text-lg">
-            {privacyPolicy.split('\n\n').map((paragraph, index) => (
-              <p key={index}>{paragraph}</p>
-            ))}
-          </div>
-        </div>
-      </section>
-
       <footer className="bg-charcoal-900 border-t border-charcoal-800 py-16">
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
           <div className="grid md:grid-cols-4 gap-12 mb-12">
@@ -464,11 +447,9 @@ Our "Sovereign Shield" architecture guarantees that your data is isolated in a p
                 />
                 <span className="font-display text-xl font-bold text-white">{displayName}</span>
               </div>
-              <div className="text-gray-400 max-w-md leading-relaxed space-y-4">
-                {aboutUs.split('\n\n').map((paragraph, index) => (
-                  <p key={index}>{paragraph}</p>
-                ))}
-              </div>
+              <p className="text-gray-400 max-w-md leading-relaxed">
+                The intelligent bidding platform that learns from your wins to create better proposals, faster.
+              </p>
             </div>
             <div>
               <h4 className="font-display font-semibold text-white mb-4">Platform</h4>
@@ -481,9 +462,9 @@ Our "Sovereign Shield" architecture guarantees that your data is isolated in a p
             <div>
               <h4 className="font-display font-semibold text-white mb-4">Company</h4>
               <ul className="space-y-3 text-gray-400">
-                <li><a href="#" className="transition-colors" onMouseEnter={(e) => e.currentTarget.style.color = primaryColor} onMouseLeave={(e) => e.currentTarget.style.color = ''}>About</a></li>
+                <li><button onClick={() => setAboutOpen(true)} className="transition-colors hover:text-white cursor-pointer" onMouseEnter={(e) => e.currentTarget.style.color = primaryColor} onMouseLeave={(e) => e.currentTarget.style.color = ''}>About</button></li>
                 <li><a href="#" className="transition-colors" onMouseEnter={(e) => e.currentTarget.style.color = primaryColor} onMouseLeave={(e) => e.currentTarget.style.color = ''}>Contact</a></li>
-                <li><a href="#privacy" className="transition-colors" onMouseEnter={(e) => e.currentTarget.style.color = primaryColor} onMouseLeave={(e) => e.currentTarget.style.color = ''}>Privacy</a></li>
+                <li><button onClick={() => setPrivacyOpen(true)} className="transition-colors hover:text-white cursor-pointer" onMouseEnter={(e) => e.currentTarget.style.color = primaryColor} onMouseLeave={(e) => e.currentTarget.style.color = ''}>Privacy</button></li>
               </ul>
             </div>
           </div>
@@ -497,6 +478,34 @@ Our "Sovereign Shield" architecture guarantees that your data is isolated in a p
           </div>
         </div>
       </footer>
+
+      {/* About Dialog */}
+      <Dialog open={aboutOpen} onOpenChange={setAboutOpen}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="font-display text-2xl font-bold">About Us</DialogTitle>
+          </DialogHeader>
+          <div className="text-gray-600 leading-relaxed space-y-4 mt-4">
+            {aboutUs.split('\n\n').map((paragraph, index) => (
+              <p key={index}>{paragraph}</p>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Privacy Policy Dialog */}
+      <Dialog open={privacyOpen} onOpenChange={setPrivacyOpen}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="font-display text-2xl font-bold">Privacy Policy</DialogTitle>
+          </DialogHeader>
+          <div className="text-gray-600 leading-relaxed space-y-4 mt-4">
+            {privacyPolicy.split('\n\n').map((paragraph, index) => (
+              <p key={index}>{paragraph}</p>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
