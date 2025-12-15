@@ -95,7 +95,7 @@ export function AppSidebar() {
         <img 
           src={displayLogo} 
           alt={`${displayName} Logo`} 
-          className="h-10 w-10 object-contain bg-white rounded p-1"
+          className="h-10 w-10 object-cover bg-white rounded"
         />
         {!isCollapsed && (
           <div>
