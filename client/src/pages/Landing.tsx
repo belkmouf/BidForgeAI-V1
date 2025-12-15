@@ -6,8 +6,6 @@ import constructionBg from '@assets/stock_images/construction_site_bu_f0afb754.j
 import bidForgeLogo from '@assets/BidForgeAi_Logo_1765759428971.jpeg';
 import { useAuthStore, apiRequest } from '@/lib/auth';
 
-import _1764979718 from "@assets/1764979718.png";
-
 interface CompanyBranding {
   companyName?: string;
   tagline?: string;
@@ -101,7 +99,7 @@ export default function Landing() {
 
   const displayName = branding?.companyName || user?.companyName || 'BidForge AI';
   const displayTagline = branding?.tagline || 'INTELLIGENT BIDDING';
-  const displayLogo = branding?.logoUrl || _1764979718;
+  const displayLogo = branding?.logoUrl || bidForgeLogo;
   const primaryColor = branding?.primaryColor || '#0d9488';
   const aboutUs = branding?.aboutUs || 'The intelligent bidding platform that learns from your wins to create better proposals, faster.';
 

@@ -18,8 +18,6 @@ import { useAuthStore, apiRequest } from "@/lib/auth";
 import bidForgeLogo from "@assets/BidForgeAi_Logo_1765759428971.jpeg";
 import { create } from 'zustand';
 
-import _1764979718 from "@assets/1764979718.png";
-
 interface SidebarStore {
   isCollapsed: boolean;
   toggle: () => void;
