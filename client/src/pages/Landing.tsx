@@ -101,7 +101,9 @@ export default function Landing() {
   const displayTagline = branding?.tagline || 'INTELLIGENT BIDDING';
   const displayLogo = branding?.logoUrl || bidForgeLogo;
   const primaryColor = branding?.primaryColor || '#0d9488';
-  const aboutUs = branding?.aboutUs || 'The intelligent bidding platform that learns from your wins to create better proposals, faster.';
+  const aboutUs = branding?.aboutUs || `Strategic Craftsmanship at Scale — The RFP bottleneck respects no boundaries; it stalls the growth of agile startups and drains the high-value expertise of global enterprises alike. BidForge AI exists to democratize "Strategic Craftsmanship," ensuring that a lean team can compete with the resources of a giant, while large organizations can recapture the agility of a startup.
+
+We reject the choice between "fast and generic" or "slow and accurate." By leveraging our proprietary "Resonance Engine" and "Live Ingestion" technology, we transform your company's unique chaos—whether it's a founder's folder of PDFs or a global SharePoint library—into a precision revenue engine. We act as the "Iron Man Suit" for your revenue team, providing the velocity to clear backlogs instantly and the rigorous "Anchored Truth" required to withstand complex scrutiny. Whether you are fighting for your first major contract or defending market dominance, the Forge scales to your ambition.`;
 
   return (
     <div className="min-h-screen bg-background" data-testid="landing-page">
@@ -437,9 +439,11 @@ export default function Landing() {
                 />
                 <span className="font-display text-xl font-bold text-white">{displayName}</span>
               </div>
-              <p className="text-gray-400 max-w-md leading-relaxed">
-                {aboutUs}
-              </p>
+              <div className="text-gray-400 max-w-md leading-relaxed space-y-4">
+                {aboutUs.split('\n\n').map((paragraph, index) => (
+                  <p key={index}>{paragraph}</p>
+                ))}
+              </div>
             </div>
             <div>
               <h4 className="font-display font-semibold text-white mb-4">Platform</h4>
