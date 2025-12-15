@@ -62,7 +62,7 @@ export interface IStorage {
     companyId: number | null,
     includeArchived?: boolean,
     showAll?: boolean,
-  ): Promise<Project[]>;
+  ): Promise<(Project & { companyName?: string })[]>;
   updateProjectStatus(
     id: string,
     status: ProjectStatus,
@@ -278,7 +278,7 @@ export class DatabaseStorage implements IStorage {
     companyId: number | null,
     includeArchived: boolean = false,
     showAll: boolean = false,
-  ): Promise<Project[]> {
+  ): Promise<(Project & { companyName?: string })[]> {
     const conditions: any[] = [];
     if (!showAll) {
       conditions.push(this.companyFilter(companyId));
@@ -286,11 +286,24 @@ export class DatabaseStorage implements IStorage {
     if (!includeArchived) {
       conditions.push(eq(projects.isArchived, false));
     }
-    return await db
-      .select()
+    const results = await db
+      .select({
+        id: projects.id,
+        companyId: projects.companyId,
+        name: projects.name,
+        clientName: projects.clientName,
+        status: projects.status,
+        isArchived: projects.isArchived,
+        metadata: projects.metadata,
+        createdAt: projects.createdAt,
+        deletedAt: projects.deletedAt,
+        companyName: companies.name,
+      })
       .from(projects)
+      .leftJoin(companies, eq(projects.companyId, companies.id))
       .where(conditions.length > 0 ? and(...conditions) : undefined)
       .orderBy(desc(projects.createdAt));
+    return results;
   }
 
   async updateProjectStatus(
