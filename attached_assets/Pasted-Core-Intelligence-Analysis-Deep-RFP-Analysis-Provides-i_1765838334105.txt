@@ -1,0 +1,29 @@
+Core Intelligence & Analysis
+Deep RFP Analysis: Provides instant multi-dimensional scoring including Quality Score, Clarity Score, Doability Assessment, and Risk Level to assess viability before committing resources.
+
+Conflict Detection Engine: Utilizes advanced AI to identify semantic inconsistencies and numeric contradictions within RFP requirements that human reviewers might miss.
+
+Win Probability Prediction: Offers data-driven predictions based on 8+ factors (including capabilities and past performance) to support informed go/no-go decisions.
+
+Multi-Agent Intelligence: Deploys five specialized AI agents—Intake, Analysis, Decision, Generation, and Review—that work together to handle specific aspects of the bid process.
+
+Content Generation & Management
+Smart Bid Generation: Generates complete professional bids in minutes using RAG (Retrieval-Augmented Generation) that pulls from winning history and adapts to current requirements.
+
+Knowledge Learning System: Continuously learns the company's strengths, voice, and strategies from every winning bid to improve future proposals.
+
+Compliance Guardian: Automates requirement tracking and verification to ensure zero compliance errors and full coverage of specifications.
+
+Collaboration & Workflow
+Team Collaboration Hub: Features multi-role access control, real-time collaboration, approval workflows, and comprehensive audit trails.
+
+Analytics & Insights: Tracks performance metrics, team productivity, ROI, and win/loss patterns to drive continuous improvement.
+
+Technical Architecture & Security
+Multi-Model AI Support: Dynamically selects between models like GPT-4o, Claude Sonnet 4.5, Gemini 2.5 Flash, and DeepSeek for optimal performance.
+
+Hybrid Search Technology: Combines 70% vector similarity with 30% full-text search using OpenAI text-embedding-3-small for high-accuracy retrieval.
+
+Enterprise Security: Includes JWT authentication, 4-tier role-based access (System Admin to Company User), end-to-end data encryption, and complete audit logging.
+
+Document Processing: Supports multi-format ingestion (PDF, ZIP, DOCX, MSG) with recursive extraction and semantic chunking to preserve context.

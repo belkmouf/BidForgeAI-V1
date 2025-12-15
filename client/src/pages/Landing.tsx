@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'wouter';
-import { FileText, Brain, Zap, Shield, Menu, X, ChevronRight, ArrowRight } from 'lucide-react';
+import { FileText, Brain, Zap, Shield, Menu, X, ChevronRight, ArrowRight, Search, AlertTriangle, TrendingUp, Users, Sparkles, BookOpen, CheckCircle, BarChart3, Cpu, Database, Lock, FileSearch } from 'lucide-react';
 import gsap from 'gsap';
 import constructionBg from '@assets/stock_images/construction_site_bu_f0afb754.jpg';
 import bidForgeLogo from '@assets/Gemini_Generated_Image_mb26x1mb26x1mb26_1765805920806.png';
@@ -15,34 +15,91 @@ interface CompanyBranding {
   aboutUs?: string;
 }
 
-const features = [
+const featureCategories = [
   {
-    icon: Brain,
-    title: "Learning Intelligence",
-    description: "Automatically learns from your Closed-Won projects to improve future bids with every success.",
-    stat: "75%",
-    statLabel: "Faster bid creation"
+    category: "Core Intelligence & Analysis",
+    features: [
+      {
+        icon: Search,
+        title: "Deep RFP Analysis",
+        description: "Instant multi-dimensional scoring including Quality Score, Clarity Score, Doability Assessment, and Risk Level to assess viability before committing resources."
+      },
+      {
+        icon: AlertTriangle,
+        title: "Conflict Detection Engine",
+        description: "Advanced AI identifies semantic inconsistencies and numeric contradictions within RFP requirements that human reviewers might miss."
+      },
+      {
+        icon: TrendingUp,
+        title: "Win Probability Prediction",
+        description: "Data-driven predictions based on 8+ factors including capabilities and past performance to support informed go/no-go decisions."
+      },
+      {
+        icon: Users,
+        title: "Multi-Agent Intelligence",
+        description: "Five specialized AI agents—Intake, Analysis, Decision, Generation, and Review—work together to handle specific aspects of the bid process."
+      }
+    ]
   },
   {
-    icon: FileText,
-    title: "Multi-Format Ingestion",
-    description: "Process PDFs, Outlook emails, and nested ZIP archives seamlessly with recursive extraction.",
-    stat: "10+",
-    statLabel: "File formats supported"
+    category: "Content Generation & Management",
+    features: [
+      {
+        icon: Sparkles,
+        title: "Smart Bid Generation",
+        description: "Generate complete professional bids in minutes using RAG that pulls from winning history and adapts to current requirements."
+      },
+      {
+        icon: BookOpen,
+        title: "Knowledge Learning System",
+        description: "Continuously learns your company's strengths, voice, and strategies from every winning bid to improve future proposals."
+      },
+      {
+        icon: CheckCircle,
+        title: "Compliance Guardian",
+        description: "Automates requirement tracking and verification to ensure zero compliance errors and full coverage of specifications."
+      }
+    ]
   },
   {
-    icon: Zap,
-    title: "AI-Powered Refinement",
-    description: "Iteratively improve bids through natural language feedback with multiple AI providers.",
-    stat: "3 min",
-    statLabel: "Average refinement time"
+    category: "Collaboration & Workflow",
+    features: [
+      {
+        icon: Users,
+        title: "Team Collaboration Hub",
+        description: "Multi-role access control, real-time collaboration, approval workflows, and comprehensive audit trails."
+      },
+      {
+        icon: BarChart3,
+        title: "Analytics & Insights",
+        description: "Track performance metrics, team productivity, ROI, and win/loss patterns to drive continuous improvement."
+      }
+    ]
   },
   {
-    icon: Shield,
-    title: "Enterprise Security",
-    description: "Bank-level encryption with full audit trails and data sovereignty for your sensitive bid data.",
-    stat: "99.9%",
-    statLabel: "Uptime SLA"
+    category: "Technical Architecture & Security",
+    features: [
+      {
+        icon: Cpu,
+        title: "Multi-Model AI Support",
+        description: "Dynamically selects between GPT-4o, Claude Sonnet 4.5, Gemini 2.5 Flash, and DeepSeek for optimal performance."
+      },
+      {
+        icon: Database,
+        title: "Hybrid Search Technology",
+        description: "Combines 70% vector similarity with 30% full-text search using OpenAI embeddings for high-accuracy retrieval."
+      },
+      {
+        icon: Lock,
+        title: "Enterprise Security",
+        description: "JWT authentication, 4-tier role-based access, end-to-end data encryption, and complete audit logging."
+      },
+      {
+        icon: FileSearch,
+        title: "Document Processing",
+        description: "Multi-format ingestion (PDF, ZIP, DOCX, MSG) with recursive extraction and semantic chunking to preserve context."
+      }
+    ]
   }
 ];
 
@@ -324,54 +381,51 @@ Our "Sovereign Shield" architecture guarantees that your data is isolated in a p
               className="uppercase tracking-[0.2em] text-sm font-medium mb-4 block"
               style={{ color: primaryColor }}
             >
-              Core Capabilities
+              Comprehensive Capabilities
             </span>
             <h2 className="font-display text-4xl md:text-5xl lg:text-6xl font-bold text-foreground mb-6">
               Built for Winning
             </h2>
             <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto">
-              Every feature designed to give you an unfair advantage in construction bidding.
+              Every feature designed to give you an unfair advantage in proposal bidding.
             </p>
           </div>
           
-          <div className="grid md:grid-cols-2 gap-6 lg:gap-8">
-            {features.map((feature, index) => (
-              <div
-                key={index}
-                className="group bg-card p-8 lg:p-10 border border-border hover:shadow-2xl transition-all duration-500 hover:-translate-y-1"
-                style={{ ['--hover-border-color' as string]: primaryColor }}
-                onMouseEnter={(e) => (e.currentTarget.style.borderColor = primaryColor)}
-                onMouseLeave={(e) => (e.currentTarget.style.borderColor = '')}
-                data-testid={`card-feature-${index}`}
+          {featureCategories.map((category, catIndex) => (
+            <div key={catIndex} className="mb-16 last:mb-0">
+              <h3 
+                className="font-display text-2xl md:text-3xl font-bold text-foreground mb-8 pb-4 border-b-2"
+                style={{ borderColor: primaryColor }}
               >
-                <div 
-                  className="w-14 h-14 lg:w-16 lg:h-16 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300"
-                  style={{ background: primaryColor }}
-                >
-                  <feature.icon className="text-white" size={28} />
-                </div>
-                
-                <h3 className="font-display text-xl lg:text-2xl font-semibold text-foreground mb-4">
-                  {feature.title}
-                </h3>
-                <p className="text-muted-foreground mb-6 leading-relaxed">
-                  {feature.description}
-                </p>
-                
-                <div className="pt-6 border-t border-border">
-                  <div 
-                    className="text-3xl lg:text-4xl font-bold mb-1"
-                    style={{ color: primaryColor }}
+                {category.category}
+              </h3>
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                {category.features.map((feature, index) => (
+                  <div
+                    key={index}
+                    className="group bg-card p-6 border border-border hover:shadow-xl transition-all duration-300 hover:-translate-y-1"
+                    onMouseEnter={(e) => (e.currentTarget.style.borderColor = primaryColor)}
+                    onMouseLeave={(e) => (e.currentTarget.style.borderColor = '')}
+                    data-testid={`card-feature-${catIndex}-${index}`}
                   >
-                    {feature.stat}
+                    <div 
+                      className="w-12 h-12 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300"
+                      style={{ background: primaryColor }}
+                    >
+                      <feature.icon className="text-white" size={24} />
+                    </div>
+                    
+                    <h4 className="font-display text-lg font-semibold text-foreground mb-3">
+                      {feature.title}
+                    </h4>
+                    <p className="text-muted-foreground text-sm leading-relaxed">
+                      {feature.description}
+                    </p>
                   </div>
-                  <div className="text-sm text-muted-foreground uppercase tracking-wider">
-                    {feature.statLabel}
-                  </div>
-                </div>
+                ))}
               </div>
-            ))}
-          </div>
+            </div>
+          ))}
         </div>
       </section>
       <section id="testimonial" className="py-24 md:py-32 bg-charcoal-900 text-white relative overflow-hidden">
