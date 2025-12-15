@@ -62,7 +62,7 @@ export interface IStorage {
     companyId: number | null,
     includeArchived?: boolean,
     showAll?: boolean,
-  ): Promise<(Project & { companyName?: string })[]>;
+  ): Promise<(Project & { companyName?: string; userName?: string })[]>;
   updateProjectStatus(
     id: string,
     status: ProjectStatus,
@@ -278,7 +278,7 @@ export class DatabaseStorage implements IStorage {
     companyId: number | null,
     includeArchived: boolean = false,
     showAll: boolean = false,
-  ): Promise<(Project & { companyName?: string })[]> {
+  ): Promise<(Project & { companyName?: string; userName?: string })[]> {
     const conditions: any[] = [];
     if (!showAll) {
       conditions.push(this.companyFilter(companyId));
@@ -286,24 +286,36 @@ export class DatabaseStorage implements IStorage {
     if (!includeArchived) {
       conditions.push(eq(projects.isArchived, false));
     }
-    const results = await db
-      .select({
-        id: projects.id,
-        companyId: projects.companyId,
-        name: projects.name,
-        clientName: projects.clientName,
-        status: projects.status,
-        isArchived: projects.isArchived,
-        metadata: projects.metadata,
-        createdAt: projects.createdAt,
-        deletedAt: projects.deletedAt,
-        companyName: companies.name,
-      })
-      .from(projects)
-      .leftJoin(companies, eq(projects.companyId, companies.id))
-      .where(conditions.length > 0 ? and(...conditions) : undefined)
-      .orderBy(desc(projects.createdAt));
-    return results;
+    
+    const results = await db.execute(sql`
+      SELECT 
+        p.id,
+        p.company_id as "companyId",
+        p.name,
+        p.client_name as "clientName",
+        p.status,
+        p.is_archived as "isArchived",
+        p.metadata,
+        p.created_at as "createdAt",
+        p.deleted_at as "deletedAt",
+        c.name as "companyName",
+        u.name as "userName"
+      FROM projects p
+      LEFT JOIN companies c ON p.company_id = c.id
+      LEFT JOIN LATERAL (
+        SELECT b.user_id
+        FROM bids b
+        WHERE b.project_id = p.id AND b.is_latest = true
+        ORDER BY b.created_at DESC
+        LIMIT 1
+      ) latest_bid ON true
+      LEFT JOIN users u ON latest_bid.user_id = u.id
+      ${showAll ? sql`` : companyId !== null ? sql`WHERE p.company_id = ${companyId}` : sql`WHERE p.company_id IS NULL`}
+      ${!includeArchived ? (showAll ? sql`WHERE p.is_archived = false` : sql`AND p.is_archived = false`) : sql``}
+      ORDER BY p.created_at DESC
+    `);
+    
+    return results.rows as (Project & { companyName?: string; userName?: string })[];
   }
 
   async updateProjectStatus(

@@ -270,6 +270,7 @@ export default function Dashboard() {
                       <TableRow className="hover:bg-transparent">
                         <TableHead>Project Name</TableHead>
                         {isSystemAdmin && <TableHead>Company</TableHead>}
+                        {isSystemAdmin && <TableHead>User</TableHead>}
                         <TableHead>Status</TableHead>
                         {isSystemAdmin && <TableHead>LLM Cost</TableHead>}
                         <TableHead>Due Date</TableHead>
@@ -296,6 +297,13 @@ export default function Dashboard() {
                             <TableCell>
                               <span className="text-sm text-muted-foreground">
                                 {(project as any).companyName || "—"}
+                              </span>
+                            </TableCell>
+                          )}
+                          {isSystemAdmin && (
+                            <TableCell>
+                              <span className="text-sm text-muted-foreground">
+                                {(project as any).userName || "—"}
                               </span>
                             </TableCell>
                           )}
