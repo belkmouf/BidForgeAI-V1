@@ -64,7 +64,7 @@ export function AppSidebar() {
 
   const displayName = branding?.companyName || user?.companyName || 'BidForge AI';
   const displayTagline = branding?.tagline || 'Intelligent Bidding';
-  const displayLogo = branding?.logoUrl || _1764979718;
+  const displayLogo = branding?.logoUrl || bidForgeLogo;
   const primaryColor = branding?.primaryColor || '#0d9488';
   
   const userName = user?.name || 'User';
