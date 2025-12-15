@@ -243,22 +243,25 @@ Our "Sovereign Shield" architecture guarantees that your data is isolated in a p
         />
         
         <div className="relative z-10 max-w-6xl mx-auto px-6 lg:px-8 text-center">
-          <div className="animate-in mb-6">
-            <span 
-              className="uppercase tracking-[0.25em] text-sm font-medium text-white"
-            >
-              Intelligent Bidding Platform
-            </span>
-          </div>
-          
-          <h1 className="animate-in font-display text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-bold text-white mb-8 leading-[1.1] tracking-tight">
-            <span className="text-white">Win More Bids.</span>
+          <h1 className="animate-in font-display text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold text-white mb-6 leading-[1.1] tracking-tight">
+            The Forge of Winning Proposals.
           </h1>
           
-          <p className="animate-in text-lg md:text-xl lg:text-2xl text-gray-300 mb-12 max-w-3xl mx-auto leading-relaxed font-light">
-            BidForge AI learns from your past successes to generate winning proposals. 
-            Sophisticated automation for serious construction professionals.
+          <p className="animate-in text-xl md:text-2xl lg:text-3xl text-gray-200 mb-8 max-w-4xl mx-auto leading-relaxed font-medium">
+            Transform your company's collective intelligence into persuasive, compliant, and winning bids—instantly.
           </p>
+          
+          <div className="animate-in text-base md:text-lg text-gray-300 mb-12 max-w-4xl mx-auto leading-relaxed font-light space-y-4 text-left">
+            <p>
+              In the high-stakes world of B2B sales, the RFP is the gatekeeper. Yet, for too long, navigating this gate has been a soul-crushing exercise in manual labor that forces you to compromise. It has forced growth teams to choose between speed and quality, and it has buried the competitive edge of enterprises under a mountain of spreadsheets.
+            </p>
+            <p className="font-semibold text-white text-center">
+              The era of manual bidding is over. The era of the Forge has begun.
+            </p>
+            <p>
+              BidForge AI is the "Iron Man Suit" for the ambitious challenger and the "Revenue Engine" for the global incumbent. We combine the generative power of advanced Artificial Intelligence with the rigorous precision of enterprise search to automate the proposal process. We don't just fill out forms; we construct winning arguments, anchored in the truth of your organization's expertise.
+            </p>
+          </div>
           
           <div className="animate-in flex flex-col sm:flex-row gap-4 justify-center">
             <Link 
