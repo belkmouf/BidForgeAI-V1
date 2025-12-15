@@ -1,4 +1,4 @@
-import OpenAI from 'openai';
+import { GoogleGenAI } from '@google/genai';
 
 const userGeminiKey = process.env.GEMINI_API_KEY;
 const integrationGeminiKey = process.env.AI_INTEGRATIONS_GEMINI_API_KEY;
@@ -6,9 +6,9 @@ const integrationBaseUrl = process.env.AI_INTEGRATIONS_GEMINI_BASE_URL;
 
 const useIntegration = !userGeminiKey && integrationGeminiKey && integrationBaseUrl;
 
-const openai = new OpenAI({
+const genai = new GoogleGenAI({
   apiKey: useIntegration ? integrationGeminiKey : userGeminiKey,
-  baseURL: useIntegration ? integrationBaseUrl : 'https://generativelanguage.googleapis.com/v1beta/openai/',
+  httpOptions: useIntegration ? { baseUrl: integrationBaseUrl } : undefined,
 });
 
 export interface AIGenerationResult {
@@ -44,19 +44,22 @@ OUTPUT REQUIREMENTS:
 - Mark any missing required information as [TO BE PROVIDED]
 - CRITICAL: Output ONLY raw HTML content. Do NOT wrap your response in markdown code blocks (like \`\`\`html or \`\`\`). Start directly with <div> or other HTML tags.`;
 
-  const response = await openai.chat.completions.create({
+  const userContent = `User Instructions: ${params.instructions}\n\nRelevant Context from Documents and Past Winning Bids:\n${params.context}\n\nGenerate a complete, professional bid response. Output ONLY raw HTML - do NOT use markdown code blocks.`;
+
+  const response = await genai.models.generateContent({
     model: 'gemini-2.5-flash',
-    messages: [
-      { role: 'system', content: systemPrompt },
-      { role: 'user', content: `User Instructions: ${params.instructions}\n\nRelevant Context from Documents and Past Winning Bids:\n${params.context}\n\nGenerate a complete, professional bid response. Output ONLY raw HTML - do NOT use markdown code blocks.` }
+    contents: [
+      { role: 'user', parts: [{ text: systemPrompt + '\n\n' + userContent }] }
     ],
-    max_tokens: 8192,
+    config: {
+      maxOutputTokens: 8192,
+    },
   });
 
   return {
-    content: response.choices[0]?.message?.content || '',
-    inputTokens: response.usage?.prompt_tokens || 0,
-    outputTokens: response.usage?.completion_tokens || 0,
+    content: response.text || '',
+    inputTokens: response.usageMetadata?.promptTokenCount || 0,
+    outputTokens: response.usageMetadata?.candidatesTokenCount || 0,
   };
 }
 
@@ -69,19 +72,22 @@ Apply the user's feedback to improve the bid response.
 Maintain the HTML structure and professional styling.
 CRITICAL: Output ONLY raw HTML content. Do NOT wrap your response in markdown code blocks (like \`\`\`html or \`\`\`).`;
 
-  const response = await openai.chat.completions.create({
+  const userContent = `Current Bid HTML:\n${params.currentHtml}\n\nUser Feedback: ${params.feedback}\n\nApply the feedback and return the updated complete HTML. Output ONLY raw HTML - do NOT use markdown code blocks.`;
+
+  const response = await genai.models.generateContent({
     model: 'gemini-2.5-flash',
-    messages: [
-      { role: 'system', content: systemPrompt },
-      { role: 'user', content: `Current Bid HTML:\n${params.currentHtml}\n\nUser Feedback: ${params.feedback}\n\nApply the feedback and return the updated complete HTML. Output ONLY raw HTML - do NOT use markdown code blocks.` }
+    contents: [
+      { role: 'user', parts: [{ text: systemPrompt + '\n\n' + userContent }] }
     ],
-    max_tokens: 8192,
+    config: {
+      maxOutputTokens: 8192,
+    },
   });
 
   return {
-    content: response.choices[0]?.message?.content || '',
-    inputTokens: response.usage?.prompt_tokens || 0,
-    outputTokens: response.usage?.completion_tokens || 0,
+    content: response.text || '',
+    inputTokens: response.usageMetadata?.promptTokenCount || 0,
+    outputTokens: response.usageMetadata?.candidatesTokenCount || 0,
   };
 }
 
