@@ -1,0 +1,176 @@
+[Sketch Analysis]
+Document Type: architectural
+Project Phase: construction_documents
+Dimensions: [
+  {
+    "type": "length",
+    "value": 9000,
+    "unit": "mm",
+    "location": "Top View, overall length",
+    "confidence": 0.95
+  },
+  {
+    "type": "length",
+    "value": 4000,
+    "unit": "mm",
+    "location": "Top View, width",
+    "confidence": 0.95
+  },
+  {
+    "type": "length",
+    "value": 4000,
+    "unit": "mm",
+    "location": "Top View, spacing",
+    "confidence": 0.95
+  },
+  {
+    "type": "length",
+    "value": 9000,
+    "unit": "mm",
+    "location": "Plan View, overall length",
+    "confidence": 0.95
+  },
+  {
+    "type": "length",
+    "value": 6600,
+    "unit": "mm",
+    "location": "Plan View, ambulance length",
+    "confidence": 0.95
+  },
+  {
+    "type": "length",
+    "value": 1200,
+    "unit": "mm",
+    "location": "Plan View, ambulance spacing",
+    "confidence": 0.95
+  },
+  {
+    "type": "length",
+    "value": 4000,
+    "unit": "mm",
+    "location": "Plan View, width",
+    "confidence": 0.95
+  },
+  {
+    "type": "length",
+    "value": 200,
+    "unit": "mm",
+    "location": "Plan View, ambulance spacing",
+    "confidence": 0.95
+  },
+  {
+    "type": "length",
+    "value": 4000,
+    "unit": "mm",
+    "location": "Front View, width",
+    "confidence": 0.95
+  },
+  {
+    "type": "length",
+    "value": 4000,
+    "unit": "mm",
+    "location": "Front View, spacing",
+    "confidence": 0.95
+  },
+  {
+    "type": "height",
+    "value": 4000,
+    "unit": "mm",
+    "location": "Front View, clear space",
+    "confidence": 0.95
+  },
+  {
+    "type": "length",
+    "value": 9000,
+    "unit": "mm",
+    "location": "Left & Right Side View, overall length",
+    "confidence": 0.95
+  },
+  {
+    "type": "height",
+    "value": 2200,
+    "unit": "mm",
+    "location": "Left & Right Side View, column height",
+    "confidence": 0.95
+  },
+  {
+    "type": "height",
+    "value": 1800,
+    "unit": "mm",
+    "location": "Left & Right Side View, arch height",
+    "confidence": 0.95
+  },
+  {
+    "type": "height",
+    "value": 4000,
+    "unit": "mm",
+    "location": "Left & Right Side View, clear space",
+    "confidence": 0.95
+  }
+]
+Materials: [
+  {
+    "name": "Fabric Shade",
+    "grade": "Commercial 95 - 340 GSM",
+    "specification": "HDPE (Commercial 95 - 340 GSM)",
+    "quantity": 0,
+    "unit": null,
+    "standard": null,
+    "confidence": 0.9
+  },
+  {
+    "name": "MS Steel",
+    "grade": null,
+    "specification": "MS STEEL - AS PER STRUCTURE",
+    "quantity": 0,
+    "unit": null,
+    "standard": null,
+    "confidence": 0.9
+  },
+  {
+    "name": "MS CHS",
+    "grade": null,
+    "specification": "MS CHS - AS PER STRUCTURE",
+    "quantity": 0,
+    "unit": null,
+    "standard": null,
+    "confidence": 0.9
+  }
+]
+Specifications: [
+  "ALL ARCHITECTURAL WORKS SHALL COMPLY AND EXECUTE AS PER OXY SPEC NO. OMN-FAC-306 (ARCHITECTURAL DESIGN FOR BUILDINGS)"
+]
+Components: [
+  {
+    "type": "column",
+    "size": null,
+    "count": null,
+    "location": "Various locations",
+    "confidence": 0.85
+  },
+  {
+    "type": "arch",
+    "size": null,
+    "count": null,
+    "location": "Left & Right Side View",
+    "confidence": 0.85
+  },
+  {
+    "type": "purlins",
+    "size": null,
+    "count": null,
+    "location": "Front View",
+    "confidence": 0.85
+  },
+  {
+    "type": "base plate",
+    "size": null,
+    "count": null,
+    "location": "Under columns",
+    "confidence": 0.85
+  }
+]
+Standards: []
+Regional Codes: []
+Annotations: []
+Notes: Drawing shows ambulance parking details with shaded structure.

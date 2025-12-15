@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { Upload, File, Trash2, CheckCircle2, AlertCircle, FileText, FileArchive, Mail, Image } from 'lucide-react';
+import { Upload, File, Trash2, CheckCircle2, AlertCircle, FileText, FileArchive, Mail, Image, Download } from 'lucide-react';
 import { useDropzone } from 'react-dropzone';
 import { cn } from '@/lib/utils';
 import { Progress } from '@/components/ui/progress';
@@ -146,21 +146,38 @@ export function DropZone({ onUpload, onDelete, files: initialFiles = [] }: DropZ
                   )}
                 </div>
               </div>
-              {file.status === 'completed' && onDelete && (
-                <div className="mt-2 pt-2 border-t border-border">
-                  <Button 
-                    variant="destructive" 
-                    size="sm" 
-                    className="w-full h-7"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onDelete(file.id);
-                    }}
-                    data-testid={`button-delete-document-${file.id}`}
-                  >
-                    <Trash2 className="h-3 w-3 mr-1" />
-                    Delete File
-                  </Button>
+              {file.status === 'completed' && (
+                <div className="mt-2 pt-2 border-t border-border flex gap-2">
+                  {file.name.endsWith('_analysis.txt') && (
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="flex-1 h-7"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        window.open(`/api/downloads/analysis/${encodeURIComponent(file.name)}`, '_blank');
+                      }}
+                      data-testid={`button-download-document-${file.id}`}
+                    >
+                      <Download className="h-3 w-3 mr-1" />
+                      Download
+                    </Button>
+                  )}
+                  {onDelete && (
+                    <Button 
+                      variant="destructive" 
+                      size="sm" 
+                      className={file.name.endsWith('_analysis.txt') ? "flex-1 h-7" : "w-full h-7"}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onDelete(file.id);
+                      }}
+                      data-testid={`button-delete-document-${file.id}`}
+                    >
+                      <Trash2 className="h-3 w-3 mr-1" />
+                      Delete
+                    </Button>
+                  )}
                 </div>
               )}
             </div>

@@ -202,7 +202,35 @@ export async function registerRoutes(
   // Serve uploaded logos
   const path = await import('path');
   const express = await import('express');
+  const fsPromises = await import('fs/promises');
   app.use('/uploads', express.default.static(path.join(process.cwd(), 'uploads')));
+  
+  // Download endpoint for analysis text files
+  app.get('/api/downloads/analysis/:filename', authenticateToken, async (req: AuthRequest, res) => {
+    try {
+      const filename = req.params.filename;
+      // Sanitize filename to prevent directory traversal
+      const safeFilename = filename.replace(/[^a-zA-Z0-9._-]/g, '_');
+      const filePath = path.join(process.cwd(), 'uploads', 'analysis', safeFilename);
+      
+      // Check if file exists
+      try {
+        await fsPromises.access(filePath);
+      } catch {
+        return res.status(404).json({ error: 'File not found' });
+      }
+      
+      // Set headers for download
+      res.setHeader('Content-Type', 'text/plain');
+      res.setHeader('Content-Disposition', `attachment; filename="${safeFilename}"`);
+      
+      const fileContent = await fsPromises.readFile(filePath, 'utf-8');
+      res.send(fileContent);
+    } catch (error: any) {
+      console.error('Download error:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
   
   // ==================== API VERSIONING ====================
   // Apply API versioning middleware to all API routes
