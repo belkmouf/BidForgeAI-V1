@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { Upload, File, Trash2, CheckCircle2, AlertCircle, FileText, FileArchive, Mail } from 'lucide-react';
+import { Upload, File, Trash2, CheckCircle2, AlertCircle, FileText, FileArchive, Mail, Image } from 'lucide-react';
 import { useDropzone } from 'react-dropzone';
 import { cn } from '@/lib/utils';
 import { Progress } from '@/components/ui/progress';
@@ -83,7 +83,11 @@ export function DropZone({ onUpload, onDelete, files: initialFiles = [] }: DropZ
       'application/pdf': ['.pdf'],
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
       'application/zip': ['.zip'],
-      'application/vnd.ms-outlook': ['.msg']
+      'application/vnd.ms-outlook': ['.msg'],
+      'image/png': ['.png'],
+      'image/jpeg': ['.jpg', '.jpeg'],
+      'image/gif': ['.gif'],
+      'image/webp': ['.webp']
     }
   });
 
@@ -91,6 +95,7 @@ export function DropZone({ onUpload, onDelete, files: initialFiles = [] }: DropZ
     if (type.includes('pdf')) return <FileText className="h-5 w-5 text-red-500" />;
     if (type.includes('zip')) return <FileArchive className="h-5 w-5 text-yellow-500" />;
     if (type.includes('msg')) return <Mail className="h-5 w-5 text-blue-500" />;
+    if (['png', 'jpg', 'jpeg', 'gif', 'webp'].includes(type.toLowerCase())) return <Image className="h-5 w-5 text-green-500" />;
     return <File className="h-5 w-5 text-gray-500" />;
   };
 
@@ -109,7 +114,7 @@ export function DropZone({ onUpload, onDelete, files: initialFiles = [] }: DropZ
             <Upload className="h-6 w-6" />
           </div>
           <p className="font-medium text-foreground">Click to upload or drag and drop</p>
-          <p className="text-xs">PDF, DOCX, ZIP, MSG (Max 50MB)</p>
+          <p className="text-xs">PDF, DOCX, ZIP, MSG, PNG, JPG, GIF, WEBP (Max 50MB)</p>
         </div>
       </div>
 
