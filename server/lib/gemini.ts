@@ -12,13 +12,14 @@ export interface AIGenerationResult {
 
 async function callGeminiAPI(contents: { role: string; parts: { text: string }[] }[], maxOutputTokens: number = 8192): Promise<{ text: string; promptTokenCount: number; candidatesTokenCount: number }> {
   if (useIntegration) {
-    const response = await fetch(`${integrationBaseUrl}/models/gemini-2.5-flash:generateContent`, {
+    const response = await fetch(integrationBaseUrl!, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${integrationGeminiKey}`,
       },
       body: JSON.stringify({
+        model: 'gemini-2.5-flash',
         contents,
         generationConfig: {
           maxOutputTokens,
