@@ -423,14 +423,15 @@ export async function registerRoutes(
 
       let workflow: string;
       let sketchResults: any[] = [];
+      
+      // Import fs/promises for file operations (needed for sketch analysis files)
+      const fs = await import('fs/promises');
 
       // Conditional triggering: ONLY run Python agent if sketches present
       if (sketches.length > 0) {
         workflow = 'with-sketches';
         console.log(`Processing ${sketches.length} sketches with Python vision agent...`);
 
-        const fs = await import('fs/promises');
-        const path = await import('path');
         const os = await import('os');
 
         // Save sketches to temp files for Python processing
@@ -491,26 +492,61 @@ export async function registerRoutes(
         }
       }
 
-      // Save sketches as documents so they appear in Project Files list
+      // Save sketches as documents and create text files with extracted data
       for (let i = 0; i < sketches.length; i++) {
         const sketch = sketches[i];
         const safeFilename = sketch.originalname.replace(/[^\w\s.-]/g, '_').replace(/\.{2,}/g, '.').trim();
         const sketchResult = sketchResults[i];
         
-        // Create document record for the sketch with extracted info as content
-        const sketchContent = sketchResult ? 
-          `[Sketch Analysis]\nDocument Type: ${sketchResult.document_type || 'Technical Drawing'}\nProject Phase: ${sketchResult.project_phase || 'Not specified'}\n${sketchResult.notes || ''}` :
-          '[Image file - analysis pending]';
+        // Create comprehensive text content from all extracted data
+        let sketchContent = '[Sketch Analysis]\n';
+        if (sketchResult) {
+          sketchContent += `Document Type: ${sketchResult.document_type || 'Technical Drawing'}\n`;
+          sketchContent += `Project Phase: ${sketchResult.project_phase || 'Not specified'}\n`;
+          if (sketchResult.dimensions) sketchContent += `Dimensions: ${JSON.stringify(sketchResult.dimensions, null, 2)}\n`;
+          if (sketchResult.materials) sketchContent += `Materials: ${JSON.stringify(sketchResult.materials, null, 2)}\n`;
+          if (sketchResult.specifications) sketchContent += `Specifications: ${JSON.stringify(sketchResult.specifications, null, 2)}\n`;
+          if (sketchResult.components) sketchContent += `Components: ${JSON.stringify(sketchResult.components, null, 2)}\n`;
+          if (sketchResult.standards) sketchContent += `Standards: ${JSON.stringify(sketchResult.standards, null, 2)}\n`;
+          if (sketchResult.regional_codes) sketchContent += `Regional Codes: ${JSON.stringify(sketchResult.regional_codes, null, 2)}\n`;
+          if (sketchResult.annotations) sketchContent += `Annotations: ${JSON.stringify(sketchResult.annotations, null, 2)}\n`;
+          if (sketchResult.notes) sketchContent += `Notes: ${sketchResult.notes}\n`;
+          if (sketchResult.raw_analysis) sketchContent += `\n--- Full Analysis ---\n${sketchResult.raw_analysis}\n`;
+        } else {
+          sketchContent = '[Image file - analysis pending]';
+        }
         
         try {
+          // Save text file with extracted data to uploads folder
+          const pathModule = await import('path');
+          const baseFilename = safeFilename.replace(/\.[^.]+$/, '');
+          const txtFilename = `${baseFilename}_analysis.txt`;
+          const txtPath = pathModule.join(process.cwd(), 'uploads', 'analysis', txtFilename);
+          
+          // Ensure analysis directory exists
+          const analysisDir = pathModule.join(process.cwd(), 'uploads', 'analysis');
+          await fs.mkdir(analysisDir, { recursive: true });
+          await fs.writeFile(txtPath, sketchContent, 'utf-8');
+          console.log(`Saved analysis text file: ${txtPath}`);
+          
+          // Create document record for the sketch (include doc type info in content)
           await storage.createDocument({
             projectId,
             filename: safeFilename,
-            description: sketchResult?.document_type || 'Uploaded sketch/drawing',
             content: sketchContent,
             isProcessed: true,
           });
+          
+          // Also create a document record for the analysis text file
+          await storage.createDocument({
+            projectId,
+            filename: txtFilename,
+            content: sketchContent,
+            isProcessed: true,
+          });
+          
           processedFiles.push({ filename: safeFilename, chunksCreated: 0 });
+          processedFiles.push({ filename: txtFilename, chunksCreated: 0 });
         } catch (error: any) {
           console.error(`Failed to save sketch document ${safeFilename}:`, error.message);
         }
