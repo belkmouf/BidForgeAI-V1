@@ -53,6 +53,7 @@ import type { Project, Bid } from "@shared/schema";
 export default function Dashboard() {
   const user = useAuthStore((state) => state.user);
   const isCollapsed = useSidebarStore((state) => state.isCollapsed);
+  const isSystemAdmin = user?.role === "system_admin";
   const [projects, setProjects] = useState<Project[]>([]);
   const [stats, setStats] = useState<{
     pipeline: Record<string, number>;
@@ -269,7 +270,7 @@ export default function Dashboard() {
                       <TableRow className="hover:bg-transparent">
                         <TableHead>Project Name</TableHead>
                         <TableHead>Status</TableHead>
-                        <TableHead>LLM Cost</TableHead>
+                        {isSystemAdmin && <TableHead>LLM Cost</TableHead>}
                         <TableHead>Due Date</TableHead>
                         <TableHead className="text-right">Action</TableHead>
                       </TableRow>
@@ -314,16 +315,18 @@ export default function Dashboard() {
                               {project.status}
                             </Badge>
                           </TableCell>
-                          <TableCell>
-                            <button
-                              onClick={(e) => handleCostClick(project, e)}
-                              className="font-mono text-sm text-primary hover:text-primary/80 hover:underline cursor-pointer flex items-center gap-1"
-                              data-testid={`link-llm-cost-${project.id}`}
-                            >
-                              <DollarSign className="h-3 w-3" />
-                              {(projectCosts[project.id] || 0).toFixed(4)}
-                            </button>
-                          </TableCell>
+                          {isSystemAdmin && (
+                            <TableCell>
+                              <button
+                                onClick={(e) => handleCostClick(project, e)}
+                                className="font-mono text-sm text-primary hover:text-primary/80 hover:underline cursor-pointer flex items-center gap-1"
+                                data-testid={`link-llm-cost-${project.id}`}
+                              >
+                                <DollarSign className="h-3 w-3" />
+                                {(projectCosts[project.id] || 0).toFixed(4)}
+                              </button>
+                            </TableCell>
+                          )}
                           <TableCell>
                             <div className="flex items-center gap-2 text-sm text-muted-foreground">
                               <Calendar className="h-3 w-3" />
