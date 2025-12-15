@@ -526,22 +526,13 @@ export async function registerRoutes(
         const safeFilename = sketch.originalname.replace(/[^\w\s.-]/g, '_').replace(/\.{2,}/g, '.').trim();
         const sketchResult = sketchResults[i];
         
-        // Create comprehensive text content from all extracted data
-        let sketchContent = '[Sketch Analysis]\n';
+        // Save the full structured JSON analysis as the text file content
+        let sketchContent: string;
         if (sketchResult) {
-          sketchContent += `Document Type: ${sketchResult.document_type || 'Technical Drawing'}\n`;
-          sketchContent += `Project Phase: ${sketchResult.project_phase || 'Not specified'}\n`;
-          if (sketchResult.dimensions) sketchContent += `Dimensions: ${JSON.stringify(sketchResult.dimensions, null, 2)}\n`;
-          if (sketchResult.materials) sketchContent += `Materials: ${JSON.stringify(sketchResult.materials, null, 2)}\n`;
-          if (sketchResult.specifications) sketchContent += `Specifications: ${JSON.stringify(sketchResult.specifications, null, 2)}\n`;
-          if (sketchResult.components) sketchContent += `Components: ${JSON.stringify(sketchResult.components, null, 2)}\n`;
-          if (sketchResult.standards) sketchContent += `Standards: ${JSON.stringify(sketchResult.standards, null, 2)}\n`;
-          if (sketchResult.regional_codes) sketchContent += `Regional Codes: ${JSON.stringify(sketchResult.regional_codes, null, 2)}\n`;
-          if (sketchResult.annotations) sketchContent += `Annotations: ${JSON.stringify(sketchResult.annotations, null, 2)}\n`;
-          if (sketchResult.notes) sketchContent += `Notes: ${sketchResult.notes}\n`;
-          if (sketchResult.raw_analysis) sketchContent += `\n--- Full Analysis ---\n${sketchResult.raw_analysis}\n`;
+          // Save the complete structured JSON for maximum detail
+          sketchContent = JSON.stringify(sketchResult, null, 2);
         } else {
-          sketchContent = '[Image file - analysis pending]';
+          sketchContent = JSON.stringify({ error: 'Image file - analysis pending' }, null, 2);
         }
         
         try {
