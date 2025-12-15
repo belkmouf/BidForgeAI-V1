@@ -68,7 +68,7 @@ OUTPUT REQUIREMENTS:
 - CRITICAL: Output ONLY raw HTML content. Do NOT wrap your response in markdown code blocks (like \`\`\`html or \`\`\`). Start directly with <div> or other HTML tags.`;
 
   const response = await gemini.models.generateContent({
-    model: 'gemini-2.5-flash',
+    model: 'gemini-1.5-flash',
     contents: [
       {
         role: 'user',
@@ -94,7 +94,7 @@ Maintain the HTML structure and professional styling.
 CRITICAL: Output ONLY raw HTML content. Do NOT wrap your response in markdown code blocks (like \`\`\`html or \`\`\`).`;
 
   const response = await gemini.models.generateContent({
-    model: 'gemini-2.5-flash',
+    model: 'gemini-1.5-flash',
     contents: [
       {
         role: 'user',
