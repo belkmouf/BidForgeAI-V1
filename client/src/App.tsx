@@ -19,6 +19,7 @@ import Login from "@/pages/Login";
 import Register from "@/pages/Register";
 import ProjectConflicts from "@/pages/ProjectConflicts";
 import Analytics from "@/pages/Analytics";
+import Reports from "@/pages/Reports";
 import Admin from "@/pages/Admin";
 import AcceptInvite from "@/pages/AcceptInvite";
 import OnboardingWizard from "@/pages/OnboardingWizard";
@@ -161,6 +162,9 @@ function Router() {
       </Route>
       <Route path="/analytics">
         {() => <ProtectedRoute component={Analytics} />}
+      </Route>
+      <Route path="/reports">
+        {() => <ProtectedRoute component={Reports} />}
       </Route>
       <Route path="/admin">
         {() => <ProtectedRoute component={Admin} />}
