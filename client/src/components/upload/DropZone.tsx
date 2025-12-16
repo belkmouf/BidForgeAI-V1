@@ -52,7 +52,13 @@ export function DropZone({ onUpload, onUploadWithProgress, onDelete, files: init
     progress: 100
   }));
 
-  const allFiles = [...completedFiles, ...uploadingFiles];
+  // Get names of completed files to filter out duplicates from uploadingFiles
+  const completedFileNames = new Set(completedFiles.map(f => f.name));
+  
+  // Filter out uploadingFiles that are already in completedFiles (avoid duplicates after refresh)
+  const activeUploads = uploadingFiles.filter(f => !completedFileNames.has(f.name));
+  
+  const allFiles = [...completedFiles, ...activeUploads];
 
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
     for (const file of acceptedFiles) {
