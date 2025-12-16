@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { Upload, File, Trash2, CheckCircle2, AlertCircle, FileText, FileArchive, Mail, Image, Download } from 'lucide-react';
+import { Upload, File, Trash2, CheckCircle2, AlertCircle, FileText, FileArchive, Mail, Image, Download, Loader2 } from 'lucide-react';
 import { useDropzone } from 'react-dropzone';
 import { cn } from '@/lib/utils';
 import { Progress } from '@/components/ui/progress';
@@ -161,7 +161,11 @@ export function DropZone({ onUpload, onUploadWithProgress, onDelete, files: init
             <div key={file.id} className="p-3 rounded-md border-2 border-primary/30 bg-card hover:shadow-sm transition-all">
               <div className="flex items-start gap-3">
                 <div className="mt-1">
-                  {getFileIcon(file.type)}
+                  {(file.status === 'uploading' || file.status === 'processing') ? (
+                    <Loader2 className="h-5 w-5 text-primary animate-spin" />
+                  ) : (
+                    getFileIcon(file.type)
+                  )}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between mb-1">
@@ -171,10 +175,13 @@ export function DropZone({ onUpload, onUploadWithProgress, onDelete, files: init
                   </div>
                   <div className="flex items-center justify-between text-xs text-muted-foreground">
                     <span>{file.size}</span>
-                    <span className="capitalize">{file.status === 'processing' ? 'Ingesting...' : file.status}</span>
+                    {file.status === 'uploading' && <span className="text-primary font-medium">Uploading {file.progress}%</span>}
+                    {file.status === 'processing' && <span className="text-primary font-medium">Processing...</span>}
+                    {file.status === 'completed' && <span className="text-green-600">Completed</span>}
+                    {file.status === 'error' && <span className="text-destructive">Error</span>}
                   </div>
-                  {file.status !== 'completed' && file.status !== 'error' && (
-                    <Progress value={file.progress} className="h-1 mt-1.5" />
+                  {(file.status === 'uploading' || file.status === 'processing') && (
+                    <Progress value={file.progress} className="h-2 mt-2" />
                   )}
                 </div>
               </div>
