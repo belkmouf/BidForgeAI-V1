@@ -156,8 +156,8 @@ export default function ProjectWorkspace() {
   const handleFileUploadWithProgress = async (file: File, onProgress: (progress: ProcessingProgress) => void) => {
     try {
       const result = await uploadDocumentWithProgress(projectId, file, onProgress);
-      // Reload documents list after successful upload
-      const docsData = await listDocuments(projectId);
+      // Reload documents list after successful upload (bust cache to get fresh data)
+      const docsData = await listDocuments(projectId, true);
       setDocuments(docsData);
       toast({
         title: "Upload Successful",
@@ -176,8 +176,8 @@ export default function ProjectWorkspace() {
   const handleDeleteDocument = async (documentId: number) => {
     try {
       await deleteDocument(documentId);
-      // Reload documents list after successful deletion
-      const docsData = await listDocuments(projectId);
+      // Reload documents list after successful deletion (bust cache to get fresh data)
+      const docsData = await listDocuments(projectId, true);
       setDocuments(docsData);
       toast({
         title: "Document Deleted",

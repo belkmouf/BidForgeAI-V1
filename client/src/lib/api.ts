@@ -224,8 +224,11 @@ export async function uploadDocumentWithProgress(
   throw new Error('No completion event received');
 }
 
-export async function listDocuments(projectId: string) {
-  const res = await apiRequest(`${API_BASE}/projects/${projectId}/documents`);
+export async function listDocuments(projectId: string, bustCache: boolean = false) {
+  const url = bustCache 
+    ? `${API_BASE}/projects/${projectId}/documents?_=${Date.now()}`
+    : `${API_BASE}/projects/${projectId}/documents`;
+  const res = await apiRequest(url);
   if (!res.ok) throw new Error(await res.text());
   return res.json() as Promise<Document[]>;
 }
