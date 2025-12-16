@@ -16,10 +16,11 @@ interface FileItem {
 interface DropZoneProps {
   files?: FileItem[];
   onUpload?: (file: File) => void;
+  onUploadWithProgress?: (file: File, onProgress: (progress: number) => void) => Promise<void>;
   onDelete?: (documentId: number) => void;
 }
 
-export function DropZone({ onUpload, onDelete, files: initialFiles = [] }: DropZoneProps) {
+export function DropZone({ onUpload, onUploadWithProgress, onDelete, files: initialFiles = [] }: DropZoneProps) {
   const [uploadingFiles, setUploadingFiles] = useState<Array<{
     id: number;
     name: string;
@@ -27,6 +28,7 @@ export function DropZone({ onUpload, onDelete, files: initialFiles = [] }: DropZ
     type: string;
     status: 'uploading' | 'processing' | 'completed' | 'error';
     progress: number;
+    errorMessage?: string;
   }>>([]);
 
   const completedFiles = initialFiles.map(f => ({
@@ -40,8 +42,8 @@ export function DropZone({ onUpload, onDelete, files: initialFiles = [] }: DropZ
 
   const allFiles = [...completedFiles, ...uploadingFiles];
 
-  const onDrop = useCallback((acceptedFiles: File[]) => {
-    acceptedFiles.forEach(file => {
+  const onDrop = useCallback(async (acceptedFiles: File[]) => {
+    for (const file of acceptedFiles) {
       const fileId = Date.now() + Math.random();
       const newFile = {
         id: fileId,
@@ -54,28 +56,58 @@ export function DropZone({ onUpload, onDelete, files: initialFiles = [] }: DropZ
 
       setUploadingFiles(prev => [...prev, newFile]);
       
-      // Call upload handler
-      onUpload?.(file);
-
-      // Simulate progress
-      let progress = 0;
-      const interval = setInterval(() => {
-        progress += 10;
-        setUploadingFiles(prev => prev.map(f => f.id === fileId ? { 
-          ...f, 
-          progress: Math.min(progress, 100), 
-          status: progress >= 100 ? 'processing' : 'uploading' 
-        } : f));
-        
-        if (progress >= 100) {
-          clearInterval(interval);
+      // Use progress-based upload if available
+      if (onUploadWithProgress) {
+        try {
+          await onUploadWithProgress(file, (progress) => {
+            setUploadingFiles(prev => prev.map(f => f.id === fileId ? { 
+              ...f, 
+              progress: Math.min(progress, 95),
+              status: progress >= 95 ? 'processing' : 'uploading'
+            } : f));
+          });
+          
+          // Mark as completed
+          setUploadingFiles(prev => prev.map(f => f.id === fileId ? { 
+            ...f, 
+            progress: 100, 
+            status: 'processing' as const
+          } : f));
+          
+          // Remove after processing indicator
           setTimeout(() => {
             setUploadingFiles(prev => prev.filter(f => f.id !== fileId));
           }, 1500);
+        } catch (error) {
+          setUploadingFiles(prev => prev.map(f => f.id === fileId ? { 
+            ...f, 
+            status: 'error' as const,
+            errorMessage: error instanceof Error ? error.message : 'Upload failed'
+          } : f));
         }
-      }, 300);
-    });
-  }, [onUpload]);
+      } else if (onUpload) {
+        // Fallback to simple upload with simulated progress
+        onUpload(file);
+
+        let progress = 0;
+        const interval = setInterval(() => {
+          progress += 10;
+          setUploadingFiles(prev => prev.map(f => f.id === fileId ? { 
+            ...f, 
+            progress: Math.min(progress, 100), 
+            status: progress >= 100 ? 'processing' : 'uploading' 
+          } : f));
+          
+          if (progress >= 100) {
+            clearInterval(interval);
+            setTimeout(() => {
+              setUploadingFiles(prev => prev.filter(f => f.id !== fileId));
+            }, 1500);
+          }
+        }, 300);
+      }
+    }
+  }, [onUpload, onUploadWithProgress]);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,

@@ -1,5 +1,5 @@
 import type { Project, Document, Bid } from '@shared/schema';
-import { apiRequest } from './auth';
+import { apiRequest, useAuthStore } from './auth';
 
 const API_BASE = '/api';
 
@@ -80,6 +80,67 @@ export async function uploadDocument(projectId: string, file: File) {
     totalChunks: number;
     documents: Array<{ filename: string; documentId: number; chunksCreated: number }>;
   }>;
+}
+
+export async function uploadDocumentWithProgress(
+  projectId: string, 
+  file: File, 
+  onProgress: (progress: number) => void
+): Promise<{ 
+  message: string; 
+  filesProcessed: number;
+  totalChunks: number;
+  documents: Array<{ filename: string; documentId: number; chunksCreated: number }>;
+}> {
+  return new Promise((resolve, reject) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    const xhr = new XMLHttpRequest();
+    
+    xhr.upload.addEventListener('progress', (event) => {
+      if (event.lengthComputable) {
+        const percentComplete = Math.round((event.loaded / event.total) * 100);
+        onProgress(percentComplete);
+      }
+    });
+    
+    xhr.addEventListener('load', () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        try {
+          const response = JSON.parse(xhr.responseText);
+          resolve(response);
+        } catch {
+          reject(new Error('Invalid response from server'));
+        }
+      } else {
+        try {
+          const errorData = JSON.parse(xhr.responseText);
+          reject(new Error(errorData.error || 'Upload failed'));
+        } catch {
+          reject(new Error('Upload failed'));
+        }
+      }
+    });
+    
+    xhr.addEventListener('error', () => {
+      reject(new Error('Network error during upload'));
+    });
+    
+    xhr.addEventListener('abort', () => {
+      reject(new Error('Upload cancelled'));
+    });
+    
+    xhr.open('POST', `${API_BASE}/projects/${projectId}/upload`);
+    
+    // Get auth token from store
+    const { accessToken } = useAuthStore.getState();
+    if (accessToken) {
+      xhr.setRequestHeader('Authorization', `Bearer ${accessToken}`);
+    }
+    
+    xhr.send(formData);
+  });
 }
 
 export async function listDocuments(projectId: string) {

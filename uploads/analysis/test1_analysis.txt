@@ -1,0 +1,169 @@
+{
+  "sketch_id": "sketch_1765853830815_test1",
+  "context_layer": {
+    "document_type": "Structural Detail Drawing",
+    "description": "Drawing shows details for a double bay shaded parking structure, including side view, plan view, foundation details, and various connection details. It includes dimensions, material specifications, and anchor bolt schedule.",
+    "inferred_capacity": {
+      "value": 2,
+      "unit": "vehicles",
+      "reasoning": "The drawing is labeled 'DOUBLE BAY SHADED PARKING', indicating it is designed to accommodate two vehicles."
+    },
+    "compliance_note": "Issued for Construction by AL SAQF ENGINEERING CONSULTANCY",
+    "purpose": "Provide shaded parking for vehicles",
+    "key_features": [
+      "Double bay design",
+      "Fabric shade structure",
+      "Detailed foundation design",
+      "Anchor bolt connection details"
+    ]
+  },
+  "project_metadata": {
+    "project_title": "DETAIL OF SHADED CAR PARKING",
+    "project_number": null,
+    "revision": null,
+    "status": "ISSUED FOR CONSTRUCTION",
+    "date": "2023",
+    "scale": null,
+    "personnel": {
+      "drawn_by": null,
+      "checked_by": null,
+      "approved_by": "APP",
+      "client": null,
+      "consultant": "AL MANARAH",
+      "contractor": null
+    },
+    "drawing_number": null,
+    "sheet_of": null
+  },
+  "technical_data": {
+    "dimensions": [],
+    "materials": [
+      {
+        "component": "Base Plate",
+        "spec": "Flange 10mm Thk",
+        "location": "Foundation",
+        "grade": null,
+        "standard": null,
+        "quantity": 0,
+        "unit": null,
+        "finish": null,
+        "color": null
+      },
+      {
+        "component": "Foundation",
+        "spec": "100mm Thk P.C.C.",
+        "location": "Below ground",
+        "grade": null,
+        "standard": null,
+        "quantity": 0,
+        "unit": null,
+        "finish": null,
+        "color": null
+      },
+      {
+        "component": "Foundation",
+        "spec": "1000g Polythene Sheets",
+        "location": "Below P.C.C.",
+        "grade": null,
+        "standard": null,
+        "quantity": 0,
+        "unit": null,
+        "finish": null,
+        "color": null
+      },
+      {
+        "component": "Foundation",
+        "spec": "3 Coats of Synthaprufe",
+        "location": "On concrete",
+        "grade": null,
+        "standard": null,
+        "quantity": 0,
+        "unit": null,
+        "finish": null,
+        "color": null
+      }
+    ],
+    "components": [
+      {
+        "type": "Foundation",
+        "description": "Foundation for double parking bay",
+        "size": null,
+        "count": 1,
+        "location": "Below ground level",
+        "material": "Concrete",
+        "connection_type": null
+      },
+      {
+        "type": "Anchor Bolt",
+        "description": "M24 Anchor Bolts (Grade 8.8)",
+        "size": "M24",
+        "count": 128,
+        "location": "Base Plate",
+        "material": "Steel Grade 8.8",
+        "connection_type": "Bolted"
+      }
+    ],
+    "quantities": {
+      "concrete_volume_m3": 0,
+      "steel_weight_kg": 0,
+      "fabric_area_m2": 0,
+      "paint_area_m2": 0,
+      "foundation_count": 1
+    }
+  },
+  "specifications": [],
+  "standards": [],
+  "regional_codes": [],
+  "annotations": [
+    "DETAIL-C REFER SHEET NO-AR-02 A",
+    "DETAIL-2 REFER SHEET NC-AR-02 A",
+    "SIDE VIEW OF SHADE (DOUBLE BAY)",
+    "PLAN OF SHADE (DOUBLE BAY)",
+    "DETAIL-3 REFER SHEET NO-",
+    "DETAIL-B",
+    "DETAIL-D",
+    "DETAIL-D",
+    "DETAIL-C",
+    "DETAIL-A",
+    "DETAIL-1",
+    "DETAIL-3",
+    "ENLARGED DETAIL-4",
+    "FINIRGAD LVL",
+    "ENLARGED DETAIL-2",
+    "SECTION - D-D",
+    "DETAIL OF FOUNDATION (FOR DOUBLE PARKING BAY)",
+    "BASE PLATE",
+    "DETAIL OF BASE PLATE",
+    "SECTION-B-B",
+    "SCALE 1:19",
+    "SECTION-E-E",
+    "3D PERSPECTIVE - DOUBLE BAY SHADED PARKING",
+    "Anchor Bolts Schedule",
+    "AL SAQF ENGINEERING CONSULTANCY ISSUED FOR CONSTRUCTION"
+  ],
+  "views_included": [
+    "Side View",
+    "Plan View",
+    "Section B-B",
+    "Section D-D",
+    "Section E-E",
+    "3D Perspective",
+    "Detail 1",
+    "Detail 2",
+    "Detail 3",
+    "Detail A",
+    "Detail B",
+    "Detail C",
+    "Detail D",
+    "Enlarged Detail 2",
+    "Enlarged Detail 4"
+  ],
+  "revisions": [],
+  "confidence_score": 0.85,
+  "processing_time": 10.478865385055542,
+  "notes": "Drawing references other sheets (AR-02 A, NC-AR-02 A) for more details. Dimensions are not explicitly labeled with values, but are implied by the detailed drawings.",
+  "warnings": [
+    "Dimensions are not explicitly labeled with values.",
+    "Scale is only provided for Section B-B."
+  ]
+}

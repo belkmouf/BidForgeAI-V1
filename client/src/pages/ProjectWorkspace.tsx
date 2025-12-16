@@ -13,7 +13,7 @@ import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/componen
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from '@/hooks/use-toast';
-import { getProject, listDocuments, uploadDocument, deleteDocument, generateBid, refineBid, getLatestBid, wrapInTemplate, generateShareLink, updateProjectStatus, type AIModel } from '@/lib/api';
+import { getProject, listDocuments, uploadDocument, uploadDocumentWithProgress, deleteDocument, generateBid, refineBid, getLatestBid, wrapInTemplate, generateShareLink, updateProjectStatus, type AIModel } from '@/lib/api';
 import type { Project, Document } from '@shared/schema';
 
 const initialEditorContent = '<h1>Welcome to BidForge AI</h1><p>Use the Generate panel to create your first bid draft, or start typing to manually build your proposal.</p>';
@@ -150,6 +150,26 @@ export default function ProjectWorkspace() {
         description: error.message || "Failed to upload file",
         variant: "destructive",
       });
+    }
+  };
+
+  const handleFileUploadWithProgress = async (file: File, onProgress: (progress: number) => void) => {
+    try {
+      const result = await uploadDocumentWithProgress(projectId, file, onProgress);
+      // Reload documents list after successful upload
+      const docsData = await listDocuments(projectId);
+      setDocuments(docsData);
+      toast({
+        title: "Upload Successful",
+        description: `${file.name} has been processed (${result.filesProcessed} file(s), ${result.totalChunks} chunks).`,
+      });
+    } catch (error: any) {
+      toast({
+        title: "Upload Failed",
+        description: error.message || "Failed to upload file",
+        variant: "destructive",
+      });
+      throw error; // Re-throw to let DropZone handle the error state
     }
   };
 
@@ -404,7 +424,7 @@ export default function ProjectWorkspace() {
                       uploadedAt: new Date(doc.uploadedAt),
                       id: doc.id.toString()
                     }))}
-                    onUpload={handleFileUpload}
+                    onUploadWithProgress={handleFileUploadWithProgress}
                     onDelete={handleDeleteDocument}
                   />
                 </div>
