@@ -1,0 +1,28 @@
+{
+  "sketch_id": "sketch_1765888766486_Car parking draiwing22",
+  "context_layer": {
+    "document_type": "Architectural Construction Drawing",
+    "description": "Drawing details the construction of a double bay shaded parking structure. It includes plan, side view, sections, and enlarged details of connections and foundation.",
+    "inferred_capacity": {
+      "value": 2,
+      "unit": "vehicles",
+      "reasoning": "The drawing shows a 'double bay' shaded parking, implying capacity for two vehicles."
+    },
+    "compliance_note": "All materials finishes shall be as per specifications & approved by the clients/consultants.",
+    "purpose": "To provide shaded parking for vehicles.",
+    "key_features": [
+      "Double bay design",
+      "Fabric shade structure",
+      "Reinforced concrete foundation"
+    ]
+  },
+  "project_metadata": {
+    "project_title": "PROPOSED DIRECTORATE BUILDING AT AL MUDHAIBI",
+    "project_number": "174/2023",
+    "revision": "00",
+    "status": "ISSUED FOR APPROVAL",
+    "date": "NOV.-2023",
+    "scale": "1:100"
+  },
+  "confidence_score": 0.88
+}
