@@ -101,132 +101,127 @@ export async function uploadDocumentWithProgress(
   totalChunks: number;
   documents: Array<{ filename: string; documentId: number; chunksCreated: number }>;
 }> {
-  return new Promise((resolve, reject) => {
-    const formData = new FormData();
-    formData.append('file', file);
-    
-    const xhr = new XMLHttpRequest();
-    let uploadComplete = false;
-    
-    // Track upload progress (file transfer)
-    xhr.upload.addEventListener('progress', (event) => {
-      if (event.lengthComputable && !uploadComplete) {
-        const percentComplete = Math.round((event.loaded / event.total) * 100);
-        onProgress({
-          stage: 'uploading',
-          filename: file.name,
-          percentage: Math.min(percentComplete, 95),
-          message: `Uploading ${percentComplete}%...`
-        });
-      }
+  const formData = new FormData();
+  formData.append('file', file);
+  
+  onProgress({
+    stage: 'uploading',
+    filename: file.name,
+    percentage: 5,
+    message: 'Starting upload...'
+  });
+  
+  const { accessToken } = useAuthStore.getState();
+  const headers: HeadersInit = {};
+  if (accessToken) {
+    headers['Authorization'] = `Bearer ${accessToken}`;
+  }
+  
+  const response = await fetch(`${API_BASE}/projects/${projectId}/upload-with-progress`, {
+    method: 'POST',
+    headers,
+    body: formData,
+  });
+  
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({ error: 'Upload failed' }));
+    throw new Error(errorData.error || 'Upload failed');
+  }
+  
+  const contentType = response.headers.get('Content-Type') || '';
+  
+  if (!contentType.includes('text/event-stream')) {
+    const result = await response.json();
+    onProgress({
+      stage: 'complete',
+      filename: file.name,
+      percentage: 100,
+      message: 'Processing complete!'
     });
+    return result;
+  }
+  
+  const reader = response.body?.getReader();
+  if (!reader) {
+    throw new Error('Unable to read response stream');
+  }
+  
+  const decoder = new TextDecoder();
+  let buffer = '';
+  let finalResult: any = null;
+  
+  while (true) {
+    const { done, value } = await reader.read();
     
-    xhr.upload.addEventListener('load', () => {
-      uploadComplete = true;
-      onProgress({
-        stage: 'parsing',
-        filename: file.name,
-        percentage: 96,
-        message: 'Processing file on server...'
-      });
-    });
+    if (done) break;
     
-    xhr.addEventListener('load', () => {
-      if (xhr.status >= 200 && xhr.status < 300) {
-        // Check if response is SSE (text/event-stream) or JSON
-        const contentType = xhr.getResponseHeader('Content-Type') || '';
-        
-        if (contentType.includes('text/event-stream')) {
-          // Parse SSE response
-          const lines = xhr.responseText.split('\n');
-          let finalResult: any = null;
+    buffer += decoder.decode(value, { stream: true });
+    
+    const lines = buffer.split('\n');
+    buffer = lines.pop() || '';
+    
+    for (const rawLine of lines) {
+      const line = rawLine.trim();
+      if (line.startsWith('data: ')) {
+        try {
+          const data = JSON.parse(line.slice(6).trim());
           
-          for (const line of lines) {
-            if (line.startsWith('data: ')) {
-              try {
-                const data = JSON.parse(line.slice(6));
-                
-                if (data.type === 'progress') {
-                  onProgress({
-                    stage: data.stage,
-                    filename: data.filename,
-                    currentChunk: data.currentChunk,
-                    totalChunks: data.totalChunks,
-                    percentage: data.percentage,
-                    message: data.message
-                  });
-                } else if (data.type === 'complete') {
-                  finalResult = data;
-                  onProgress({
-                    stage: 'complete',
-                    filename: file.name,
-                    percentage: 100,
-                    message: 'Processing complete!'
-                  });
-                } else if (data.type === 'error') {
-                  reject(new Error(data.message));
-                  return;
-                }
-              } catch (e) {
-                console.warn('Failed to parse SSE line:', line);
-              }
-            }
-          }
-          
-          if (finalResult) {
-            resolve({
-              message: 'Upload complete',
-              filesProcessed: finalResult.filesProcessed,
-              totalChunks: finalResult.totalChunks,
-              documents: finalResult.documents
+          if (data.type === 'progress') {
+            onProgress({
+              stage: data.stage,
+              filename: data.filename,
+              currentChunk: data.currentChunk,
+              totalChunks: data.totalChunks,
+              percentage: data.percentage,
+              message: data.message
             });
-          } else {
-            reject(new Error('No completion event received'));
-          }
-        } else {
-          // Standard JSON response (fallback)
-          try {
-            const response = JSON.parse(xhr.responseText);
+          } else if (data.type === 'complete') {
+            finalResult = data;
             onProgress({
               stage: 'complete',
               filename: file.name,
               percentage: 100,
               message: 'Processing complete!'
             });
-            resolve(response);
-          } catch {
-            reject(new Error('Invalid response from server'));
+          } else if (data.type === 'error') {
+            throw new Error(data.message);
+          }
+        } catch (e) {
+          if (e instanceof Error && e.message !== 'Unexpected end of JSON input') {
+            console.warn('Failed to parse SSE line:', line, e);
           }
         }
-      } else {
-        try {
-          const errorData = JSON.parse(xhr.responseText);
-          reject(new Error(errorData.error || 'Upload failed'));
-        } catch {
-          reject(new Error('Upload failed'));
-        }
       }
-    });
-    
-    xhr.addEventListener('error', () => {
-      reject(new Error('Network error during upload'));
-    });
-    
-    xhr.addEventListener('abort', () => {
-      reject(new Error('Upload cancelled'));
-    });
-    
-    // Use the SSE progress endpoint
-    xhr.open('POST', `${API_BASE}/projects/${projectId}/upload-with-progress`);
-    
-    // Get auth token from store
-    const { accessToken } = useAuthStore.getState();
-    if (accessToken) {
-      xhr.setRequestHeader('Authorization', `Bearer ${accessToken}`);
     }
-    
-    xhr.send(formData);
-  });
+  }
+  
+  const trimmedBuffer = buffer.trim();
+  if (trimmedBuffer.startsWith('data: ')) {
+    try {
+      const data = JSON.parse(trimmedBuffer.slice(6).trim());
+      if (data.type === 'complete') {
+        finalResult = data;
+        onProgress({
+          stage: 'complete',
+          filename: file.name,
+          percentage: 100,
+          message: 'Processing complete!'
+        });
+      }
+    } catch {
+    }
+  }
+  
+  if (finalResult) {
+    return {
+      message: 'Upload complete',
+      filesProcessed: finalResult.filesProcessed,
+      totalChunks: finalResult.totalChunks,
+      documents: finalResult.documents
+    };
+  }
+  
+  throw new Error('No completion event received');
 }
 
 export async function listDocuments(projectId: string) {
