@@ -928,3 +928,60 @@ export const decisionLogs = pgTable("decision_logs", {
 
 export type DecisionLogRecord = typeof decisionLogs.$inferSelect;
 export type InsertDecisionLog = typeof decisionLogs.$inferInsert;
+
+// ==================== DASHBOARD CONFIGURATION ====================
+
+// Dashboard Widget Type Enum
+export const widgetTypeEnum = z.enum([
+  'win_rate_gauge',
+  'monthly_trends',
+  'project_type_breakdown',
+  'client_performance',
+  'revenue_by_status',
+  'recent_outcomes',
+  'avg_bid_amount',
+  'prediction_accuracy'
+]);
+export type WidgetType = z.infer<typeof widgetTypeEnum>;
+
+// Dashboard Widget Configuration
+export type DashboardWidget = {
+  id: string;
+  type: WidgetType;
+  title: string;
+  position: { x: number; y: number };
+  size: { width: number; height: number };
+  settings?: Record<string, any>;
+};
+
+// User Dashboard Configuration Table
+export const dashboardConfigs = pgTable("dashboard_configs", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  companyId: integer("company_id").references(() => companies.id, { onDelete: "cascade" }),
+  name: varchar("name", { length: 100 }).notNull().default("My Dashboard"),
+  isDefault: boolean("is_default").default(false),
+  widgets: jsonb("widgets").$type<DashboardWidget[]>().default(sql`'[]'::jsonb`),
+  dateRange: varchar("date_range", { length: 50 }).default("30d"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export type DashboardConfig = typeof dashboardConfigs.$inferSelect;
+export type InsertDashboardConfig = typeof dashboardConfigs.$inferInsert;
+
+export const insertDashboardConfigSchema = z.object({
+  name: z.string().min(1).max(100).optional(),
+  isDefault: z.boolean().optional(),
+  widgets: z.array(z.object({
+    id: z.string(),
+    type: widgetTypeEnum,
+    title: z.string(),
+    position: z.object({ x: z.number(), y: z.number() }),
+    size: z.object({ width: z.number(), height: z.number() }),
+    settings: z.record(z.any()).optional(),
+  })).optional(),
+  dateRange: z.string().optional(),
+});
+
+export const updateDashboardConfigSchema = insertDashboardConfigSchema.partial();
