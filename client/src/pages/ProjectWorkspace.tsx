@@ -13,7 +13,7 @@ import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/componen
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from '@/hooks/use-toast';
-import { getProject, listDocuments, uploadDocument, uploadDocumentWithProgress, deleteDocument, generateBid, refineBid, getLatestBid, wrapInTemplate, generateShareLink, updateProjectStatus, type AIModel } from '@/lib/api';
+import { getProject, listDocuments, uploadDocument, uploadDocumentWithProgress, deleteDocument, generateBid, refineBid, getLatestBid, wrapInTemplate, generateShareLink, updateProjectStatus, type AIModel, type ProcessingProgress } from '@/lib/api';
 import type { Project, Document } from '@shared/schema';
 
 const initialEditorContent = '<h1>Welcome to BidForge AI</h1><p>Use the Generate panel to create your first bid draft, or start typing to manually build your proposal.</p>';
@@ -153,7 +153,7 @@ export default function ProjectWorkspace() {
     }
   };
 
-  const handleFileUploadWithProgress = async (file: File, onProgress: (progress: number) => void) => {
+  const handleFileUploadWithProgress = async (file: File, onProgress: (progress: ProcessingProgress) => void) => {
     try {
       const result = await uploadDocumentWithProgress(projectId, file, onProgress);
       // Reload documents list after successful upload

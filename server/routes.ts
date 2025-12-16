@@ -475,7 +475,7 @@ export async function registerRoutes(
           }
 
           // Analyze sketches using Python agent
-          const context = req.body.context || `Project ${project.title || projectId}`;
+          const context = req.body.context || `Project ${project.name || projectId}`;
           const analysisResults = await pythonSketchClient.analyzeMultiple(tempPaths, context);
 
           // Extract successful results
@@ -601,6 +601,105 @@ export async function registerRoutes(
     } catch (error: any) {
       console.error('Upload error:', error);
       res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Upload with SSE progress streaming
+  app.post("/api/projects/:id/upload-with-progress", authenticateToken, upload.any(), async (req: AuthRequest, res) => {
+    try {
+      const files = req.files as Express.Multer.File[];
+
+      if (!files || files.length === 0) {
+        return res.status(400).json({ error: "No files uploaded" });
+      }
+
+      const projectId = req.params.id;
+      const companyId = req.user?.companyId ?? null;
+
+      // Verify project exists and belongs to this company
+      const project = await storage.getProject(projectId, companyId);
+      if (!project) {
+        return res.status(404).json({ error: "Project not found" });
+      }
+
+      // Set up SSE headers
+      res.setHeader('Content-Type', 'text/event-stream');
+      res.setHeader('Cache-Control', 'no-cache');
+      res.setHeader('Connection', 'keep-alive');
+      res.setHeader('X-Accel-Buffering', 'no');
+
+      const sendProgress = (data: any) => {
+        res.write(`data: ${JSON.stringify(data)}\n\n`);
+      };
+
+      // Classify files
+      const imageExtensions = ['.png', '.jpg', '.jpeg', '.gif', '.tiff', '.bmp', '.webp'];
+      const documentExtensions = ['.pdf', '.msg', '.zip', '.txt', '.doc', '.docx'];
+
+      const documents: Express.Multer.File[] = [];
+
+      for (const file of files) {
+        const originalName = file.originalname;
+        const safeFilename = originalName.replace(/[^\w\s.-]/g, '_').replace(/\.{2,}/g, '.').trim();
+
+        if (!safeFilename || safeFilename.length === 0) continue;
+        if (file.size > 50 * 1024 * 1024 || file.size === 0) continue;
+
+        const fileExt = safeFilename.toLowerCase().match(/\.[^.]*$/)?.[0] || '';
+
+        if (documentExtensions.includes(fileExt)) {
+          documents.push(file);
+        } else if (imageExtensions.includes(fileExt)) {
+          // Skip image processing for now in SSE mode
+          sendProgress({ type: 'info', message: `Skipping image ${safeFilename} - use regular upload for images` });
+        }
+      }
+
+      // Process documents with progress callback
+      const processedFiles: any[] = [];
+      
+      for (const doc of documents) {
+        const safeFilename = doc.originalname.replace(/[^\w\s.-]/g, '_').replace(/\.{2,}/g, '.').trim();
+
+        try {
+          const processed = await ingestionService.processFile(
+            doc.buffer,
+            safeFilename,
+            projectId,
+            (progress) => {
+              sendProgress({ 
+                type: 'progress', 
+                filename: progress.filename,
+                stage: progress.stage,
+                currentChunk: progress.currentChunk,
+                totalChunks: progress.totalChunks,
+                percentage: progress.percentage,
+                message: progress.message 
+              });
+            }
+          );
+          processedFiles.push(...processed);
+        } catch (error: any) {
+          console.error(`Failed to process document ${safeFilename}:`, error.message);
+          sendProgress({ type: 'error', filename: safeFilename, message: error.message });
+        }
+      }
+
+      const totalChunks = processedFiles.reduce((sum, f) => sum + f.chunksCreated, 0);
+
+      // Send final result
+      sendProgress({ 
+        type: 'complete', 
+        filesProcessed: processedFiles.length, 
+        totalChunks,
+        documents: processedFiles 
+      });
+
+      res.end();
+    } catch (error: any) {
+      console.error('Upload SSE error:', error);
+      res.write(`data: ${JSON.stringify({ type: 'error', message: error.message })}\n\n`);
+      res.end();
     }
   });
 

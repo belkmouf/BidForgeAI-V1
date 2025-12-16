@@ -33,35 +33,47 @@ interface ProcessedFile {
   chunksCreated: number;
 }
 
+export interface ProcessingProgress {
+  stage: 'parsing' | 'chunking' | 'embedding' | 'complete' | 'error';
+  filename: string;
+  currentChunk?: number;
+  totalChunks?: number;
+  percentage: number;
+  message: string;
+}
+
+export type ProgressCallback = (progress: ProcessingProgress) => void;
+
 export class IngestionService {
   private tempDirs: string[] = [];
 
   async processFile(
     buffer: Buffer,
     filename: string,
-    projectId: string
+    projectId: string,
+    onProgress?: ProgressCallback
   ): Promise<ProcessedFile[]> {
     const results: ProcessedFile[] = [];
     const ext = path.extname(filename).toLowerCase();
 
     try {
       if (ext === '.pdf') {
-        const result = await this.processPdf(buffer, filename, projectId);
+        const result = await this.processPdf(buffer, filename, projectId, onProgress);
         results.push(result);
       } else if (ext === '.zip') {
-        const zipResults = await this.processZip(buffer, filename, projectId);
+        const zipResults = await this.processZip(buffer, filename, projectId, onProgress);
         results.push(...zipResults);
       } else if (ext === '.msg') {
-        const msgResults = await this.processMsg(buffer, filename, projectId);
+        const msgResults = await this.processMsg(buffer, filename, projectId, onProgress);
         results.push(...msgResults);
       } else if (ext === '.docx') {
-        const result = await this.processDocx(buffer, filename, projectId);
+        const result = await this.processDocx(buffer, filename, projectId, onProgress);
         results.push(result);
       } else if (ext === '.txt' || ext === '.doc') {
-        const result = await this.processText(buffer, filename, projectId);
+        const result = await this.processText(buffer, filename, projectId, onProgress);
         results.push(result);
       } else {
-        const result = await this.processText(buffer, filename, projectId);
+        const result = await this.processText(buffer, filename, projectId, onProgress);
         results.push(result);
       }
     } finally {
@@ -74,8 +86,10 @@ export class IngestionService {
   private async processPdf(
     buffer: Buffer,
     filename: string,
-    projectId: string
+    projectId: string,
+    onProgress?: ProgressCallback
   ): Promise<ProcessedFile> {
+    onProgress?.({ stage: 'parsing', filename, percentage: 5, message: 'Parsing PDF...' });
     let text = '';
     
     try {
@@ -86,14 +100,16 @@ export class IngestionService {
       text = buffer.toString('utf-8', 0, Math.min(buffer.length, 10000));
     }
 
-    return this.createDocumentWithChunks(projectId, filename, text);
+    return this.createDocumentWithChunks(projectId, filename, text, onProgress);
   }
 
   private async processZip(
     buffer: Buffer,
     filename: string,
-    projectId: string
+    projectId: string,
+    onProgress?: ProgressCallback
   ): Promise<ProcessedFile[]> {
+    onProgress?.({ stage: 'parsing', filename, percentage: 5, message: 'Extracting ZIP archive...' });
     const results: ProcessedFile[] = [];
     const tempDir = this.createTempDir();
     const resolvedTempDir = path.resolve(tempDir);
@@ -151,8 +167,10 @@ export class IngestionService {
   private async processMsg(
     buffer: Buffer,
     filename: string,
-    projectId: string
+    projectId: string,
+    onProgress?: ProgressCallback
   ): Promise<ProcessedFile[]> {
+    onProgress?.({ stage: 'parsing', filename, percentage: 5, message: 'Parsing email...' });
     const results: ProcessedFile[] = [];
     
     try {
@@ -235,17 +253,21 @@ export class IngestionService {
   private async processText(
     buffer: Buffer,
     filename: string,
-    projectId: string
+    projectId: string,
+    onProgress?: ProgressCallback
   ): Promise<ProcessedFile> {
+    onProgress?.({ stage: 'parsing', filename, percentage: 5, message: 'Reading text file...' });
     const text = buffer.toString('utf-8', 0, Math.min(buffer.length, 50000));
-    return this.createDocumentWithChunks(projectId, filename, text);
+    return this.createDocumentWithChunks(projectId, filename, text, onProgress);
   }
 
   private async processDocx(
     buffer: Buffer,
     filename: string,
-    projectId: string
+    projectId: string,
+    onProgress?: ProgressCallback
   ): Promise<ProcessedFile> {
+    onProgress?.({ stage: 'parsing', filename, percentage: 5, message: 'Parsing Word document...' });
     let text = '';
     
     try {
@@ -265,16 +287,18 @@ export class IngestionService {
       text = `[DOCX content could not be extracted: ${error.message}]`;
     }
     
-    return this.createDocumentWithChunks(projectId, filename, text);
+    return this.createDocumentWithChunks(projectId, filename, text, onProgress);
   }
 
   private async createDocumentWithChunks(
     projectId: string,
     filename: string,
-    content: string
+    content: string,
+    onProgress?: ProgressCallback
   ): Promise<ProcessedFile> {
     // Sanitize content: remove null bytes that PostgreSQL cannot store in text columns
     const sanitizedContent = content.replace(/\x00/g, '');
+    onProgress?.({ stage: 'chunking', filename, percentage: 15, message: 'Splitting text into chunks...' });
     const chunks = await this.chunkTextSemantic(sanitizedContent);
     
     // Use a transaction to ensure atomic document + chunk creation
@@ -295,6 +319,14 @@ export class IngestionService {
 
       // Create chunks with embeddings
       console.log(`Generating embeddings for ${chunks.length} chunks from ${filename}...`);
+      onProgress?.({ 
+        stage: 'embedding', 
+        filename, 
+        currentChunk: 0, 
+        totalChunks: chunks.length, 
+        percentage: 20, 
+        message: `Creating embeddings (0/${chunks.length})...` 
+      });
       
       for (let i = 0; i < chunks.length; i++) {
         // Ensure each chunk is also sanitized (remove any null bytes)
@@ -312,6 +344,17 @@ export class IngestionService {
              VALUES ($1, $2, $3, $4::vector)`,
             [documentId, sanitizedChunk, i, embeddingStr]
           );
+          
+          // Report progress for each chunk
+          const progressPercent = 20 + Math.floor(((i + 1) / chunks.length) * 75);
+          onProgress?.({ 
+            stage: 'embedding', 
+            filename, 
+            currentChunk: i + 1, 
+            totalChunks: chunks.length, 
+            percentage: progressPercent, 
+            message: `Creating embeddings (${i + 1}/${chunks.length})...` 
+          });
           
           // Log progress for large documents
           if ((i + 1) % 10 === 0 || i === chunks.length - 1) {
@@ -336,6 +379,14 @@ export class IngestionService {
 
       await client.query('COMMIT');
       console.log(`✅ Successfully processed ${filename} with ${chunks.length} chunks`);
+      onProgress?.({ 
+        stage: 'complete', 
+        filename, 
+        currentChunk: chunks.length, 
+        totalChunks: chunks.length, 
+        percentage: 100, 
+        message: 'Processing complete!' 
+      });
     } catch (error) {
       await client.query('ROLLBACK');
       console.error(`Transaction failed for ${filename}, rolling back:`, error);

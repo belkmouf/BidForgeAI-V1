@@ -13,10 +13,19 @@ interface FileItem {
   uploadedAt: Date;
 }
 
+export interface ProcessingProgress {
+  stage: 'uploading' | 'parsing' | 'chunking' | 'embedding' | 'complete' | 'error';
+  filename: string;
+  currentChunk?: number;
+  totalChunks?: number;
+  percentage: number;
+  message: string;
+}
+
 interface DropZoneProps {
   files?: FileItem[];
   onUpload?: (file: File) => void;
-  onUploadWithProgress?: (file: File, onProgress: (progress: number) => void) => Promise<void>;
+  onUploadWithProgress?: (file: File, onProgress: (progress: ProcessingProgress) => void) => Promise<void>;
   onDelete?: (documentId: number) => void;
 }
 
@@ -26,8 +35,11 @@ export function DropZone({ onUpload, onUploadWithProgress, onDelete, files: init
     name: string;
     size: string;
     type: string;
-    status: 'uploading' | 'processing' | 'completed' | 'error';
+    status: 'uploading' | 'parsing' | 'chunking' | 'embedding' | 'completed' | 'error';
     progress: number;
+    statusMessage?: string;
+    currentChunk?: number;
+    totalChunks?: number;
     errorMessage?: string;
   }>>([]);
 
@@ -62,17 +74,13 @@ export function DropZone({ onUpload, onUploadWithProgress, onDelete, files: init
           await onUploadWithProgress(file, (progress) => {
             setUploadingFiles(prev => prev.map(f => f.id === fileId ? { 
               ...f, 
-              progress: Math.min(progress, 95),
-              status: progress >= 95 ? 'processing' : 'uploading'
+              progress: progress.percentage,
+              status: progress.stage === 'complete' ? 'completed' : progress.stage,
+              statusMessage: progress.message,
+              currentChunk: progress.currentChunk,
+              totalChunks: progress.totalChunks
             } : f));
           });
-          
-          // Mark as completed
-          setUploadingFiles(prev => prev.map(f => f.id === fileId ? { 
-            ...f, 
-            progress: 100, 
-            status: 'processing' as const
-          } : f));
           
           // Remove after processing indicator
           setTimeout(() => {
@@ -95,7 +103,7 @@ export function DropZone({ onUpload, onUploadWithProgress, onDelete, files: init
           setUploadingFiles(prev => prev.map(f => f.id === fileId ? { 
             ...f, 
             progress: Math.min(progress, 100), 
-            status: progress >= 100 ? 'processing' : 'uploading' 
+            status: progress >= 100 ? 'embedding' as const : 'uploading' as const
           } : f));
           
           if (progress >= 100) {
@@ -161,7 +169,7 @@ export function DropZone({ onUpload, onUploadWithProgress, onDelete, files: init
             <div key={file.id} className="p-3 rounded-md border-2 border-primary/30 bg-card hover:shadow-sm transition-all">
               <div className="flex items-start gap-3">
                 <div className="mt-1">
-                  {(file.status === 'uploading' || file.status === 'processing') ? (
+                  {(file.status !== 'completed' && file.status !== 'error') ? (
                     <Loader2 className="h-5 w-5 text-primary animate-spin" />
                   ) : (
                     getFileIcon(file.type)
@@ -175,12 +183,14 @@ export function DropZone({ onUpload, onUploadWithProgress, onDelete, files: init
                   </div>
                   <div className="flex items-center justify-between text-xs text-muted-foreground">
                     <span>{file.size}</span>
-                    {file.status === 'uploading' && <span className="text-primary font-medium">Uploading {file.progress}%</span>}
-                    {file.status === 'processing' && <span className="text-primary font-medium">Processing...</span>}
+                    {file.status === 'uploading' && <span className="text-primary font-medium">{file.statusMessage || `Uploading ${file.progress}%`}</span>}
+                    {file.status === 'parsing' && <span className="text-primary font-medium">{file.statusMessage || 'Parsing file...'}</span>}
+                    {file.status === 'chunking' && <span className="text-primary font-medium">{file.statusMessage || 'Splitting into chunks...'}</span>}
+                    {file.status === 'embedding' && <span className="text-primary font-medium">{file.statusMessage || `Embedding (${file.currentChunk || 0}/${file.totalChunks || 0})`}</span>}
                     {file.status === 'completed' && <span className="text-green-600">Completed</span>}
                     {file.status === 'error' && <span className="text-destructive">Error</span>}
                   </div>
-                  {(file.status === 'uploading' || file.status === 'processing') && (
+                  {(file.status !== 'completed' && file.status !== 'error') && (
                     <Progress value={file.progress} className="h-2 mt-2" />
                   )}
                 </div>
