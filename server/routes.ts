@@ -706,31 +706,53 @@ export async function registerRoutes(
             const sketchDoc = await storage.createDocument({
               projectId,
               filename: safeFilename,
-              contentType: sketch.mimetype || 'image/png',
               content: sketchContent,
-              fileSize: sketch.size,
+              isProcessed: false,
             });
 
-            // Create a single chunk for the image analysis
-            const chunkId = crypto.randomUUID();
+            // Create a single chunk for the image analysis with required chunkIndex
             await storage.createDocumentChunk({
-              chunkId,
               documentId: sketchDoc.id,
-              projectId,
               content: sketchContent,
+              chunkIndex: 0,
               embedding: null,
-              metadata: {
-                type: 'image_analysis',
-                original_filename: safeFilename,
-                analysis_available: !!sketchResult,
-              },
             });
+
+            // Mark the document as processed after creating the chunk
+            await storage.updateDocumentProcessed(sketchDoc.id, true);
 
             processedFiles.push({
               filename: safeFilename,
               documentId: sketchDoc.id,
               chunksCreated: 1,
               type: 'image',
+            });
+
+            // Also create the analysis text file
+            const baseFilename = safeFilename.replace(/\.[^.]+$/, '');
+            const txtFilename = `${baseFilename}_analysis.txt`;
+            
+            const txtDoc = await storage.createDocument({
+              projectId,
+              filename: txtFilename,
+              content: sketchContent,
+              isProcessed: false,
+            });
+
+            await storage.createDocumentChunk({
+              documentId: txtDoc.id,
+              content: sketchContent,
+              chunkIndex: 0,
+              embedding: null,
+            });
+
+            await storage.updateDocumentProcessed(txtDoc.id, true);
+
+            processedFiles.push({
+              filename: txtFilename,
+              documentId: txtDoc.id,
+              chunksCreated: 1,
+              type: 'analysis',
             });
           } catch (error: any) {
             console.error(`Failed to save sketch ${safeFilename}:`, error.message);
