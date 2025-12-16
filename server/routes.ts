@@ -636,6 +636,7 @@ export async function registerRoutes(
       const imageExtensions = ['.png', '.jpg', '.jpeg', '.gif', '.tiff', '.bmp', '.webp'];
       const documentExtensions = ['.pdf', '.msg', '.zip', '.txt', '.doc', '.docx'];
 
+      const sketches: Express.Multer.File[] = [];
       const documents: Express.Multer.File[] = [];
 
       for (const file of files) {
@@ -650,13 +651,101 @@ export async function registerRoutes(
         if (documentExtensions.includes(fileExt)) {
           documents.push(file);
         } else if (imageExtensions.includes(fileExt)) {
-          // Skip image processing for now in SSE mode
-          sendProgress({ type: 'info', message: `Skipping image ${safeFilename} - use regular upload for images` });
+          sketches.push(file);
         }
       }
 
       // Process documents with progress callback
       const processedFiles: any[] = [];
+      
+      // Process images/sketches first
+      const fs = await import('fs/promises');
+      const os = await import('os');
+      let sketchResults: any[] = [];
+      
+      if (sketches.length > 0) {
+        sendProgress({ type: 'progress', stage: 'parsing', message: `Analyzing ${sketches.length} image(s) with vision AI...`, percentage: 5 });
+        
+        const tempPaths: string[] = [];
+        try {
+          for (const sketch of sketches) {
+            const tempPath = path.join(os.tmpdir(), `sketch_${Date.now()}_${sketch.originalname}`);
+            await fs.writeFile(tempPath, sketch.buffer);
+            tempPaths.push(tempPath);
+          }
+
+          const context = `Project ${project.name || projectId}`;
+          const analysisResults = await pythonSketchClient.analyzeMultiple(tempPaths, context);
+          sketchResults = analysisResults.filter(r => r.success).map(r => r.result);
+
+          // Clean up temp files
+          for (const tempPath of tempPaths) {
+            try { await fs.unlink(tempPath); } catch {}
+          }
+        } catch (error: any) {
+          console.error('Image analysis error:', error.message);
+          sendProgress({ type: 'error', message: `Image analysis failed: ${error.message}` });
+        }
+
+        // Save each sketch as a document
+        for (let i = 0; i < sketches.length; i++) {
+          const sketch = sketches[i];
+          const safeFilename = sketch.originalname.replace(/[^\w\s.-]/g, '_').replace(/\.{2,}/g, '.').trim();
+          const sketchResult = sketchResults[i];
+
+          sendProgress({ type: 'progress', filename: safeFilename, stage: 'chunking', message: `Saving image ${i + 1}/${sketches.length}...`, percentage: 10 + (i / sketches.length) * 20 });
+
+          let sketchContent: string;
+          if (sketchResult) {
+            sketchContent = JSON.stringify(sketchResult, null, 2);
+          } else {
+            sketchContent = JSON.stringify({ error: 'Image file - analysis pending' }, null, 2);
+          }
+
+          try {
+            const sketchDoc = await storage.createDocument({
+              projectId,
+              filename: safeFilename,
+              contentType: sketch.mimetype || 'image/png',
+              content: sketchContent,
+              fileSize: sketch.size,
+            });
+
+            // Create a single chunk for the image analysis
+            const chunkId = crypto.randomUUID();
+            await storage.createDocumentChunk({
+              chunkId,
+              documentId: sketchDoc.id,
+              projectId,
+              content: sketchContent,
+              embedding: null,
+              metadata: {
+                type: 'image_analysis',
+                original_filename: safeFilename,
+                analysis_available: !!sketchResult,
+              },
+            });
+
+            processedFiles.push({
+              filename: safeFilename,
+              documentId: sketchDoc.id,
+              chunksCreated: 1,
+              type: 'image',
+            });
+          } catch (error: any) {
+            console.error(`Failed to save sketch ${safeFilename}:`, error.message);
+            sendProgress({ type: 'error', filename: safeFilename, message: error.message });
+          }
+        }
+
+        // Save sketch analysis to project metadata
+        if (sketchResults.length > 0) {
+          await storage.updateProjectMetadata(projectId, companyId, {
+            sketchAnalysis: sketchResults,
+            sketchAnalysisDate: new Date().toISOString(),
+          });
+        }
+      }
       
       for (const doc of documents) {
         const safeFilename = doc.originalname.replace(/[^\w\s.-]/g, '_').replace(/\.{2,}/g, '.').trim();
