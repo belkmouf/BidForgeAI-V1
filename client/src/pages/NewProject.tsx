@@ -20,14 +20,14 @@ export default function NewProject() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name || !clientName) return;
+    if (!name || !clientName || !description) return;
 
     setIsSubmitting(true);
     try {
       const project = await createProject({
         name,
         clientName,
-        description: description || undefined,
+        description,
         status: 'Active'
       });
       
@@ -95,7 +95,7 @@ export default function NewProject() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="description">Project Description (Optional)</Label>
+                  <Label htmlFor="description">Project Description</Label>
                   <Textarea
                     id="description"
                     data-testid="input-project-description"
@@ -105,6 +105,7 @@ export default function NewProject() {
                     maxLength={5000}
                     rows={4}
                     className="resize-none"
+                    required
                   />
                   <p className="text-xs text-muted-foreground text-right">
                     {description.length}/5000 characters
@@ -120,7 +121,7 @@ export default function NewProject() {
                   <Button 
                     type="submit" 
                     data-testid="button-create-project"
-                    disabled={isSubmitting || !name || !clientName}
+                    disabled={isSubmitting || !name || !clientName || !description}
                     className="flex-1"
                   >
                     {isSubmitting ? 'Creating...' : 'Create Project'}

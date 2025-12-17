@@ -552,7 +552,7 @@ export const userRolesRelations = relations(userRoles, ({ one }) => ({
 export const insertProjectSchema = z.object({
   name: z.string().min(1, "Project name is required"),
   clientName: z.string().min(1, "Client name is required"),
-  description: z.string().max(5000, "Description must be 5000 characters or less").optional(),
+  description: z.string().min(1, "Project description is required").max(5000, "Description must be 5000 characters or less"),
   status: projectStatusEnum.optional(),
   metadata: z.any().optional(),
 });
