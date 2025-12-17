@@ -137,6 +137,12 @@ export function BidHistory({ projectId, onSelectBid, refreshTrigger }: BidHistor
                         <span className="font-medium text-sm">
                           Version {bid.version}
                         </span>
+                        {bid.generationTimeSeconds && (
+                          <span className="text-[10px] text-muted-foreground flex items-center gap-0.5">
+                            <Timer className="h-3 w-3" />
+                            {formatGenerationTime(bid.generationTimeSeconds)}
+                          </span>
+                        )}
                         {bid.isLatest && (
                           <Badge variant="default" className="text-[10px] h-4 px-1.5">
                             Latest
@@ -146,13 +152,6 @@ export function BidHistory({ projectId, onSelectBid, refreshTrigger }: BidHistor
                       <div className="flex items-center gap-2 text-xs text-muted-foreground">
                         <Clock className="h-3 w-3" />
                         {formatDate(bid.createdAt)}
-                        {bid.generationTimeSeconds && (
-                          <>
-                            <span className="text-muted-foreground/50">•</span>
-                            <Timer className="h-3 w-3" />
-                            <span>{formatGenerationTime(bid.generationTimeSeconds)}</span>
-                          </>
-                        )}
                       </div>
                     </div>
                     <div className="flex flex-col items-end gap-1">
