@@ -687,6 +687,14 @@ export async function registerRoutes(
           sendProgress({ type: 'error', message: `Image analysis failed: ${error.message}` });
         }
 
+        // Helper to create versioned filename
+        const getVersionedFilename = (originalName: string, version: number): string => {
+          if (version === 1) return originalName;
+          const ext = originalName.match(/\.[^.]+$/)?.[0] || '';
+          const base = originalName.replace(/\.[^.]+$/, '');
+          return `${base}_v${version}${ext}`;
+        };
+
         // Save each sketch as a document
         for (let i = 0; i < sketches.length; i++) {
           const sketch = sketches[i];
@@ -696,6 +704,10 @@ export async function registerRoutes(
           sendProgress({ type: 'progress', filename: safeFilename, stage: 'chunking', message: `Saving image ${i + 1}/${sketches.length}...`, percentage: 10 + (i / sketches.length) * 20 });
 
           try {
+            // Get next version for this filename
+            const version = await storage.getNextVersionForFilename(projectId, safeFilename);
+            const versionedFilename = getVersionedFilename(safeFilename, version);
+            
             // Only create records if analysis was successful
             if (sketchResult) {
               const sketchContent = JSON.stringify(sketchResult, null, 2);
@@ -703,9 +715,11 @@ export async function registerRoutes(
               // Save the image document with full analysis
               const sketchDoc = await storage.createDocument({
                 projectId,
-                filename: safeFilename,
+                filename: versionedFilename,
+                originalFilename: safeFilename,
                 content: sketchContent,
                 isProcessed: false,
+                version,
               });
 
               // Create a single chunk for the image analysis with required chunkIndex
@@ -720,21 +734,27 @@ export async function registerRoutes(
               await storage.updateDocumentProcessed(sketchDoc.id, true);
 
               processedFiles.push({
-                filename: safeFilename,
+                filename: versionedFilename,
+                originalFilename: safeFilename,
+                version,
                 documentId: sketchDoc.id,
                 chunksCreated: 1,
                 type: 'image',
               });
 
               // Only create the analysis text file when JSON is fully complete
-              const baseFilename = safeFilename.replace(/\.[^.]+$/, '');
-              const txtFilename = `${baseFilename}_analysis.txt`;
+              const baseVersionedFilename = versionedFilename.replace(/\.[^.]+$/, '');
+              const txtFilename = `${baseVersionedFilename}_analysis.txt`;
+              const baseOriginalFilename = safeFilename.replace(/\.[^.]+$/, '');
+              const originalTxtFilename = `${baseOriginalFilename}_analysis.txt`;
               
               const txtDoc = await storage.createDocument({
                 projectId,
                 filename: txtFilename,
+                originalFilename: originalTxtFilename,
                 content: sketchContent,
                 isProcessed: false,
+                version,
               });
 
               await storage.createDocumentChunk({
@@ -748,12 +768,14 @@ export async function registerRoutes(
 
               processedFiles.push({
                 filename: txtFilename,
+                originalFilename: originalTxtFilename,
+                version,
                 documentId: txtDoc.id,
                 chunksCreated: 1,
                 type: 'analysis',
               });
               
-              sendProgress({ type: 'progress', filename: safeFilename, stage: 'complete', message: `Analysis complete for ${safeFilename}`, percentage: 30 + (i / sketches.length) * 20 });
+              sendProgress({ type: 'progress', filename: versionedFilename, stage: 'complete', message: `Analysis complete for ${versionedFilename}${version > 1 ? ` (version ${version})` : ''}`, percentage: 30 + (i / sketches.length) * 20 });
             } else {
               // Analysis failed - only save image reference without analysis file
               console.warn(`Sketch analysis incomplete for ${safeFilename}, skipping text file creation`);
@@ -762,13 +784,17 @@ export async function registerRoutes(
               // Save just the image record with pending status
               const sketchDoc = await storage.createDocument({
                 projectId,
-                filename: safeFilename,
-                content: JSON.stringify({ status: 'analysis_pending', filename: safeFilename }),
+                filename: versionedFilename,
+                originalFilename: safeFilename,
+                content: JSON.stringify({ status: 'analysis_pending', filename: versionedFilename }),
                 isProcessed: false,
+                version,
               });
 
               processedFiles.push({
-                filename: safeFilename,
+                filename: versionedFilename,
+                originalFilename: safeFilename,
+                version,
                 documentId: sketchDoc.id,
                 chunksCreated: 0,
                 type: 'image',

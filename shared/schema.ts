@@ -558,6 +558,7 @@ export const insertProjectSchema = z.object({
 export const insertDocumentSchema = z.object({
   projectId: z.string(),
   filename: z.string(),
+  originalFilename: z.string().optional().nullable(),
   content: z.string().optional().nullable(),
   isProcessed: z.boolean().optional(),
   version: z.number().int().positive().optional(),

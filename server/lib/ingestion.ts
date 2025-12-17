@@ -30,6 +30,8 @@ const CHUNK_OVERLAP = 200;
 interface ProcessedFile {
   documentId: number;
   filename: string;
+  originalFilename?: string;
+  version?: number;
   chunksCreated: number;
 }
 
@@ -304,16 +306,33 @@ export class IngestionService {
     // Use a transaction to ensure atomic document + chunk creation
     const client = await pool.connect();
     let documentId: number;
+    let versionedFilename = filename;
+    let version = 1;
     
     try {
       await client.query('BEGIN');
       
-      // Create the document
+      // Check for existing documents with this filename to determine version
+      const versionResult = await client.query(
+        `SELECT COALESCE(MAX(version), 0) as max_version FROM documents 
+         WHERE project_id = $1 AND (original_filename = $2 OR filename = $2)`,
+        [projectId, filename]
+      );
+      version = (versionResult.rows[0]?.max_version || 0) + 1;
+      
+      // Generate versioned filename if needed
+      if (version > 1) {
+        const ext = filename.match(/\.[^.]+$/)?.[0] || '';
+        const base = filename.replace(/\.[^.]+$/, '');
+        versionedFilename = `${base}_v${version}${ext}`;
+      }
+      
+      // Create the document with versioning
       const docResult = await client.query(
-        `INSERT INTO documents (project_id, filename, content, is_processed) 
-         VALUES ($1, $2, $3, $4) 
+        `INSERT INTO documents (project_id, filename, original_filename, content, is_processed, version) 
+         VALUES ($1, $2, $3, $4, $5, $6) 
          RETURNING id`,
-        [projectId, filename, sanitizedContent.substring(0, 10000), false]
+        [projectId, versionedFilename, filename, sanitizedContent.substring(0, 10000), false, version]
       );
       documentId = docResult.rows[0].id;
 
@@ -378,10 +397,10 @@ export class IngestionService {
       );
 
       await client.query('COMMIT');
-      console.log(`✅ Successfully processed ${filename} with ${chunks.length} chunks`);
+      console.log(`✅ Successfully processed ${versionedFilename}${version > 1 ? ` (v${version})` : ''} with ${chunks.length} chunks`);
       onProgress?.({ 
         stage: 'complete', 
-        filename, 
+        filename: versionedFilename, 
         currentChunk: chunks.length, 
         totalChunks: chunks.length, 
         percentage: 100, 
@@ -397,7 +416,9 @@ export class IngestionService {
 
     return {
       documentId,
-      filename,
+      filename: versionedFilename,
+      originalFilename: filename,
+      version,
       chunksCreated: chunks.length,
     };
   }
