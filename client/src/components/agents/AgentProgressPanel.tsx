@@ -45,6 +45,7 @@ interface AgentProgressPanelProps {
   projectId: string;
   isActive: boolean;
   onComplete?: () => void;
+  onCancel?: () => void;
 }
 
 const agentColors: Record<string, string> = {
@@ -107,7 +108,7 @@ function EvaluationDetails({ data }: { data: unknown }) {
   );
 }
 
-export function AgentProgressPanel({ projectId, isActive, onComplete }: AgentProgressPanelProps) {
+export function AgentProgressPanel({ projectId, isActive, onComplete, onCancel }: AgentProgressPanelProps) {
   const [events, setEvents] = useState<ProgressEvent[]>([]);
   const [currentAgent, setCurrentAgent] = useState<string | null>(null);
   const [status, setStatus] = useState<'idle' | 'running' | 'completed' | 'failed'>('idle');
@@ -118,7 +119,9 @@ export function AgentProgressPanel({ projectId, isActive, onComplete }: AgentPro
   useEffect(() => {
     if (!isActive || !projectId) return;
 
-    const eventSource = new EventSource(`/api/agent-progress/progress/${projectId}`);
+    const eventSource = new EventSource(`/api/agent-progress/progress/${projectId}`, {
+      withCredentials: true
+    });
     eventSourceRef.current = eventSource;
 
     eventSource.onmessage = (event) => {
@@ -244,9 +247,23 @@ export function AgentProgressPanel({ projectId, isActive, onComplete }: AgentPro
         {status === 'running' && (
           <div className="mt-2">
             <Progress value={getProgress()} className="h-2" />
-            <p className="text-xs text-muted-foreground mt-1">
-              {currentAgent && agentLabels[currentAgent]} running...
-            </p>
+            <div className="flex items-center justify-between mt-1">
+              <p className="text-xs text-muted-foreground">
+                {currentAgent && agentLabels[currentAgent]} running...
+              </p>
+              {onCancel && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 px-2 text-xs text-destructive hover:text-destructive"
+                  onClick={onCancel}
+                  data-testid="button-cancel-workflow"
+                >
+                  <XCircle className="h-3 w-3 mr-1" />
+                  Cancel
+                </Button>
+              )}
+            </div>
           </div>
         )}
       </CardHeader>

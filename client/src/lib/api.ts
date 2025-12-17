@@ -244,6 +244,53 @@ export async function deleteDocument(documentId: number) {
 // AI Model type (order: Anthropic first, then Gemini, DeepSeek, OpenAI last)
 export type AIModel = 'anthropic' | 'gemini' | 'deepseek' | 'openai';
 
+// Agent Workflow API
+export interface AgentWorkflowResponse {
+  message: string;
+  projectId: string;
+  status: 'running' | 'completed' | 'failed' | 'cancelled';
+  currentAgent?: string;
+  mode: 'multishot';
+}
+
+export async function startAgentWorkflow(projectId: string): Promise<AgentWorkflowResponse> {
+  const res = await apiRequest(`${API_BASE}/agents/multishot/process`, {
+    method: 'POST',
+    body: JSON.stringify({ projectId }),
+  });
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({ error: 'Failed to start agent workflow' }));
+    throw new Error(errorData.error || 'Failed to start agent workflow');
+  }
+  return res.json();
+}
+
+export async function cancelAgentWorkflow(projectId: string): Promise<{ message: string }> {
+  const res = await apiRequest(`${API_BASE}/agents/multishot/${projectId}/cancel`, {
+    method: 'POST',
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+export async function getAgentWorkflowState(projectId: string): Promise<{
+  status: string;
+  currentAgent: string | null;
+  outputs: Record<string, unknown>;
+} | null> {
+  const res = await apiRequest(`${API_BASE}/agent-progress/state/${projectId}`);
+  if (!res.ok) {
+    if (res.status === 404) return null;
+    throw new Error(await res.text());
+  }
+  return res.json();
+}
+
+// SSE endpoint for agent progress
+export function getAgentProgressSSEUrl(projectId: string): string {
+  return `${API_BASE}/agent-progress/progress/${projectId}`;
+}
+
 // Bid Generation API
 export async function generateBid(projectId: string, instructions: string, tone?: string, model?: AIModel) {
   const res = await apiRequest(`${API_BASE}/projects/${projectId}/generate`, {

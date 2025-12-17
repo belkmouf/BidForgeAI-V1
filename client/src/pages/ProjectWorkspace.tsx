@@ -13,7 +13,8 @@ import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/componen
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from '@/hooks/use-toast';
-import { getProject, listDocuments, uploadDocument, uploadDocumentWithProgress, deleteDocument, generateBid, refineBid, getLatestBid, wrapInTemplate, generateShareLink, updateProjectStatus, type AIModel, type ProcessingProgress } from '@/lib/api';
+import { getProject, listDocuments, uploadDocument, uploadDocumentWithProgress, deleteDocument, generateBid, refineBid, getLatestBid, wrapInTemplate, generateShareLink, updateProjectStatus, startAgentWorkflow, cancelAgentWorkflow, type AIModel, type ProcessingProgress } from '@/lib/api';
+import { AgentProgressPanel } from '@/components/agents/AgentProgressPanel';
 import type { Project, Document } from '@shared/schema';
 
 const initialEditorContent = '<h1>Welcome to BidForge AI</h1><p>Use the Generate panel to create your first bid draft, or start typing to manually build your proposal.</p>';
@@ -34,6 +35,7 @@ export default function ProjectWorkspace() {
   const [currentBidId, setCurrentBidId] = useState<number | null>(null);
   const [isSharing, setIsSharing] = useState(false);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+  const [showAgentProgress, setShowAgentProgress] = useState(false);
   const isCollapsed = useSidebarStore((state) => state.isCollapsed);
 
   const handleStatusChange = async (newStatus: string) => {
@@ -93,27 +95,75 @@ export default function ProjectWorkspace() {
 
   const handleGenerate = async (instructions: string, tone?: string, model?: AIModel) => {
     setIsGenerating(true);
+    setShowAgentProgress(true);
     const modelToUse = model || selectedModel;
     setSelectedModel(modelToUse);
+    
     try {
-      const result = await generateBid(projectId, instructions, tone, modelToUse);
-      setEditorContent(result.rawContent || result.html);
-      setBidRefreshTrigger(prev => prev + 1);
-      if (result.bid?.id) {
-        setCurrentBidId(result.bid.id);
-      }
+      // Start the multi-shot agent workflow
+      await startAgentWorkflow(projectId);
+      
       toast({
-        title: "Bid Generated",
-        description: `Generated bid using ${result.chunksUsed} context chunks with ${result.model.toUpperCase()}.`,
+        title: "Agent Workflow Started",
+        description: "The AI orchestrator is analyzing your documents and generating the bid...",
       });
+      
+      // The AgentProgressPanel will handle showing real-time progress
+      // Completion is handled by onAgentWorkflowComplete callback
     } catch (error: any) {
+      setIsGenerating(false);
+      setShowAgentProgress(false);
       toast({
         title: "Generation Failed",
-        description: error.message || "Failed to generate bid",
+        description: error.message || "Failed to start agent workflow",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleAgentWorkflowComplete = async () => {
+    try {
+      // Fetch the latest bid after workflow completes
+      const latestBid = await getLatestBid(projectId);
+      if (latestBid) {
+        setEditorContent(latestBid.rawContent || latestBid.content);
+        setCurrentBidId(latestBid.id);
+        setBidRefreshTrigger(prev => prev + 1);
+      }
+      
+      toast({
+        title: "Bid Generated",
+        description: "The AI agent workflow has completed successfully.",
+      });
+    } catch (error: any) {
+      console.error('Failed to fetch generated bid:', error);
+      toast({
+        title: "Warning",
+        description: "Workflow completed but failed to load the generated bid. Please refresh.",
         variant: "destructive",
       });
     } finally {
       setIsGenerating(false);
+      // Keep progress panel visible for a moment so user can see completion
+      setTimeout(() => setShowAgentProgress(false), 2000);
+    }
+  };
+
+  const handleCancelWorkflow = async () => {
+    try {
+      await cancelAgentWorkflow(projectId);
+      setIsGenerating(false);
+      setShowAgentProgress(false);
+      toast({
+        title: "Workflow Cancelled",
+        description: "The agent workflow has been stopped.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Cancel Failed",
+        description: error.message || "Failed to cancel workflow",
+        variant: "destructive",
+      });
     }
   };
 
@@ -496,9 +546,22 @@ export default function ProjectWorkspace() {
               <div className="h-full flex flex-col p-4">
                 <div className="flex-1 flex flex-col min-h-0 gap-6">
                   <GeneratePanel onGenerate={handleGenerate} isGenerating={isGenerating} />
-                  <div className="flex-1 min-h-0 flex flex-col">
-                    <RefineChat onRefine={handleRefine} />
-                  </div>
+                  
+                  {/* Agent Progress Panel - shown during workflow */}
+                  {showAgentProgress && (
+                    <AgentProgressPanel 
+                      projectId={projectId}
+                      isActive={showAgentProgress}
+                      onComplete={handleAgentWorkflowComplete}
+                      onCancel={handleCancelWorkflow}
+                    />
+                  )}
+                  
+                  {!showAgentProgress && (
+                    <div className="flex-1 min-h-0 flex flex-col">
+                      <RefineChat onRefine={handleRefine} />
+                    </div>
+                  )}
                 </div>
               </div>
             </ResizablePanel>
