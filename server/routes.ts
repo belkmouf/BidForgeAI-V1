@@ -683,7 +683,9 @@ export async function registerRoutes(
             ? `Project: ${project.name || projectId}\nDescription: ${project.description}`
             : `Project: ${project.name || projectId}`;
           const analysisResults = await pythonSketchClient.analyzeMultiple(tempPaths, context);
-          sketchResults = analysisResults.filter(r => r.success).map(r => r.result);
+          // IMPORTANT: Don't filter - keep array indices aligned with sketches array
+          // Map to result if success, otherwise null (preserves index mapping)
+          sketchResults = analysisResults.map(r => r.success ? r.result : null);
 
           // Clean up temp files
           for (const tempPath of tempPaths) {
