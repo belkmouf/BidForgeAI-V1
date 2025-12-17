@@ -1,4 +1,5 @@
 import Redis from 'ioredis';
+import * as crypto from 'crypto';
 import { logger, logContext } from './logger.js';
 
 interface CacheConfig {
@@ -396,7 +397,6 @@ class CacheService {
 
   // Utility methods
   private hashQuery(query: string): string {
-    const crypto = require('crypto');
     return crypto.createHash('md5').update(query).digest('hex');
   }
 
