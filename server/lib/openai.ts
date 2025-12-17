@@ -24,43 +24,61 @@ const embeddingsClient = new OpenAI({
   // The integration key may or may not work - if it fails, user needs to provide OPENAI_API_KEY
 });
 
-// Generate text embedding using OpenAI (direct API, not proxy)
-export async function generateEmbedding(text: string): Promise<number[]> {
-  try {
-    // Check cache first for performance (3-5x speedup on cache hits)
-    const cached = await cache.getEmbedding(text);
-    if (cached) {
-      console.log("[OpenAI] Using cached embedding");
-      return cached;
-    }
-
-    // Generate new embedding via API
-    const response = await embeddingsClient.embeddings.create({
-      model: "text-embedding-3-small",
-      input: text,
-    });
-
-    const embedding = response.data[0].embedding;
-
-    // Cache for future use (10 minute TTL)
-    await cache.cacheEmbedding(text, embedding, 600).catch((cacheError) => {
-      // Log but don't fail if caching fails
-      console.warn("[OpenAI] Failed to cache embedding:", cacheError);
-    });
-
-    return embedding;
-  } catch (error: any) {
-    // If embeddings fail, provide clear error about what's needed
-    if (error.status === 401 || error.code === "invalid_api_key") {
-      console.error(
-        "Embeddings failed: The OPENAI_API_KEY secret is required for embeddings. Replit AI Integration keys do not support the embeddings endpoint.",
-      );
-      throw new Error(
-        "OPENAI_API_KEY required for embeddings. Please add your OpenAI API key as a secret.",
-      );
-    }
-    throw error;
+// Generate text embedding using OpenAI (direct API, not proxy) with auto-retry
+export async function generateEmbedding(text: string, maxRetries: number = 3): Promise<number[]> {
+  // Check cache first for performance (3-5x speedup on cache hits)
+  const cached = await cache.getEmbedding(text);
+  if (cached) {
+    console.log("[OpenAI] Using cached embedding");
+    return cached;
   }
+
+  let lastError: any;
+  
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      // Generate new embedding via API
+      const response = await embeddingsClient.embeddings.create({
+        model: "text-embedding-3-small",
+        input: text,
+      });
+
+      const embedding = response.data[0].embedding;
+
+      // Cache for future use (10 minute TTL)
+      await cache.cacheEmbedding(text, embedding, 600).catch((cacheError) => {
+        // Log but don't fail if caching fails
+        console.warn("[OpenAI] Failed to cache embedding:", cacheError);
+      });
+
+      return embedding;
+    } catch (error: any) {
+      lastError = error;
+      
+      // If embeddings fail due to auth, don't retry
+      if (error.status === 401 || error.code === "invalid_api_key") {
+        console.error(
+          "Embeddings failed: The OPENAI_API_KEY secret is required for embeddings. Replit AI Integration keys do not support the embeddings endpoint.",
+        );
+        throw new Error(
+          "OPENAI_API_KEY required for embeddings. Please add your OpenAI API key as a secret.",
+        );
+      }
+      
+      // Log retry attempt
+      console.warn(`[OpenAI] Embedding attempt ${attempt}/${maxRetries} failed: ${error.message}`);
+      
+      if (attempt < maxRetries) {
+        // Exponential backoff: 1s, 2s, 4s
+        const delay = Math.pow(2, attempt - 1) * 1000;
+        console.log(`[OpenAI] Retrying embedding in ${delay}ms...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+    }
+  }
+  
+  console.error(`[OpenAI] All ${maxRetries} embedding attempts failed`);
+  throw lastError;
 }
 
 export interface AIGenerationResult {
