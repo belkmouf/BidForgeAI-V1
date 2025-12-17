@@ -76,8 +76,16 @@ export class MasterOrchestrator extends EventEmitter {
     if (options?.acceptanceThreshold) this.acceptanceThreshold = options.acceptanceThreshold;
   }
 
-  emitProgress(event: ProgressEvent): void {
+  emitProgress(event: ProgressEvent & { projectId?: string }): void {
     this.emit('progress', event);
+  }
+  
+  private emitProgressWithProject(projectId: string, event: Omit<ProgressEvent, 'timestamp'>): void {
+    this.emit('progress', {
+      ...event,
+      projectId,
+      timestamp: new Date(),
+    });
   }
 
   async evaluateAgentOutput(
@@ -214,12 +222,11 @@ Provide clear, specific feedback that will help the agent improve its output. Be
     while (iteration < this.maxIterationsPerAgent && !accepted) {
       iteration++;
       
-      this.emitProgress({
+      this.emitProgressWithProject(context.projectId, {
         type: 'agent_start',
         agentName,
         iteration,
         message: `Starting ${agentName} agent (iteration ${iteration}/${this.maxIterationsPerAgent})`,
-        timestamp: new Date(),
       });
 
       messages.push({
@@ -259,7 +266,7 @@ Provide clear, specific feedback that will help the agent improve its output. Be
           iteration,
         });
 
-        this.emitProgress({
+        this.emitProgressWithProject(context.projectId, {
           type: 'agent_output',
           agentName,
           iteration,
@@ -267,7 +274,6 @@ Provide clear, specific feedback that will help the agent improve its output. Be
             ? `${agentName} produced output`
             : `${agentName} failed: ${currentOutput.error}`,
           data: { success: currentOutput.success },
-          timestamp: new Date(),
         });
 
         if (!currentOutput.success) {
@@ -295,7 +301,7 @@ Provide clear, specific feedback that will help the agent improve its output. Be
           evaluation,
         });
 
-        this.emitProgress({
+        this.emitProgressWithProject(context.projectId, {
           type: 'evaluation',
           agentName,
           iteration,
@@ -303,19 +309,17 @@ Provide clear, specific feedback that will help the agent improve its output. Be
             ? `Output accepted with score ${evaluation.score}/100`
             : `Score ${evaluation.score}/100 - refinement needed`,
           data: evaluation,
-          timestamp: new Date(),
         });
 
         accepted = isAccepted;
 
         if (!accepted && iteration < this.maxIterationsPerAgent) {
-          this.emitProgress({
+          this.emitProgressWithProject(context.projectId, {
             type: 'refinement_request',
             agentName,
             iteration,
             message: `Requesting ${agentName} to refine output`,
             data: { improvements: evaluation.improvements },
-            timestamp: new Date(),
           });
         }
 
@@ -329,12 +333,11 @@ Provide clear, specific feedback that will help the agent improve its output. Be
           iteration,
         });
 
-        this.emitProgress({
+        this.emitProgressWithProject(context.projectId, {
           type: 'error',
           agentName,
           iteration,
           message: `Error: ${errorMessage}`,
-          timestamp: new Date(),
         });
 
         currentOutput = { success: false, error: errorMessage };
@@ -342,7 +345,7 @@ Provide clear, specific feedback that will help the agent improve its output. Be
       }
     }
 
-    this.emitProgress({
+    this.emitProgressWithProject(context.projectId, {
       type: 'agent_complete',
       agentName,
       iteration,
@@ -350,7 +353,6 @@ Provide clear, specific feedback that will help the agent improve its output. Be
         ? `${agentName} completed successfully after ${iteration} iteration(s)`
         : `${agentName} completed after ${iteration} iteration(s) (max iterations reached or error)`,
       data: { accepted, iterations: iteration },
-      timestamp: new Date(),
     });
 
     return {
