@@ -378,16 +378,16 @@ export default function Analytics() {
                       </div>
                     </div>
                     <div className="grid grid-cols-3 gap-4 text-center">
-                      <div className="p-4 rounded-lg bg-green-500/10">
-                        <div className="text-2xl font-bold text-green-500">{overview?.bidding.won || 0}</div>
+                      <div className="p-4 rounded-lg bg-green-50 border border-green-300">
+                        <div className="text-2xl font-bold text-green-600">{overview?.bidding.won || 0}</div>
                         <div className="text-sm text-slate-600">Won</div>
                       </div>
-                      <div className="p-4 rounded-lg bg-red-500/10">
-                        <div className="text-2xl font-bold text-red-500">{overview?.bidding.lost || 0}</div>
+                      <div className="p-4 rounded-lg bg-red-50 border border-red-300">
+                        <div className="text-2xl font-bold text-red-600">{overview?.bidding.lost || 0}</div>
                         <div className="text-sm text-slate-600">Lost</div>
                       </div>
-                      <div className="p-4 rounded-lg bg-blue-500/10">
-                        <div className="text-2xl font-bold text-blue-500">{overview?.bidding.totalBids || 0}</div>
+                      <div className="p-4 rounded-lg bg-blue-50 border border-blue-300">
+                        <div className="text-2xl font-bold text-blue-600">{overview?.bidding.totalBids || 0}</div>
                         <div className="text-sm text-slate-600">Total</div>
                       </div>
                     </div>
