@@ -7,19 +7,19 @@ import { ChatGoogleGenerativeAI } from '@langchain/google-genai';
 import { z } from 'zod';
 
 const AnalysisResponseSchema = z.object({
-  qualityScore: z.number(),
-  clarityScore: z.number(),
-  doabilityScore: z.number(),
-  vendorRiskScore: z.number(),
-  overallRiskLevel: z.enum(['Low', 'Medium', 'High', 'Critical']),
-  keyFindings: z.array(z.string()),
-  redFlags: z.array(z.string()),
-  opportunities: z.array(z.string()),
+  qualityScore: z.number().default(50),
+  clarityScore: z.number().default(50),
+  doabilityScore: z.number().default(50),
+  vendorRiskScore: z.number().default(50),
+  overallRiskLevel: z.enum(['Low', 'Medium', 'High', 'Critical']).default('Medium'),
+  keyFindings: z.array(z.string()).default([]),
+  redFlags: z.array(z.string()).default([]),
+  opportunities: z.array(z.string()).default([]),
   recommendations: z.array(z.object({
-    action: z.string(),
-    priority: z.enum(['high', 'medium', 'low']),
+    action: z.string().default('Review this item'),
+    priority: z.enum(['high', 'medium', 'low']).default('medium'),
     timeEstimate: z.string().optional(),
-  })),
+  })).default([]),
 });
 
 export class AnalysisAgent extends BaseAgent {
@@ -134,6 +134,25 @@ export class AnalysisAgent extends BaseAgent {
         }
 
         const parsed = JSON.parse(jsonMatch[0]);
+        
+        // Normalize recommendations to ensure action field exists
+        if (parsed.recommendations && Array.isArray(parsed.recommendations)) {
+          parsed.recommendations = parsed.recommendations.map((rec: Record<string, unknown>) => ({
+            action: rec.action || rec.recommendation || rec.description || 'Review this item',
+            priority: rec.priority || 'medium',
+            timeEstimate: rec.timeEstimate || rec.time_estimate,
+          }));
+        }
+        
+        // Normalize overallRiskLevel casing
+        if (parsed.overallRiskLevel && typeof parsed.overallRiskLevel === 'string') {
+          const level = parsed.overallRiskLevel.toLowerCase();
+          if (level === 'low') parsed.overallRiskLevel = 'Low';
+          else if (level === 'medium') parsed.overallRiskLevel = 'Medium';
+          else if (level === 'high') parsed.overallRiskLevel = 'High';
+          else if (level === 'critical') parsed.overallRiskLevel = 'Critical';
+        }
+        
         const analysis = AnalysisResponseSchema.parse(parsed);
 
         this.log(`Analysis complete. Risk level: ${analysis.overallRiskLevel}, Doability: ${analysis.doabilityScore}`);
