@@ -151,16 +151,16 @@ export function DropZone({ onUpload, onUploadWithProgress, onDelete, files: init
       <div
         {...getRootProps()}
         className={cn(
-          "border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors mb-4",
+          "border-2 border-dashed rounded-lg p-4 text-center cursor-pointer transition-colors mb-3",
           isDragActive ? "border-primary bg-primary/5" : "border-primary/30 hover:border-primary/50 hover:bg-muted/50"
         )}
       >
         <input {...getInputProps()} />
-        <div className="flex flex-col items-center gap-2 text-muted-foreground">
-          <div className="bg-muted p-3 rounded-full mb-2">
-            <Upload className="h-6 w-6" />
+        <div className="flex flex-col items-center gap-1 text-muted-foreground">
+          <div className="bg-muted p-2 rounded-full mb-1">
+            <Upload className="h-4 w-4" />
           </div>
-          <p className="font-medium text-foreground">Click to upload or drag and drop</p>
+          <p className="font-medium text-foreground text-sm">Click to upload or drag and drop</p>
           <p className="text-xs">PDF, DOCX, ZIP, MSG, PNG, JPG, GIF, WEBP (Max 50MB)</p>
         </div>
       </div>
