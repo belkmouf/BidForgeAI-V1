@@ -184,7 +184,7 @@ export function DropZone({ onUpload, onUploadWithProgress, onDelete, files: init
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-start justify-between gap-2 mb-1">
-                    <p className="text-sm font-medium break-all leading-tight">{file.name}</p>
+                    <p className="text-xs font-medium break-all leading-tight">{file.name}</p>
                     {file.status === 'completed' && <CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" />}
                     {file.status === 'error' && <AlertCircle className="h-4 w-4 text-destructive flex-shrink-0 mt-0.5" />}
                   </div>
