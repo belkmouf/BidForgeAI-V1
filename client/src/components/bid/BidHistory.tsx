@@ -54,9 +54,27 @@ export function BidHistory({ projectId, onSelectBid, refreshTrigger }: BidHistor
     return remainingSeconds > 0 ? `${minutes}m ${remainingSeconds}s` : `${minutes}m`;
   };
 
+  const getModelDisplayName = (model: string) => {
+    switch (model) {
+      case 'anthropic':
+        return 'Claude Sonnet';
+      case 'gemini':
+        return 'Gemini Flash';
+      case 'deepseek':
+        return 'DeepSeek';
+      case 'openai':
+        return 'GPT-4o';
+      case 'multishot-agent':
+        return 'Claude Sonnet';
+      default:
+        return model;
+    }
+  };
+
   const getModelColor = (model: string) => {
     switch (model) {
       case 'anthropic':
+      case 'multishot-agent':
         return 'bg-orange-100 text-orange-800 border-orange-200';
       case 'gemini':
         return 'bg-blue-100 text-blue-800 border-blue-200';
@@ -157,7 +175,7 @@ export function BidHistory({ projectId, onSelectBid, refreshTrigger }: BidHistor
                     <div className="flex flex-col items-end gap-1">
                       <Badge variant="outline" className={`text-[10px] ${getModelColor(bid.model)}`}>
                         <Cpu className="h-2.5 w-2.5 mr-1" />
-                        {bid.model}
+                        {getModelDisplayName(bid.model)}
                       </Badge>
                       <ChevronRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
                     </div>
