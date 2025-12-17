@@ -113,8 +113,36 @@ export function AgentProgressPanel({ projectId, isActive, onComplete, onCancel }
   const [currentAgent, setCurrentAgent] = useState<string | null>(null);
   const [status, setStatus] = useState<'idle' | 'running' | 'completed' | 'failed'>('idle');
   const [expandedEvents, setExpandedEvents] = useState<Set<number>>(new Set());
+  const [startTime, setStartTime] = useState<Date | null>(null);
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const eventSourceRef = useRef<EventSource | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Timer to track elapsed time
+  useEffect(() => {
+    if (status === 'running' && startTime) {
+      timerRef.current = setInterval(() => {
+        setElapsedSeconds(Math.floor((Date.now() - startTime.getTime()) / 1000));
+      }, 1000);
+    } else if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+
+    return () => {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+    };
+  }, [status, startTime]);
+
+  const formatElapsedTime = (seconds: number): string => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
 
   useEffect(() => {
     if (!isActive || !projectId) return;
@@ -141,6 +169,10 @@ export function AgentProgressPanel({ projectId, isActive, onComplete, onCancel }
 
         if (data.type === 'agent_start') {
           setCurrentAgent(data.agentName);
+          if (status !== 'running') {
+            setStartTime(new Date());
+            setElapsedSeconds(0);
+          }
           setStatus('running');
         } else if (data.type === 'workflow_complete') {
           setStatus('completed');
@@ -248,8 +280,11 @@ export function AgentProgressPanel({ projectId, isActive, onComplete, onCancel }
           <div className="mt-2">
             <Progress value={getProgress()} className="h-2" />
             <div className="flex items-center justify-between mt-1">
-              <p className="text-xs text-muted-foreground">
-                {currentAgent && agentLabels[currentAgent]} running...
+              <p className="text-xs text-muted-foreground flex items-center gap-2">
+                <span>{currentAgent && agentLabels[currentAgent]} running...</span>
+                <span className="font-mono text-primary font-medium" data-testid="elapsed-time">
+                  {formatElapsedTime(elapsedSeconds)}
+                </span>
               </p>
               {onCancel && (
                 <Button
