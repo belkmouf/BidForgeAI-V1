@@ -6,6 +6,9 @@ import {
   generateProjectSummary,
   updateProjectSummary,
   exportProjectSummary,
+  uploadDocument,
+  deleteDocument,
+  getProject,
   type DocumentSummaryResponse,
 } from '../lib/api';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '../components/ui/card';
@@ -13,9 +16,12 @@ import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
 import { Progress } from '../components/ui/progress';
 import { Separator } from '../components/ui/separator';
-import {  Loader2, FileText, CheckCircle, AlertCircle, Clock, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, FileCheck, AlertTriangle, TrendingUp, Download, RefreshCw, Edit2, Save, X } from 'lucide-react';
+import { Loader2, FileText, CheckCircle, AlertCircle, Clock, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, FileCheck, AlertTriangle, TrendingUp, Download, RefreshCw, Edit2, Save, X, Upload } from 'lucide-react';
 import { Textarea } from '../components/ui/textarea';
 import { Alert, AlertDescription } from '../components/ui/alert';
+import { ProjectWorkflowLayout, getWorkflowSteps } from '../components/workflow/ProjectWorkflowLayout';
+import { useProjectProgress } from '../hooks/useProjectProgress';
+import { DropZone, type ProcessingProgress } from '../components/upload/DropZone';
 
 function formatFileSize(bytes: number): string {
   if (bytes === 0) return '0 Bytes';
@@ -379,13 +385,20 @@ function ProjectSummaryCard({ summary, projectId }: { summary: DocumentSummaryRe
 export default function DocumentSummary() {
   const { id } = useParams<{ id: string }>();
   const [, navigate] = useLocation();
+  const queryClient = useQueryClient();
+  const progress = useProjectProgress(id);
 
-  const { data, isLoading, error } = useQuery({
+  const { data: project } = useQuery({
+    queryKey: ['project', id],
+    queryFn: () => getProject(id!),
+    enabled: !!id,
+  });
+
+  const { data, isLoading, error, refetch } = useQuery({
     queryKey: ['document-summary', id],
     queryFn: () => getDocumentSummary(id!),
     enabled: !!id,
     refetchInterval: (query) => {
-      // Poll every 3 seconds if documents are still processing
       const queryData = query.state?.data;
       if (queryData && queryData.stats && !queryData.stats.allProcessed) {
         return 3000;
@@ -393,6 +406,55 @@ export default function DocumentSummary() {
       return false;
     },
   });
+
+  const handleFileUpload = async (file: File, onProgress: (progress: ProcessingProgress) => void) => {
+    if (!id) return;
+    
+    onProgress({ stage: 'uploading', filename: file.name, percentage: 10, message: 'Uploading...' });
+    
+    try {
+      await uploadDocument(id, file);
+      onProgress({ stage: 'parsing', filename: file.name, percentage: 40, message: 'Processing document...' });
+      
+      // Poll for completion
+      let attempts = 0;
+      while (attempts < 30) {
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        await refetch();
+        onProgress({ 
+          stage: 'embedding', 
+          filename: file.name, 
+          percentage: 50 + Math.min(attempts * 5, 45), 
+          message: 'Extracting content...' 
+        });
+        attempts++;
+        
+        const latestData = queryClient.getQueryData(['document-summary', id]) as DocumentSummaryResponse | undefined;
+        const uploadedDoc = latestData?.documents?.find(d => d.filename === file.name);
+        if (uploadedDoc?.isProcessed) {
+          onProgress({ stage: 'complete', filename: file.name, percentage: 100, message: 'Complete!' });
+          return;
+        }
+      }
+      onProgress({ stage: 'complete', filename: file.name, percentage: 100, message: 'Processing in background' });
+    } catch (err) {
+      onProgress({ stage: 'error', filename: file.name, percentage: 0, message: 'Upload failed' });
+      throw err;
+    }
+  };
+
+  const handleDeleteDocument = async (documentId: number) => {
+    await deleteDocument(documentId);
+    refetch();
+  };
+
+  const steps = getWorkflowSteps(id || '', {
+    documentsProcessed: progress.documentsProcessed,
+    analysisComplete: progress.analysisComplete,
+    conflictsReviewed: progress.conflictsReviewed,
+  });
+
+  const canProceed = data?.stats?.allProcessed && data?.stats?.documentCount > 0;
 
   if (isLoading) {
     return (
@@ -423,23 +485,49 @@ export default function DocumentSummary() {
   const readinessPercentage = data.readinessScore.score;
 
   return (
-    <div className="container mx-auto p-6 max-w-6xl">
-      {/* Header */}
-      <div className="mb-6">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => navigate(`/projects/${id}`)}
-          className="mb-2"
-        >
-          <ChevronLeft className="w-4 h-4 mr-1" />
-          Back to Project
-        </Button>
-        <h1 className="text-3xl font-bold">Document Review & Summary</h1>
-        <p className="text-gray-600 mt-1">
-          Step 2 of 3: Review uploaded documents before generating your bid proposal
-        </p>
-      </div>
+    <ProjectWorkflowLayout
+      projectId={id || ''}
+      projectName={project?.name || 'Project'}
+      clientName={project?.clientName}
+      currentStep={0}
+      steps={steps}
+      nextLabel="Run RFP Analysis"
+      nextDisabled={!canProceed}
+      onNext={() => navigate(`/projects/${id}/analysis`)}
+    >
+      <div className="max-w-6xl mx-auto">
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold">Upload & Verify Documents</h1>
+          <p className="text-muted-foreground mt-1">
+            Upload your RFP documents and verify they've been processed correctly
+          </p>
+        </div>
+
+        {/* Upload Section */}
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Upload className="w-5 h-5" />
+              Upload Documents
+            </CardTitle>
+            <CardDescription>
+              Drag and drop files or click to browse. Supports PDF, DOCX, XLSX, images, and more.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <DropZone
+              files={data.documents.map(doc => ({
+                id: doc.id.toString(),
+                name: doc.filename,
+                size: doc.fileSize || 0,
+                uploadedAt: new Date(doc.uploadedAt),
+                isProcessed: doc.isProcessed,
+              }))}
+              onUploadWithProgress={handleFileUpload}
+              onDelete={handleDeleteDocument}
+            />
+          </CardContent>
+        </Card>
 
       {/* Quick Stats and Readiness Score */}
       <div className="grid md:grid-cols-2 gap-6 mb-6">
@@ -621,28 +709,7 @@ export default function DocumentSummary() {
         </div>
       )}
 
-      {/* Action Buttons */}
-      <div className="flex justify-between items-center pt-6 border-t">
-        <Button
-          variant="outline"
-          onClick={() => navigate(`/projects/${id}`)}
-        >
-          <ChevronLeft className="w-4 h-4 mr-2" />
-          Back to Upload
-        </Button>
-        <div className="flex gap-3">
-          <Button variant="outline">
-            Save & Exit
-          </Button>
-          <Button
-            onClick={() => navigate(`/projects/${id}`)}
-            disabled={!data.stats.allProcessed || readinessPercentage < 50}
-          >
-            Generate Bid
-            <ChevronRight className="w-4 h-4 ml-2" />
-          </Button>
-        </div>
       </div>
-    </div>
+    </ProjectWorkflowLayout>
   );
 }

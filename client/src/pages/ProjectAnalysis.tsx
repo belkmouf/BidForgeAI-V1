@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useRoute, Link } from 'wouter';
-import { AppSidebar } from '@/components/layout/AppSidebar';
+import { useRoute, Link, useLocation } from 'wouter';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -14,7 +13,6 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { 
-  ChevronLeft, 
   AlertTriangle, 
   CheckCircle, 
   XCircle, 
@@ -37,6 +35,8 @@ import { getProject, listDocuments } from '@/lib/api';
 import { apiRequest } from '@/lib/auth';
 import type { Project, Document } from '@shared/schema';
 import { WinProbability } from '@/components/WinProbability';
+import { ProjectWorkflowLayout, getWorkflowSteps } from '@/components/workflow/ProjectWorkflowLayout';
+import { useProjectProgress } from '@/hooks/useProjectProgress';
 
 interface AnalysisData {
   id: number;
@@ -113,7 +113,9 @@ function ScoreCard({ title, score, icon, inverted = false }: {
 
 export default function ProjectAnalysis() {
   const [, params] = useRoute('/projects/:id/analysis');
+  const [, navigate] = useLocation();
   const projectId = params?.id || '';
+  const progress = useProjectProgress(projectId);
   
   const [project, setProject] = useState<Project | null>(null);
   const [documents, setDocuments] = useState<Document[]>([]);
@@ -323,26 +325,35 @@ export default function ProjectAnalysis() {
 
   const activeAlerts = alerts.filter(a => !a.isResolved);
 
+  const steps = getWorkflowSteps(projectId, {
+    documentsProcessed: progress.documentsProcessed,
+    analysisComplete: !!analysis,
+    conflictsReviewed: progress.conflictsReviewed,
+  });
+
+  const canProceed = !!analysis && !isAnalyzing;
+
   return (
-    <div className="flex h-screen bg-gray-50 overflow-hidden">
-      <AppSidebar />
-      
-      <div className="flex-1 flex flex-col ml-64 h-full overflow-auto">
-        <header className="h-14 border-b border-border flex items-center justify-between px-6 bg-white sticky top-0 z-10">
-          <div className="flex items-center gap-4">
-            <Link href={`/projects/${projectId}`}>
-              <Button variant="ghost" size="icon" className="h-8 w-8" data-testid="button-back">
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
-            </Link>
-            <div>
-              <h1 className="font-semibold text-sm flex items-center gap-2">
-                {project.name} - RFP Analysis
-              </h1>
-              <p className="text-xs text-muted-foreground">{project.clientName}</p>
-            </div>
+    <ProjectWorkflowLayout
+      projectId={projectId}
+      projectName={project.name}
+      clientName={project.clientName}
+      currentStep={1}
+      steps={steps}
+      backLabel="Back to Documents"
+      onBack={() => navigate(`/projects/${projectId}/documents`)}
+      nextLabel="Review Conflicts"
+      nextDisabled={!canProceed}
+      onNext={() => navigate(`/projects/${projectId}/conflicts`)}
+    >
+      <div className="max-w-6xl mx-auto">
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h1 className="text-2xl font-bold">RFP Analysis</h1>
+            <p className="text-muted-foreground mt-1">
+              AI-powered analysis of your RFP documents for risks and opportunities
+            </p>
           </div>
-          
           <Button 
             onClick={runAnalysis} 
             disabled={isAnalyzing || documents.length === 0}
@@ -357,13 +368,13 @@ export default function ProjectAnalysis() {
             ) : (
               <>
                 <Play className="h-4 w-4" />
-                Run Analysis
+                {analysis ? 'Re-run Analysis' : 'Run Analysis'}
               </>
             )}
           </Button>
-        </header>
+        </div>
 
-        <div className="p-6 space-y-6">
+        <div className="space-y-6">
           {documents.length === 0 ? (
             <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 text-center">
               <FileText className="h-12 w-12 mx-auto text-yellow-600 mb-3" />
@@ -810,6 +821,6 @@ export default function ProjectAnalysis() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </ProjectWorkflowLayout>
   );
 }

@@ -14,6 +14,19 @@ Preferred communication style: Simple, everyday language.
 
 The frontend uses React 18 with TypeScript and Vite, featuring a single-page application architecture with Wouter for routing and TanStack Query for server state. The UI is built with Shadcn UI (New York style), Radix UI primitives, and Tailwind CSS v4, incorporating a custom design system inspired by "Somerstone" with a specific color palette (Charcoal, Deep Teal, Antique Gold) and font hierarchy (Syne, Inter, Fraunces). It includes GSAP for animations. Key features include a dashboard with Recharts, a project workspace with drag-and-drop file upload, resizable panels, and an AI generation panel with multi-model selection and chat-based refinement. A Tiptap editor is used for rich text bid document editing.
 
+**4-Step Guided Workflow:**
+The project workspace implements a sequential 4-step workflow with visual stepper navigation:
+1. **Documents** (`/projects/:id/documents`): Upload and verify RFP documents with drag-and-drop, processing status, and file management
+2. **RFP Analysis** (`/projects/:id/analysis`): AI-powered document analysis with quality scores, risk assessment, and recommendations
+3. **Conflicts** (`/projects/:id/conflicts`): Review detected conflicts and inconsistencies in the RFP documents
+4. **Bid Generation** (`/projects/:id`): Generate and refine bid proposals with multi-model AI comparison
+
+Key workflow features:
+- `ProjectWorkflowLayout` component provides consistent stepper UI and navigation
+- `useProjectProgress` hook tracks completion status across steps
+- Step gating prevents skipping ahead without completing prerequisites
+- Back/Next navigation with conditional disabling based on completion status
+
 ### Technical Implementations
 
 The backend is Express.js with TypeScript, using Drizzle ORM for type-safe database interactions with Neon serverless PostgreSQL. It features a RESTful API, Multer for file uploads, and Zod for schema validation. AI integration supports multiple providers (OpenAI, Anthropic, Google Gemini, DeepSeek) with a unified interface for bid generation and refinement, including multi-model parallel comparison. The RAG implementation uses OpenAI's text-embedding-3-small model with pgvector for hybrid search (vector similarity + full-text search) and LangChain's `RecursiveCharacterTextSplitter` for semantic chunking, incorporating context from current and historical projects.
