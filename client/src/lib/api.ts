@@ -253,10 +253,10 @@ export interface AgentWorkflowResponse {
   mode: 'multishot';
 }
 
-export async function startAgentWorkflow(projectId: string): Promise<AgentWorkflowResponse> {
+export async function startAgentWorkflow(projectId: string, model?: AIModel): Promise<AgentWorkflowResponse> {
   const res = await apiRequest(`${API_BASE}/agents/multishot/process`, {
     method: 'POST',
-    body: JSON.stringify({ projectId }),
+    body: JSON.stringify({ projectId, model: model || 'anthropic' }),
   });
   if (!res.ok) {
     const errorData = await res.json().catch(() => ({ error: 'Failed to start agent workflow' }));

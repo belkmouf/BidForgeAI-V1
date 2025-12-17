@@ -293,6 +293,7 @@ router.get("/", authenticateToken, async (req: AuthRequest, res: Response) => {
 
 const multishotWorkflowSchema = z.object({
   projectId: z.string().uuid(),
+  model: z.enum(['openai', 'anthropic', 'gemini', 'deepseek']).optional().default('anthropic'),
 });
 
 router.post(
@@ -301,7 +302,7 @@ router.post(
   requirePermission(PERMISSIONS.PROJECT_CREATE),
   async (req: AuthRequest, res: Response) => {
     try {
-      const { projectId } = multishotWorkflowSchema.parse(req.body);
+      const { projectId, model } = multishotWorkflowSchema.parse(req.body);
       const userId = req.user?.userId;
 
       if (!userId) {
@@ -363,7 +364,7 @@ router.post(
       });
 
       multishotOrchestrator
-        .runWorkflow(projectId, userId, { projectId, userId }, { hasImages })
+        .runWorkflow(projectId, userId, { projectId, userId, model }, { hasImages })
         .then(async (result) => {
           console.log(
             `[AgentRoutes] Multi-shot workflow completed for project ${projectId}: ${result.success ? "success" : "failed"}`

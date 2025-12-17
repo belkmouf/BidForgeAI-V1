@@ -101,8 +101,8 @@ export default function ProjectWorkspace() {
     setSelectedModel(modelToUse);
     
     try {
-      // Start the multi-shot agent workflow
-      await startAgentWorkflow(projectId);
+      // Start the multi-shot agent workflow with selected model
+      await startAgentWorkflow(projectId, modelToUse);
       
       toast({
         title: "Agent Workflow Started",

@@ -46,6 +46,7 @@ export interface WorkflowState {
   hasImages: boolean;
   startedAt: Date;
   updatedAt: Date;
+  model?: string;
 }
 
 const workflowSteps: WorkflowStep[] = [
@@ -159,6 +160,7 @@ export class MultishotWorkflowOrchestrator {
     initialInput: Record<string, unknown>,
     options?: { hasImages?: boolean }
   ): Promise<{ success: boolean; outputs: Record<string, AgentOutput>; messages: AgentMessage[] }> {
+    const selectedModel = (initialInput.model as string) || 'anthropic';
     const state: WorkflowState = {
       projectId,
       userId,
@@ -169,6 +171,7 @@ export class MultishotWorkflowOrchestrator {
       hasImages: options?.hasImages ?? false,
       startedAt: new Date(),
       updatedAt: new Date(),
+      model: selectedModel,
     };
 
     await this.initializeWorkflowState(projectId, state);
@@ -327,7 +330,7 @@ export class MultishotWorkflowOrchestrator {
             rawContent: draft.content,
             instructions: 'Generated via AI Agent Workflow',
             tone: 'professional',
-            model: 'anthropic',
+            model: state.model || 'anthropic',
             searchMethod: 'agent-workflow',
             chunksUsed: 0,
             generationTimeSeconds,
