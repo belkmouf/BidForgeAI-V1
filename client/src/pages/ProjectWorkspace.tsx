@@ -422,7 +422,8 @@ export default function ProjectWorkspace() {
                       name: doc.filename,
                       size: 0,
                       uploadedAt: new Date(doc.uploadedAt),
-                      id: doc.id.toString()
+                      id: doc.id.toString(),
+                      isProcessed: doc.isProcessed
                     }))}
                     onUploadWithProgress={handleFileUploadWithProgress}
                     onDelete={handleDeleteDocument}

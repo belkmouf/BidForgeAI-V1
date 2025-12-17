@@ -11,6 +11,7 @@ interface FileItem {
   name: string;
   size: number;
   uploadedAt: Date;
+  isProcessed?: boolean;
 }
 
 export interface ProcessingProgress {
@@ -48,8 +49,8 @@ export function DropZone({ onUpload, onUploadWithProgress, onDelete, files: init
     name: f.name,
     type: f.name.split('.').pop() || 'unknown',
     size: f.size > 0 ? (f.size / 1024 / 1024).toFixed(2) + ' MB' : 'N/A',
-    status: 'completed' as const,
-    progress: 100
+    status: (f.isProcessed !== false ? 'completed' : 'embedding') as 'completed' | 'embedding',
+    progress: f.isProcessed !== false ? 100 : 50
   }));
 
   // Get names of completed files to filter out duplicates from uploadingFiles
