@@ -120,7 +120,7 @@ export function BidHistory({ projectId, onSelectBid, refreshTrigger }: BidHistor
   }
 
   return (
-    <Card className="h-full flex flex-col border-2 border-primary/30">
+    <Card className="h-full flex flex-col border-2 border-primary/30 max-w-[220px]">
       <CardHeader className="pb-3 flex-shrink-0">
         <CardTitle className="text-sm font-medium flex items-center gap-2">
           <History className="h-4 w-4" />
