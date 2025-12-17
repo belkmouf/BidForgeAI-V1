@@ -532,7 +532,7 @@ export async function registerRoutes(
         }
       }
 
-      // Save sketches as documents and create text files with extracted data
+      // Save sketches as documents and create text files with extracted data + RAG chunks
       for (let i = 0; i < sketches.length; i++) {
         const sketch = sketches[i];
         const safeFilename = sketch.originalname.replace(/[^\w\s.-]/g, '_').replace(/\.{2,}/g, '.').trim();
@@ -560,24 +560,26 @@ export async function registerRoutes(
           await fs.writeFile(txtPath, sketchContent, 'utf-8');
           console.log(`Saved analysis text file: ${txtPath}`);
           
-          // Create document record for the sketch (include doc type info in content)
+          // Create document record for the original sketch image
           await storage.createDocument({
             projectId,
             filename: safeFilename,
-            content: sketchContent,
+            content: `[Image: ${safeFilename}] - See ${txtFilename} for extracted analysis`,
             isProcessed: true,
           });
-          
-          // Also create a document record for the analysis text file
-          await storage.createDocument({
-            projectId,
-            filename: txtFilename,
-            content: sketchContent,
-            isProcessed: true,
-          });
-          
           processedFiles.push({ filename: safeFilename, chunksCreated: 0 });
-          processedFiles.push({ filename: txtFilename, chunksCreated: 0 });
+          
+          // Process the analysis text through ingestion service to create RAG chunks with embeddings
+          const txtBuffer = Buffer.from(sketchContent, 'utf-8');
+          const ragResults = await ingestionService.processFile(
+            txtBuffer,
+            txtFilename,
+            projectId
+          );
+          
+          // Add the RAG-processed results (with actual chunk counts)
+          processedFiles.push(...ragResults);
+          console.log(`Created RAG chunks for ${txtFilename}: ${ragResults.reduce((sum, r) => sum + r.chunksCreated, 0)} chunks`);
         } catch (error: any) {
           console.error(`Failed to save sketch document ${safeFilename}:`, error.message);
         }
@@ -735,61 +737,32 @@ export async function registerRoutes(
             if (sketchResult) {
               const sketchContent = JSON.stringify(sketchResult, null, 2);
               
-              // Save the image document with full analysis
+              // Save the image document reference (not for RAG, just tracking)
               const sketchDoc = await storage.createDocument({
                 projectId,
                 filename: versionedFilename,
-                originalFilename: originalFilename, // Keep original with Arabic/special chars for display
-                content: sketchContent,
-                isProcessed: false,
+                originalFilename: originalFilename,
+                content: `[Image: ${originalFilename}] - See analysis.txt for extracted data`,
+                isProcessed: true,
                 version,
               });
-
-              // Create a single chunk for the image analysis with required chunkIndex
-              await storage.createDocumentChunk({
-                documentId: sketchDoc.id,
-                content: sketchContent,
-                chunkIndex: 0,
-                embedding: null,
-              });
-
-              // Mark the document as processed after creating the chunk
-              await storage.updateDocumentProcessed(sketchDoc.id, true);
 
               processedFiles.push({
                 filename: versionedFilename,
                 originalFilename: originalFilename,
                 version,
                 documentId: sketchDoc.id,
-                chunksCreated: 1,
+                chunksCreated: 0,
                 type: 'image',
               });
 
-              // Only create the analysis text file when JSON is fully complete
+              // Create the analysis text file with proper RAG indexing
               const baseVersionedFilename = versionedFilename.replace(/\.[^.]+$/, '');
               const txtFilename = `${baseVersionedFilename}_analysis.txt`;
               const baseOriginalFilename = originalFilename.replace(/\.[^.]+$/, '');
               const originalTxtFilename = `${baseOriginalFilename}_analysis.txt`;
               
-              const txtDoc = await storage.createDocument({
-                projectId,
-                filename: txtFilename,
-                originalFilename: originalTxtFilename, // Original name with Arabic/special chars
-                content: sketchContent,
-                isProcessed: false,
-                version,
-              });
-
-              await storage.createDocumentChunk({
-                documentId: txtDoc.id,
-                content: sketchContent,
-                chunkIndex: 0,
-                embedding: null,
-              });
-
-              await storage.updateDocumentProcessed(txtDoc.id, true);
-
-              // Also save the full analysis to the filesystem for downloads
+              // Save to filesystem first
               try {
                 const pathModule = await import('path');
                 const analysisDir = pathModule.join(process.cwd(), 'uploads', 'analysis');
@@ -801,16 +774,41 @@ export async function registerRoutes(
                 console.error(`Failed to save analysis to filesystem: ${fsError.message}`);
               }
 
-              processedFiles.push({
-                filename: txtFilename,
-                originalFilename: originalTxtFilename,
-                version,
-                documentId: txtDoc.id,
-                chunksCreated: 1,
-                type: 'analysis',
-              });
+              // Process through ingestion service to create proper RAG chunks with embeddings
+              sendProgress({ type: 'progress', filename: originalFilename, stage: 'embedding', message: `Creating RAG embeddings for ${originalFilename}...`, percentage: 25 + (i / sketches.length) * 20 });
               
-              sendProgress({ type: 'progress', filename: originalFilename, stage: 'complete', message: `Analysis complete for ${originalFilename}${version > 1 ? ` (version ${version})` : ''}`, percentage: 30 + (i / sketches.length) * 20 });
+              const txtBuffer = Buffer.from(sketchContent, 'utf-8');
+              const ragResults = await ingestionService.processFile(
+                txtBuffer,
+                txtFilename,
+                projectId,
+                (progress) => {
+                  sendProgress({ 
+                    type: 'progress', 
+                    filename: originalFilename, 
+                    stage: progress.stage, 
+                    message: progress.message, 
+                    percentage: progress.percentage 
+                  });
+                }
+              );
+              
+              // Add RAG results with proper chunk counts
+              for (const ragResult of ragResults) {
+                processedFiles.push({
+                  filename: ragResult.filename,
+                  originalFilename: originalTxtFilename,
+                  version,
+                  documentId: ragResult.documentId,
+                  chunksCreated: ragResult.chunksCreated,
+                  type: 'analysis',
+                });
+              }
+              
+              const totalChunks = ragResults.reduce((sum, r) => sum + r.chunksCreated, 0);
+              console.log(`Created ${totalChunks} RAG chunks with embeddings for ${txtFilename}`);
+              
+              sendProgress({ type: 'progress', filename: originalFilename, stage: 'complete', message: `Analysis complete for ${originalFilename}${version > 1 ? ` (version ${version})` : ''} - ${totalChunks} RAG chunks created`, percentage: 30 + (i / sketches.length) * 20 });
             } else {
               // Analysis failed - save image reference and mark as processed (no embedding needed)
               console.warn(`Sketch analysis incomplete for ${originalFilename}, skipping text file creation`);
