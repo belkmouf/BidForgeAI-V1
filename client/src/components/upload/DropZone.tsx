@@ -209,9 +209,26 @@ export function DropZone({ onUpload, onUploadWithProgress, onDelete, files: init
                       variant="outline" 
                       size="sm" 
                       className="flex-1 h-7"
-                      onClick={(e) => {
+                      onClick={async (e) => {
                         e.stopPropagation();
-                        window.open(`/api/downloads/analysis/${encodeURIComponent(file.name)}`, '_blank');
+                        try {
+                          const token = localStorage.getItem('accessToken');
+                          const response = await fetch(`/api/downloads/analysis/${encodeURIComponent(file.name)}`, {
+                            headers: { 'Authorization': `Bearer ${token}` }
+                          });
+                          if (!response.ok) throw new Error('Download failed');
+                          const blob = await response.blob();
+                          const url = window.URL.createObjectURL(blob);
+                          const a = document.createElement('a');
+                          a.href = url;
+                          a.download = file.name;
+                          document.body.appendChild(a);
+                          a.click();
+                          window.URL.revokeObjectURL(url);
+                          document.body.removeChild(a);
+                        } catch (err) {
+                          console.error('Download error:', err);
+                        }
                       }}
                       data-testid={`button-download-document-${file.id}`}
                     >
