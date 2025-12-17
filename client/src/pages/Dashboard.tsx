@@ -388,17 +388,23 @@ export default function Dashboard() {
                       >
                         <CartesianGrid
                           strokeDasharray="3 3"
-                          horizontal={false}
-                          stroke="#e5e7eb"
+                          horizontal={true}
+                          vertical={true}
+                          stroke="#9ca3af"
                         />
-                        <XAxis type="number" hide />
+                        <XAxis 
+                          type="number" 
+                          axisLine={{ stroke: '#9ca3af' }}
+                          tickLine={{ stroke: '#9ca3af' }}
+                          tick={{ fontSize: 11 }}
+                        />
                         <YAxis
                           dataKey="name"
                           type="category"
-                          width={80}
+                          width={85}
                           tick={{ fontSize: 12 }}
-                          axisLine={false}
-                          tickLine={false}
+                          axisLine={{ stroke: '#9ca3af' }}
+                          tickLine={{ stroke: '#9ca3af' }}
                         />
                         <Tooltip
                           cursor={{ fill: "transparent" }}
