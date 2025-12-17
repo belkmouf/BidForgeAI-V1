@@ -323,7 +323,7 @@ export function AgentProgressPanel({ projectId, isActive, onComplete, onCancel }
       </CardHeader>
 
       <CardContent className="flex-1 p-0 overflow-hidden">
-        <div className="flex gap-2 p-3 border-b bg-muted/30">
+        <div className="flex gap-2 p-3 border-b bg-muted/30 flex-wrap">
           {['intake', 'analysis', 'decision', 'generation', 'review'].map((agent) => (
             <Badge
               key={agent}
@@ -335,16 +335,28 @@ export function AgentProgressPanel({ projectId, isActive, onComplete, onCancel }
                   : 'secondary'
               }
               className={cn(
-                'text-xs',
+                'text-xs transition-all duration-300',
                 completedAgents.includes(agent) && agentColors[agent],
-                currentAgent === agent && 'animate-pulse'
+                currentAgent === agent && 'animate-blink ring-2 ring-primary ring-offset-1 font-semibold'
               )}
+              style={currentAgent === agent ? {
+                animation: 'blink 1s ease-in-out infinite',
+              } : undefined}
               data-testid={`agent-badge-${agent}`}
             >
+              {currentAgent === agent && (
+                <span className="inline-block w-2 h-2 bg-green-400 rounded-full mr-1.5 animate-ping" />
+              )}
               {agentLabels[agent]}
             </Badge>
           ))}
         </div>
+        <style>{`
+          @keyframes blink {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.7; transform: scale(1.05); }
+          }
+        `}</style>
 
         <ScrollArea className="h-[calc(100%-60px)]" ref={scrollRef}>
           <div className="p-3 space-y-2">
