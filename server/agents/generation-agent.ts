@@ -39,10 +39,12 @@ export class GenerationAgent extends BaseAgent {
         documents?: DocumentInfoType[];
         analysis?: AnalysisResultType;
         review?: { feedback?: string[]; attempts?: number };
+        projectSummary?: string;
       };
 
       const docs = state.documents || [];
       const analysis = state.analysis;
+      const projectSummary = state.projectSummary || '';
 
       if (docs.length === 0) {
         return {
@@ -154,8 +156,12 @@ ALL technical details must be SPECIFIC and derived from the RFQ documents.
 
 Generate only the HTML content for the bid proposal body, not a full HTML document.`;
 
-      const userPrompt = `Generate a bid proposal for this RFQ:
+      const projectSummarySection = projectSummary 
+        ? `\n\nAI-GENERATED PROJECT SUMMARY:\n${projectSummary}\n`
+        : '';
 
+      const userPrompt = `Generate a bid proposal for this RFQ:
+${projectSummarySection}
 ${analysisContext}
 
 RFQ Documents:

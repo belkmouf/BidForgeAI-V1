@@ -9,9 +9,25 @@ import { decisionAgent } from './decision-agent';
 import { generationAgent } from './generation-agent';
 import { reviewAgent } from './review-agent';
 import { db } from '../db';
-import { agentStates, agentExecutions, projects } from '@shared/schema';
+import { agentStates, agentExecutions, projects, projectSummaries } from '@shared/schema';
 import { eq } from 'drizzle-orm';
 import { storage } from '../storage';
+
+interface ProjectSummaryContext {
+  overview?: string;
+  scopeOfWork?: string[];
+  keyRequirements?: {
+    budget?: string;
+    timeline?: string;
+    certifications?: string[];
+    labor?: string;
+    insurance?: string[];
+    bonding?: string;
+  };
+  riskFactors?: string[];
+  opportunities?: string[];
+  missingInformation?: string[];
+}
 
 export interface WorkflowStep {
   name: string;
@@ -72,6 +88,71 @@ export class MultishotWorkflowOrchestrator {
     this.orchestrator.emit('progress', fullEvent);
   }
 
+  private async getProjectSummary(projectId: string): Promise<ProjectSummaryContext | null> {
+    try {
+      const [summary] = await db
+        .select()
+        .from(projectSummaries)
+        .where(eq(projectSummaries.projectId, projectId))
+        .limit(1);
+      
+      if (!summary) return null;
+      
+      return {
+        overview: summary.overview || undefined,
+        scopeOfWork: summary.scopeOfWork || undefined,
+        keyRequirements: summary.keyRequirements || undefined,
+        riskFactors: summary.riskFactors || undefined,
+        opportunities: summary.opportunities || undefined,
+        missingInformation: summary.missingInformation || undefined,
+      };
+    } catch (error) {
+      console.error('[MultishotWorkflow] Failed to fetch project summary:', error);
+      return null;
+    }
+  }
+
+  private formatProjectSummaryForPrompt(summary: ProjectSummaryContext): string {
+    const sections: string[] = [];
+    
+    if (summary.overview) {
+      sections.push(`## Project Overview\n${summary.overview}`);
+    }
+    
+    if (summary.scopeOfWork?.length) {
+      sections.push(`## Scope of Work\n${summary.scopeOfWork.map(s => `- ${s}`).join('\n')}`);
+    }
+    
+    if (summary.keyRequirements) {
+      const reqs: string[] = [];
+      if (summary.keyRequirements.budget) reqs.push(`- Budget: ${summary.keyRequirements.budget}`);
+      if (summary.keyRequirements.timeline) reqs.push(`- Timeline: ${summary.keyRequirements.timeline}`);
+      if (summary.keyRequirements.labor) reqs.push(`- Labor Requirements: ${summary.keyRequirements.labor}`);
+      if (summary.keyRequirements.bonding) reqs.push(`- Bonding: ${summary.keyRequirements.bonding}`);
+      if (summary.keyRequirements.certifications?.length) {
+        reqs.push(`- Required Certifications: ${summary.keyRequirements.certifications.join(', ')}`);
+      }
+      if (summary.keyRequirements.insurance?.length) {
+        reqs.push(`- Insurance Requirements: ${summary.keyRequirements.insurance.join(', ')}`);
+      }
+      if (reqs.length) sections.push(`## Key Requirements\n${reqs.join('\n')}`);
+    }
+    
+    if (summary.riskFactors?.length) {
+      sections.push(`## Risk Factors\n${summary.riskFactors.map(r => `- ${r}`).join('\n')}`);
+    }
+    
+    if (summary.opportunities?.length) {
+      sections.push(`## Opportunities\n${summary.opportunities.map(o => `- ${o}`).join('\n')}`);
+    }
+    
+    if (summary.missingInformation?.length) {
+      sections.push(`## Missing Information (Address in Bid)\n${summary.missingInformation.map(m => `- ${m}`).join('\n')}`);
+    }
+    
+    return sections.join('\n\n');
+  }
+
   async runWorkflow(
     projectId: string,
     userId: number,
@@ -99,7 +180,17 @@ export class MultishotWorkflowOrchestrator {
       message: 'Starting multi-shot bid generation workflow',
     });
 
-    let currentInput = initialInput;
+    // Fetch and format project summary for inclusion in prompts
+    const projectSummary = await this.getProjectSummary(projectId);
+    const projectSummaryText = projectSummary 
+      ? this.formatProjectSummaryForPrompt(projectSummary)
+      : '';
+
+    let currentInput = {
+      ...initialInput,
+      projectSummary: projectSummaryText,
+      projectSummaryData: projectSummary,
+    };
     
     for (const step of workflowSteps) {
       if (step.condition && !step.condition(state)) {
