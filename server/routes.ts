@@ -695,65 +695,86 @@ export async function registerRoutes(
 
           sendProgress({ type: 'progress', filename: safeFilename, stage: 'chunking', message: `Saving image ${i + 1}/${sketches.length}...`, percentage: 10 + (i / sketches.length) * 20 });
 
-          let sketchContent: string;
-          if (sketchResult) {
-            sketchContent = JSON.stringify(sketchResult, null, 2);
-          } else {
-            sketchContent = JSON.stringify({ error: 'Image file - analysis pending' }, null, 2);
-          }
-
           try {
-            const sketchDoc = await storage.createDocument({
-              projectId,
-              filename: safeFilename,
-              content: sketchContent,
-              isProcessed: false,
-            });
+            // Only create records if analysis was successful
+            if (sketchResult) {
+              const sketchContent = JSON.stringify(sketchResult, null, 2);
+              
+              // Save the image document with full analysis
+              const sketchDoc = await storage.createDocument({
+                projectId,
+                filename: safeFilename,
+                content: sketchContent,
+                isProcessed: false,
+              });
 
-            // Create a single chunk for the image analysis with required chunkIndex
-            await storage.createDocumentChunk({
-              documentId: sketchDoc.id,
-              content: sketchContent,
-              chunkIndex: 0,
-              embedding: null,
-            });
+              // Create a single chunk for the image analysis with required chunkIndex
+              await storage.createDocumentChunk({
+                documentId: sketchDoc.id,
+                content: sketchContent,
+                chunkIndex: 0,
+                embedding: null,
+              });
 
-            // Mark the document as processed after creating the chunk
-            await storage.updateDocumentProcessed(sketchDoc.id, true);
+              // Mark the document as processed after creating the chunk
+              await storage.updateDocumentProcessed(sketchDoc.id, true);
 
-            processedFiles.push({
-              filename: safeFilename,
-              documentId: sketchDoc.id,
-              chunksCreated: 1,
-              type: 'image',
-            });
+              processedFiles.push({
+                filename: safeFilename,
+                documentId: sketchDoc.id,
+                chunksCreated: 1,
+                type: 'image',
+              });
 
-            // Also create the analysis text file
-            const baseFilename = safeFilename.replace(/\.[^.]+$/, '');
-            const txtFilename = `${baseFilename}_analysis.txt`;
-            
-            const txtDoc = await storage.createDocument({
-              projectId,
-              filename: txtFilename,
-              content: sketchContent,
-              isProcessed: false,
-            });
+              // Only create the analysis text file when JSON is fully complete
+              const baseFilename = safeFilename.replace(/\.[^.]+$/, '');
+              const txtFilename = `${baseFilename}_analysis.txt`;
+              
+              const txtDoc = await storage.createDocument({
+                projectId,
+                filename: txtFilename,
+                content: sketchContent,
+                isProcessed: false,
+              });
 
-            await storage.createDocumentChunk({
-              documentId: txtDoc.id,
-              content: sketchContent,
-              chunkIndex: 0,
-              embedding: null,
-            });
+              await storage.createDocumentChunk({
+                documentId: txtDoc.id,
+                content: sketchContent,
+                chunkIndex: 0,
+                embedding: null,
+              });
 
-            await storage.updateDocumentProcessed(txtDoc.id, true);
+              await storage.updateDocumentProcessed(txtDoc.id, true);
 
-            processedFiles.push({
-              filename: txtFilename,
-              documentId: txtDoc.id,
-              chunksCreated: 1,
-              type: 'analysis',
-            });
+              processedFiles.push({
+                filename: txtFilename,
+                documentId: txtDoc.id,
+                chunksCreated: 1,
+                type: 'analysis',
+              });
+              
+              sendProgress({ type: 'progress', filename: safeFilename, stage: 'complete', message: `Analysis complete for ${safeFilename}`, percentage: 30 + (i / sketches.length) * 20 });
+            } else {
+              // Analysis failed - only save image reference without analysis file
+              console.warn(`Sketch analysis incomplete for ${safeFilename}, skipping text file creation`);
+              sendProgress({ type: 'warning', filename: safeFilename, message: `Analysis incomplete for ${safeFilename} - text file not created` });
+              
+              // Save just the image record with pending status
+              const sketchDoc = await storage.createDocument({
+                projectId,
+                filename: safeFilename,
+                content: JSON.stringify({ status: 'analysis_pending', filename: safeFilename }),
+                isProcessed: false,
+              });
+
+              processedFiles.push({
+                filename: safeFilename,
+                documentId: sketchDoc.id,
+                chunksCreated: 0,
+                type: 'image',
+                status: 'pending',
+              });
+            }
           } catch (error: any) {
             console.error(`Failed to save sketch ${safeFilename}:`, error.message);
             sendProgress({ type: 'error', filename: safeFilename, message: error.message });
