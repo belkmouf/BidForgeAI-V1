@@ -137,11 +137,18 @@ export class AnalysisAgent extends BaseAgent {
         
         // Normalize recommendations to ensure action field exists
         if (parsed.recommendations && Array.isArray(parsed.recommendations)) {
-          parsed.recommendations = parsed.recommendations.map((rec: Record<string, unknown>) => ({
-            action: rec.action || rec.recommendation || rec.description || 'Review this item',
-            priority: rec.priority || 'medium',
-            timeEstimate: rec.timeEstimate || rec.time_estimate,
-          }));
+          parsed.recommendations = parsed.recommendations.map((rec: Record<string, unknown>) => {
+            // Normalize priority to lowercase
+            let priority = String(rec.priority || 'medium').toLowerCase();
+            if (!['high', 'medium', 'low'].includes(priority)) {
+              priority = 'medium';
+            }
+            return {
+              action: rec.action || rec.recommendation || rec.description || 'Review this item',
+              priority,
+              timeEstimate: rec.timeEstimate || rec.time_estimate,
+            };
+          });
         }
         
         // Normalize overallRiskLevel casing

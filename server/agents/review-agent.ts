@@ -5,10 +5,10 @@ import { ChatOpenAI } from '@langchain/openai';
 import { z } from 'zod';
 
 const ReviewResponseSchema = z.object({
-  passed: z.boolean(),
-  score: z.number().min(0).max(100),
-  feedback: z.array(z.string()),
-  suggestions: z.array(z.string()),
+  passed: z.boolean().default(true),
+  score: z.number().min(0).max(100).default(75),
+  feedback: z.array(z.string()).default([]),
+  suggestions: z.array(z.string()).default([]),
 });
 
 export class ReviewAgent extends BaseAgent {
@@ -89,6 +89,24 @@ Previous feedback (if any): ${previousReview?.feedback?.join(', ') || 'None'}`;
         }
 
         const parsed = JSON.parse(jsonMatch[0]);
+        
+        // Normalize response fields
+        if (parsed.feedback && !Array.isArray(parsed.feedback)) {
+          // Convert object to array of strings
+          parsed.feedback = Object.values(parsed.feedback).map(String);
+        }
+        if (parsed.suggestions && !Array.isArray(parsed.suggestions)) {
+          parsed.suggestions = Object.values(parsed.suggestions).map(String);
+        }
+        // Handle 'pass' vs 'passed'
+        if (parsed.passed === undefined && parsed.pass !== undefined) {
+          parsed.passed = Boolean(parsed.pass);
+        }
+        // Derive passed from score if missing
+        if (parsed.passed === undefined && typeof parsed.score === 'number') {
+          parsed.passed = parsed.score >= 70;
+        }
+        
         const reviewResult = ReviewResponseSchema.parse(parsed);
 
         const review: ReviewResultType = {

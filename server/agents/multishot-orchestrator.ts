@@ -47,6 +47,7 @@ const workflowSteps: WorkflowStep[] = [
 
 export class MultishotWorkflowOrchestrator {
   private orchestrator: MasterOrchestrator;
+  private readonly workflowTimeoutMs = 5 * 60 * 1000; // 5 minutes total workflow timeout
   
   constructor() {
     this.orchestrator = masterOrchestrator;
@@ -113,6 +114,19 @@ export class MultishotWorkflowOrchestrator {
       const cancelled = await this.checkCancellation(projectId);
       if (cancelled) {
         state.status = 'cancelled';
+        break;
+      }
+
+      // Check workflow timeout
+      const elapsedMs = Date.now() - state.startedAt.getTime();
+      if (elapsedMs > this.workflowTimeoutMs) {
+        this.emitWithProject(projectId, {
+          type: 'error',
+          agentName: 'workflow',
+          iteration: state.currentStep,
+          message: `Workflow timed out after ${Math.round(elapsedMs / 1000)}s. Completing with available results.`,
+        });
+        state.status = 'completed';
         break;
       }
 

@@ -408,6 +408,6 @@ Provide clear, specific feedback that will help the agent improve its output. Be
 }
 
 export const masterOrchestrator = new MasterOrchestrator({
-  maxIterationsPerAgent: 3,
+  maxIterationsPerAgent: 2,
   acceptanceThreshold: 75,
 });
