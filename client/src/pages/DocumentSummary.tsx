@@ -384,9 +384,10 @@ export default function DocumentSummary() {
     queryKey: ['document-summary', id],
     queryFn: () => getDocumentSummary(id!),
     enabled: !!id,
-    refetchInterval: (data) => {
+    refetchInterval: (query) => {
       // Poll every 3 seconds if documents are still processing
-      if (data && !data.stats.allProcessed) {
+      const queryData = query.state?.data;
+      if (queryData && queryData.stats && !queryData.stats.allProcessed) {
         return 3000;
       }
       return false;
