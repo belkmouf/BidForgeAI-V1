@@ -804,17 +804,17 @@ export async function registerRoutes(
               
               sendProgress({ type: 'progress', filename: originalFilename, stage: 'complete', message: `Analysis complete for ${originalFilename}${version > 1 ? ` (version ${version})` : ''}`, percentage: 30 + (i / sketches.length) * 20 });
             } else {
-              // Analysis failed - only save image reference without analysis file
+              // Analysis failed - save image reference and mark as processed (no embedding needed)
               console.warn(`Sketch analysis incomplete for ${originalFilename}, skipping text file creation`);
               sendProgress({ type: 'warning', filename: originalFilename, message: `Analysis incomplete for ${originalFilename} - text file not created` });
               
-              // Save just the image record with pending status
+              // Save just the image record - mark as processed since there's nothing more to do
               const sketchDoc = await storage.createDocument({
                 projectId,
                 filename: versionedFilename,
                 originalFilename: originalFilename,
-                content: JSON.stringify({ status: 'analysis_pending', filename: versionedFilename }),
-                isProcessed: false,
+                content: JSON.stringify({ status: 'analysis_failed', filename: versionedFilename, error: 'Vision analysis did not return valid results' }),
+                isProcessed: true, // Mark as processed to prevent stuck state
                 version,
               });
 
@@ -825,8 +825,10 @@ export async function registerRoutes(
                 documentId: sketchDoc.id,
                 chunksCreated: 0,
                 type: 'image',
-                status: 'pending',
+                status: 'failed',
               });
+              
+              sendProgress({ type: 'progress', filename: originalFilename, stage: 'complete', message: `Image saved (analysis failed) for ${originalFilename}`, percentage: 30 + (i / sketches.length) * 20 });
             }
           } catch (error: any) {
             console.error(`Failed to save sketch ${originalFilename}:`, error.message);
