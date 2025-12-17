@@ -205,36 +205,22 @@ export function DropZone({ onUpload, onUploadWithProgress, onDelete, files: init
               {file.status === 'completed' && (
                 <div className="mt-2 pt-2 border-t border-border flex gap-2">
                   {file.name.endsWith('_analysis.txt') && (
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      className="flex-1 h-7"
-                      onClick={async (e) => {
-                        e.stopPropagation();
-                        try {
-                          const token = localStorage.getItem('accessToken');
-                          const response = await fetch(`/api/downloads/analysis/${encodeURIComponent(file.name)}`, {
-                            headers: { 'Authorization': `Bearer ${token}` }
-                          });
-                          if (!response.ok) throw new Error('Download failed');
-                          const blob = await response.blob();
-                          const url = window.URL.createObjectURL(blob);
-                          const a = document.createElement('a');
-                          a.href = url;
-                          a.download = file.name;
-                          document.body.appendChild(a);
-                          a.click();
-                          window.URL.revokeObjectURL(url);
-                          document.body.removeChild(a);
-                        } catch (err) {
-                          console.error('Download error:', err);
-                        }
-                      }}
-                      data-testid={`button-download-document-${file.id}`}
+                    <a 
+                      href={`/api/downloads/analysis/${encodeURIComponent(file.name)}`}
+                      download={file.name}
+                      onClick={(e) => e.stopPropagation()}
+                      className="flex-1"
                     >
-                      <Download className="h-3 w-3 mr-1" />
-                      Download
-                    </Button>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="w-full h-7"
+                        data-testid={`button-download-document-${file.id}`}
+                      >
+                        <Download className="h-3 w-3 mr-1" />
+                        Download
+                      </Button>
+                    </a>
                   )}
                   {onDelete && (
                     <Button 
