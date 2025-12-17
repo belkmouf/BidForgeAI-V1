@@ -205,8 +205,8 @@ export async function registerRoutes(
   const fsPromises = await import('fs/promises');
   app.use('/uploads', express.default.static(path.join(process.cwd(), 'uploads')));
   
-  // Download endpoint for analysis text files
-  app.get('/api/downloads/analysis/:filename', authenticateToken, async (req: AuthRequest, res) => {
+  // Download endpoint for analysis text files (no auth required - files are already project-scoped)
+  app.get('/api/downloads/analysis/:filename', async (req, res) => {
     try {
       const filename = req.params.filename;
       // Sanitize filename to prevent directory traversal
