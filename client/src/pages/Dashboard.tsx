@@ -167,7 +167,7 @@ export default function Dashboard() {
   }, [stats]);
 
   return (
-    <div className="flex min-h-screen bg-gray-100">
+    <div className="flex min-h-screen bg-background">
       <AppSidebar />
       <main className={`flex-1 p-8 overflow-auto transition-all duration-300 ${isCollapsed ? 'ml-16' : 'ml-64'}`}>
         <div className="max-w-7xl mx-auto space-y-8">

@@ -214,7 +214,7 @@ export default function Analytics() {
   })) : [];
 
   return (
-    <div className="min-h-screen bg-gray-100 text-slate-900">
+    <div className="min-h-screen bg-background text-slate-900">
       <div className="max-w-7xl mx-auto px-6 py-8">
         <div className="flex items-center justify-between mb-8 p-4 border border-primary/20 rounded-xl bg-card shadow-md">
           <div className="flex items-center gap-4">
