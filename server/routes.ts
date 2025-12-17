@@ -696,17 +696,25 @@ export async function registerRoutes(
           return `${base}_v${version}${ext}`;
         };
 
+        // Helper to create filesystem-safe filename with unique ID (preserves extension)
+        const createSafeFilename = (originalName: string): string => {
+          const ext = originalName.match(/\.[^.]+$/)?.[0] || '';
+          const uniqueId = crypto.randomUUID().slice(0, 8);
+          return `file_${uniqueId}${ext}`;
+        };
+
         // Save each sketch as a document
         for (let i = 0; i < sketches.length; i++) {
           const sketch = sketches[i];
-          const safeFilename = sketch.originalname.replace(/[^\w\s.-]/g, '_').replace(/\.{2,}/g, '.').trim();
+          const originalFilename = sketch.originalname; // Keep original with Arabic/special chars
+          const safeFilename = createSafeFilename(originalFilename); // UUID-based for filesystem
           const sketchResult = sketchResults[i];
 
-          sendProgress({ type: 'progress', filename: safeFilename, stage: 'chunking', message: `Saving image ${i + 1}/${sketches.length}...`, percentage: 10 + (i / sketches.length) * 20 });
+          sendProgress({ type: 'progress', filename: originalFilename, stage: 'chunking', message: `Saving image ${i + 1}/${sketches.length}...`, percentage: 10 + (i / sketches.length) * 20 });
 
           try {
-            // Get next version for this filename
-            const version = await storage.getNextVersionForFilename(projectId, safeFilename);
+            // Get next version based on original filename (for tracking duplicates)
+            const version = await storage.getNextVersionForFilename(projectId, originalFilename);
             const versionedFilename = getVersionedFilename(safeFilename, version);
             
             // Only create records if analysis was successful
@@ -717,7 +725,7 @@ export async function registerRoutes(
               const sketchDoc = await storage.createDocument({
                 projectId,
                 filename: versionedFilename,
-                originalFilename: safeFilename,
+                originalFilename: originalFilename, // Keep original with Arabic/special chars for display
                 content: sketchContent,
                 isProcessed: false,
                 version,
@@ -736,7 +744,7 @@ export async function registerRoutes(
 
               processedFiles.push({
                 filename: versionedFilename,
-                originalFilename: safeFilename,
+                originalFilename: originalFilename,
                 version,
                 documentId: sketchDoc.id,
                 chunksCreated: 1,
@@ -746,13 +754,13 @@ export async function registerRoutes(
               // Only create the analysis text file when JSON is fully complete
               const baseVersionedFilename = versionedFilename.replace(/\.[^.]+$/, '');
               const txtFilename = `${baseVersionedFilename}_analysis.txt`;
-              const baseOriginalFilename = safeFilename.replace(/\.[^.]+$/, '');
+              const baseOriginalFilename = originalFilename.replace(/\.[^.]+$/, '');
               const originalTxtFilename = `${baseOriginalFilename}_analysis.txt`;
               
               const txtDoc = await storage.createDocument({
                 projectId,
                 filename: txtFilename,
-                originalFilename: originalTxtFilename,
+                originalFilename: originalTxtFilename, // Original name with Arabic/special chars
                 content: sketchContent,
                 isProcessed: false,
                 version,
@@ -788,17 +796,17 @@ export async function registerRoutes(
                 type: 'analysis',
               });
               
-              sendProgress({ type: 'progress', filename: versionedFilename, stage: 'complete', message: `Analysis complete for ${versionedFilename}${version > 1 ? ` (version ${version})` : ''}`, percentage: 30 + (i / sketches.length) * 20 });
+              sendProgress({ type: 'progress', filename: originalFilename, stage: 'complete', message: `Analysis complete for ${originalFilename}${version > 1 ? ` (version ${version})` : ''}`, percentage: 30 + (i / sketches.length) * 20 });
             } else {
               // Analysis failed - only save image reference without analysis file
-              console.warn(`Sketch analysis incomplete for ${safeFilename}, skipping text file creation`);
-              sendProgress({ type: 'warning', filename: safeFilename, message: `Analysis incomplete for ${safeFilename} - text file not created` });
+              console.warn(`Sketch analysis incomplete for ${originalFilename}, skipping text file creation`);
+              sendProgress({ type: 'warning', filename: originalFilename, message: `Analysis incomplete for ${originalFilename} - text file not created` });
               
               // Save just the image record with pending status
               const sketchDoc = await storage.createDocument({
                 projectId,
                 filename: versionedFilename,
-                originalFilename: safeFilename,
+                originalFilename: originalFilename,
                 content: JSON.stringify({ status: 'analysis_pending', filename: versionedFilename }),
                 isProcessed: false,
                 version,
@@ -806,7 +814,7 @@ export async function registerRoutes(
 
               processedFiles.push({
                 filename: versionedFilename,
-                originalFilename: safeFilename,
+                originalFilename: originalFilename,
                 version,
                 documentId: sketchDoc.id,
                 chunksCreated: 0,
@@ -815,8 +823,8 @@ export async function registerRoutes(
               });
             }
           } catch (error: any) {
-            console.error(`Failed to save sketch ${safeFilename}:`, error.message);
-            sendProgress({ type: 'error', filename: safeFilename, message: error.message });
+            console.error(`Failed to save sketch ${originalFilename}:`, error.message);
+            sendProgress({ type: 'error', filename: originalFilename, message: error.message });
           }
         }
 
