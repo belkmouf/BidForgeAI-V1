@@ -35,7 +35,14 @@ The backend is Express.js with TypeScript, using Drizzle ORM for type-safe datab
 
 **Core Features:**
 - **RFP Analysis & Risk Assessment:** AI-powered analysis of RFQ documents providing scores for Quality, Clarity, Doability, and Vendor Risk, along with an overall risk level, missing document detection, and actionable recommendations. Includes a feature to request missing documents via WhatsApp or Email.
-- **AI Agent System:** Utilizes LangChain/LangGraph for a multi-agent pipeline (Intake, Analysis, Decision, Generation, Review) for workflow orchestration, supporting conditional routing, automatic retries, and risk-based early termination.
+- **Multi-Shot AI Agent System:** Iterative refinement architecture orchestrated by Anthropic Claude Sonnet 3.5:
+  - **MasterOrchestrator** (`server/agents/master-orchestrator.ts`): Central coordinator using Anthropic Claude to evaluate agent outputs against quality thresholds (default 75/100) and decide if refinement is needed.
+  - **MultishotAgent** (`server/agents/multishot-agent.ts`): Extended base agent supporting iterative refinement with feedback loops.
+  - **SketchAgent** (`server/agents/sketch-agent.ts`): Analyzes construction drawings via Python subprocess integration.
+  - Workflow agents: Intake → Sketch (conditional) → Analysis → Decision → Generation → Review
+  - Each agent can iterate up to 3 times (configurable) until output meets acceptance threshold.
+  - Real-time progress streaming via Server-Sent Events (SSE) at `/api/agent-progress/progress/:projectId`.
+  - Frontend `AgentProgressPanel` component displays multi-shot conversation progress with evaluation scores and refinement feedback.
 - **Conflict Detection:** AI-powered semantic conflict detection using OpenAI embeddings and numeric conflict detection via regex, identifying contradictions in bid documents with severity scoring.
 - **Win Probability ML System:** Extracts 8 predictive features from project data (e.g., Project Type, Client Relationship, Competitiveness) to calculate bid win probability using a weighted statistical scoring model, providing confidence scores and actionable recommendations.
 

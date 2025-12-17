@@ -34,6 +34,7 @@ import {
 } from "./lib/whatsapp";
 import authRoutes from "./routes/auth";
 import agentRoutes from "./routes/agents";
+import agentProgressRoutes from "./routes/agent-progress";
 import { conflictRouter } from "./routes/conflicts";
 import winProbabilityRoutes from "./routes/win-probability";
 import teamRoutes from "./routes/team";
@@ -257,6 +258,7 @@ export async function registerRoutes(
 
   // ==================== AI AGENTS ====================
   app.use('/api/agents', agentRoutes);
+  app.use('/api/agent-progress', agentProgressRoutes);
 
   // ==================== CONFLICT DETECTION ====================
   app.use('/api/conflicts', conflictRouter);

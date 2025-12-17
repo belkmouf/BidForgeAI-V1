@@ -1,9 +1,10 @@
 import { Router, Response } from "express";
 import { z } from "zod";
 import { db } from "../db";
-import { agentExecutions, agentStates, projects } from "@shared/schema";
-import { eq, desc } from "drizzle-orm";
+import { agentExecutions, agentStates, projects, documents } from "@shared/schema";
+import { eq, desc, and } from "drizzle-orm";
 import { orchestrator, initializeAgents } from "../agents";
+import { multishotOrchestrator } from "../agents/multishot-orchestrator";
 import { authenticateToken, AuthRequest } from "../middleware/auth";
 import { requirePermission, PERMISSIONS } from "../middleware/rbac";
 
@@ -289,5 +290,110 @@ router.get("/", authenticateToken, async (req: AuthRequest, res: Response) => {
     res.status(500).json({ error: "Failed to list workflows" });
   }
 });
+
+const multishotWorkflowSchema = z.object({
+  projectId: z.string().uuid(),
+});
+
+router.post(
+  "/multishot/process",
+  authenticateToken,
+  requirePermission(PERMISSIONS.PROJECT_CREATE),
+  async (req: AuthRequest, res: Response) => {
+    try {
+      const { projectId } = multishotWorkflowSchema.parse(req.body);
+      const userId = req.user?.userId;
+
+      if (!userId) {
+        return res.status(401).json({ error: "User not authenticated" });
+      }
+
+      const [project] = await db
+        .select()
+        .from(projects)
+        .where(eq(projects.id, projectId))
+        .limit(1);
+
+      if (!project) {
+        return res.status(404).json({ error: "Project not found" });
+      }
+
+      const existingState = await db
+        .select()
+        .from(agentStates)
+        .where(eq(agentStates.projectId, projectId))
+        .limit(1);
+
+      if (existingState.length > 0 && existingState[0].status === "running") {
+        return res.status(409).json({
+          error: "Workflow already running for this project",
+          currentAgent: existingState[0].currentAgent,
+        });
+      }
+
+      const projectDocs = await db
+        .select()
+        .from(documents)
+        .where(eq(documents.projectId, projectId));
+
+      const imageExtensions = [".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp", ".tiff"];
+      const hasImages = projectDocs.some((doc) =>
+        imageExtensions.some((ext) => doc.filename.toLowerCase().endsWith(ext))
+      );
+
+      res.json({
+        message: "Multi-shot workflow started",
+        projectId,
+        status: "running",
+        currentAgent: "intake",
+        mode: "multishot",
+      });
+
+      multishotOrchestrator
+        .runWorkflow(projectId, userId, { projectId, userId }, { hasImages })
+        .then(async (result) => {
+          console.log(
+            `[AgentRoutes] Multi-shot workflow completed for project ${projectId}: ${result.success ? "success" : "failed"}`
+          );
+        })
+        .catch(async (error) => {
+          console.error(
+            `[AgentRoutes] Multi-shot workflow failed for project ${projectId}:`,
+            error
+          );
+        });
+    } catch (error) {
+      console.error("[AgentRoutes] Start multi-shot workflow error:", error);
+      if (error instanceof z.ZodError) {
+        return res
+          .status(400)
+          .json({ error: "Invalid request", details: error.errors });
+      }
+      res.status(500).json({ error: "Failed to start multi-shot workflow" });
+    }
+  }
+);
+
+router.post(
+  "/multishot/:projectId/cancel",
+  authenticateToken,
+  requirePermission(PERMISSIONS.PROJECT_EDIT),
+  async (req: AuthRequest, res: Response) => {
+    try {
+      const { projectId } = req.params;
+
+      await multishotOrchestrator.cancelWorkflow(projectId);
+
+      res.json({
+        message: "Multi-shot workflow cancelled",
+        projectId,
+        status: "cancelled",
+      });
+    } catch (error) {
+      console.error("[AgentRoutes] Cancel multi-shot workflow error:", error);
+      res.status(500).json({ error: "Failed to cancel multi-shot workflow" });
+    }
+  }
+);
 
 export default router;
