@@ -9,36 +9,61 @@ export interface OrchestratorConfig {
   maxRetries: number;
   minDoabilityScore: number;
   criticalRiskThreshold: boolean;
+  agentTimeoutMs: number; // Timeout for individual agent execution
 }
 
 const DEFAULT_CONFIG: OrchestratorConfig = {
   maxRetries: 3,
   minDoabilityScore: 30,
   criticalRiskThreshold: true,
+  agentTimeoutMs: 5 * 60 * 1000, // 5 minutes default timeout
 };
 
 export class AgentOrchestrator {
   private graph: unknown = null;
   private registry: AgentRegistry;
   private config: OrchestratorConfig;
-  private cancelledProjects: Set<string> = new Set();
 
   constructor(config: Partial<OrchestratorConfig> = {}) {
     this.registry = new InMemoryAgentRegistry();
     this.config = { ...DEFAULT_CONFIG, ...config };
   }
 
-  cancelWorkflow(projectId: string): void {
-    this.cancelledProjects.add(projectId);
+  async cancelWorkflow(projectId: string): Promise<void> {
     console.log(`[Orchestrator] Workflow cancelled for project: ${projectId}`);
+    // Persist cancellation to database
+    await db
+      .update(agentStates)
+      .set({
+        status: 'cancelled',
+        updatedAt: new Date(),
+      })
+      .where(eq(agentStates.projectId, projectId));
   }
 
-  clearCancellation(projectId: string): void {
-    this.cancelledProjects.delete(projectId);
+  async clearCancellation(projectId: string): Promise<void> {
+    // Only clear if completed, not if explicitly cancelled
+    const [state] = await db
+      .select()
+      .from(agentStates)
+      .where(eq(agentStates.projectId, projectId))
+      .limit(1);
+
+    if (state?.status === 'completed') {
+      // State already updated to completed, nothing to clear
+      return;
+    }
   }
 
-  private isCancelled(projectId: string): boolean {
-    return this.cancelledProjects.has(projectId);
+  private async isCancelled(projectId: string): Promise<boolean> {
+    // Check cancellation status from database
+    const [state] = await db
+      .select()
+      .from(agentStates)
+      .where(eq(agentStates.projectId, projectId))
+      .limit(1);
+
+    return state?.status === 'cancelled';
   }
 
   private async logExecution(
@@ -90,12 +115,30 @@ export class AgentOrchestrator {
     console.log(`[Orchestrator] Registered agent: ${agent.name}`);
   }
 
+  // Helper to execute a promise with timeout
+  private async executeWithTimeout<T>(
+    promise: Promise<T>,
+    timeoutMs: number,
+    agentName: string
+  ): Promise<T> {
+    return Promise.race([
+      promise,
+      new Promise<T>((_, reject) =>
+        setTimeout(
+          () => reject(new Error(`Agent ${agentName} execution timed out after ${timeoutMs}ms`)),
+          timeoutMs
+        )
+      ),
+    ]);
+  }
+
   private createAgentNode(agentName: string) {
     return async (state: BidWorkflowState): Promise<Partial<BidWorkflowState>> => {
       const agent = this.registry.get(agentName);
       const startTime = new Date();
 
-      if (this.isCancelled(state.projectId)) {
+      // Check if workflow was cancelled (from database)
+      if (await this.isCancelled(state.projectId)) {
         console.log(`[Orchestrator] Workflow cancelled for project: ${state.projectId}`);
         await this.logExecution(state.projectId, agentName, 'cancelled', undefined, undefined, 'Workflow cancelled by user', startTime);
         await this.updateState(state.projectId, agentName, 'cancelled', { ...state, status: 'cancelled' });
@@ -116,25 +159,30 @@ export class AgentOrchestrator {
       }
 
       try {
-        console.log(`[Orchestrator] Executing agent: ${agentName}`);
+        console.log(`[Orchestrator] Executing agent: ${agentName} with timeout ${this.config.agentTimeoutMs}ms`);
         await this.logExecution(state.projectId, agentName, 'running', state, undefined, undefined, startTime);
         await this.updateState(state.projectId, agentName, 'running', state);
 
-        const result = await agent.execute(
-          {
-            type: agentName,
-            data: state,
-            context: {
+        // Execute agent with timeout protection
+        const result = await this.executeWithTimeout(
+          agent.execute(
+            {
+              type: agentName,
+              data: state,
+              context: {
+                projectId: state.projectId,
+                userId: state.userId,
+                metadata: {},
+              },
+            },
+            {
               projectId: state.projectId,
               userId: state.userId,
               metadata: {},
-            },
-          },
-          {
-            projectId: state.projectId,
-            userId: state.userId,
-            metadata: {},
-          }
+            }
+          ),
+          this.config.agentTimeoutMs,
+          agentName
         );
 
         if (!result.success) {
@@ -220,7 +268,8 @@ export class AgentOrchestrator {
   private async completeNode(state: BidWorkflowState): Promise<Partial<BidWorkflowState>> {
     const startTime = new Date();
 
-    if (this.isCancelled(state.projectId)) {
+    // Check if workflow was cancelled (from database)
+    if (await this.isCancelled(state.projectId)) {
       return {
         status: 'cancelled',
         updatedAt: new Date(),
@@ -231,7 +280,7 @@ export class AgentOrchestrator {
     await this.logExecution(state.projectId, 'complete', 'completed', state, undefined, undefined, startTime);
     await this.updateState(state.projectId, 'complete', 'completed', { ...state, status: 'completed', completedAt: new Date() });
 
-    this.clearCancellation(state.projectId);
+    await this.clearCancellation(state.projectId);
 
     return {
       status: 'completed',

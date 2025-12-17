@@ -16,7 +16,21 @@ const getJwtSecret = (): string => {
   );
 };
 
+const getJwtRefreshSecret = (): string => {
+  // Use separate secret for refresh tokens for enhanced security
+  const secret = process.env.JWT_REFRESH_SECRET;
+  if (!secret && process.env.NODE_ENV === "production") {
+    throw new Error(
+      "JWT_REFRESH_SECRET environment variable is required in production",
+    );
+  }
+  return (
+    secret || "bidforge-dev-refresh-secret-" + crypto.randomBytes(16).toString("hex")
+  );
+};
+
 const JWT_SECRET = getJwtSecret();
+const JWT_REFRESH_SECRET = getJwtRefreshSecret();
 const JWT_EXPIRES_IN = "24h";
 const REFRESH_TOKEN_EXPIRES_IN = "7d";
 
@@ -44,12 +58,20 @@ export function generateAccessToken(payload: TokenPayload): string {
 }
 
 export function generateRefreshToken(payload: TokenPayload): string {
-  return jwt.sign(payload, JWT_SECRET, { expiresIn: REFRESH_TOKEN_EXPIRES_IN });
+  return jwt.sign(payload, JWT_REFRESH_SECRET, { expiresIn: REFRESH_TOKEN_EXPIRES_IN });
 }
 
 export function verifyToken(token: string): TokenPayload | null {
   try {
     return jwt.verify(token, JWT_SECRET) as TokenPayload;
+  } catch (error) {
+    return null;
+  }
+}
+
+export function verifyRefreshToken(token: string): TokenPayload | null {
+  try {
+    return jwt.verify(token, JWT_REFRESH_SECRET) as TokenPayload;
   } catch (error) {
     return null;
   }

@@ -437,3 +437,131 @@ export async function uploadTemplateFile(file: File, data: { name: string; descr
   if (!res.ok) throw new Error(await res.text());
   return res.json() as Promise<Template>;
 }
+
+// Document Summary API
+export interface DocumentSummaryResponse {
+  stats: {
+    documentCount: number;
+    totalSize: number;
+    totalChunks: number;
+    allProcessed: boolean;
+  };
+  readinessScore: {
+    score: number;
+    checks: {
+      documentsUploaded: boolean;
+      documentsProcessed: boolean;
+      analysisComplete: boolean;
+      missingInfo: string[];
+    };
+  };
+  documents: Array<{
+    id: number;
+    filename: string;
+    description?: string;
+    isProcessed: boolean;
+    uploadedAt: string;
+    pageCount?: number;
+    fileSize?: number;
+    fileType?: string;
+    keyInformation?: {
+      projectType?: string;
+      location?: string;
+      deadline?: string;
+      budget?: string;
+      requirements?: string[];
+    };
+    extractedEntities?: Array<{
+      type: string;
+      value: string;
+      confidence: number;
+      context?: string;
+    }>;
+    processingTimeMs?: number;
+    processingStatus?: string;
+    chunkCount: number;
+    status: string;
+  }>;
+  projectSummary: {
+    id: number;
+    projectId: string;
+    overview?: string;
+    scopeOfWork?: string[];
+    keyRequirements?: {
+      budget?: string;
+      timeline?: string;
+      certifications?: string[];
+      labor?: string;
+      insurance?: string[];
+      bonding?: string;
+    };
+    riskFactors?: string[];
+    opportunities?: string[];
+    missingInformation?: string[];
+    coverageScore?: number;
+    completenessScore?: number;
+    isUserEdited: boolean;
+    generatedAt: string;
+    updatedAt: string;
+  } | null;
+  analysis: {
+    coverageScore: number;
+    conflictCount: number;
+    winProbability: number;
+    riskLevel: string;
+  };
+}
+
+export async function getDocumentSummary(projectId: string) {
+  const res = await apiRequest(`${API_BASE}/projects/${projectId}/document-summary`);
+  if (!res.ok) throw new Error(await res.text());
+  return res.json() as Promise<DocumentSummaryResponse>;
+}
+
+export async function generateProjectSummary(projectId: string) {
+  const res = await apiRequest(`${API_BASE}/projects/${projectId}/generate-summary`, {
+    method: 'POST',
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json() as Promise<{ summary: DocumentSummaryResponse['projectSummary'] }>;
+}
+
+export async function updateProjectSummary(projectId: string, updates: Partial<DocumentSummaryResponse['projectSummary']>) {
+  const res = await apiRequest(`${API_BASE}/projects/${projectId}/summary`, {
+    method: 'PATCH',
+    body: JSON.stringify(updates),
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json() as Promise<{ summary: DocumentSummaryResponse['projectSummary'] }>;
+}
+
+export async function extractDocumentEntities(documentId: number) {
+  const res = await apiRequest(`${API_BASE}/documents/${documentId}/extract-entities`, {
+    method: 'POST',
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json() as Promise<{
+    keyInformation: any;
+    extractedEntities: any[];
+    processingTimeMs: number;
+  }>;
+}
+
+export async function exportProjectSummary(projectId: string, format: 'pdf' | 'json' = 'pdf') {
+  const res = await apiRequest(`${API_BASE}/projects/${projectId}/summary/export?format=${format}`);
+  if (!res.ok) throw new Error(await res.text());
+
+  if (format === 'pdf') {
+    const blob = await res.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `project-summary-${projectId}.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
+  } else {
+    return res.json();
+  }
+}

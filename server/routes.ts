@@ -42,6 +42,7 @@ import analyticsRoutes from "./routes/analytics";
 import reportsRoutes from "./routes/reports";
 import adminRoutes from "./routes/admin";
 import v1Routes from "./routes/v1/index";
+import documentSummaryRoutes from "./routes/document-summary";
 import { fetchWebsiteInfo, batchFetchWebsiteInfo, getWebsiteInfoCache, saveWebsiteInfo, fetchAndSaveWebsiteInfo } from "./routes/website-info.js";
 import { apiVersioning, API_VERSIONS, trackVersionUsage, VersionedRequest } from "./middleware/versioning";
 import { authenticateToken, optionalAuth, AuthRequest } from "./middleware/auth";
@@ -250,10 +251,13 @@ export async function registerRoutes(
   
   // ==================== AUTHENTICATION ====================
   app.use('/api/auth', authRoutes);
-  
+
+  // ==================== DOCUMENT SUMMARY ====================
+  app.use('/api', documentSummaryRoutes);
+
   // ==================== AI AGENTS ====================
   app.use('/api/agents', agentRoutes);
-  
+
   // ==================== CONFLICT DETECTION ====================
   app.use('/api/conflicts', conflictRouter);
   

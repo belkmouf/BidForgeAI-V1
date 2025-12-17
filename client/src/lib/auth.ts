@@ -13,10 +13,9 @@ interface User {
 interface AuthState {
   user: User | null;
   accessToken: string | null;
-  refreshToken: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  setAuth: (user: User, accessToken: string, refreshToken: string) => void;
+  setAuth: (user: User, accessToken: string) => void;
   clearAuth: () => void;
   setLoading: (loading: boolean) => void;
   updateUser: (user: Partial<User>) => void;
@@ -24,7 +23,7 @@ interface AuthState {
 }
 
 const getStoredAuth = () => {
-  if (typeof window === 'undefined') return { user: null, accessToken: null, refreshToken: null, isAuthenticated: false };
+  if (typeof window === 'undefined') return { user: null, accessToken: null, isAuthenticated: false };
   try {
     const stored = localStorage.getItem('bidforge-auth');
     if (stored) {
@@ -32,23 +31,22 @@ const getStoredAuth = () => {
       return {
         user: parsed.user || null,
         accessToken: parsed.accessToken || null,
-        refreshToken: parsed.refreshToken || null,
         isAuthenticated: !!parsed.accessToken,
       };
     }
   } catch (e) {
     console.error('Failed to parse stored auth:', e);
   }
-  return { user: null, accessToken: null, refreshToken: null, isAuthenticated: false };
+  return { user: null, accessToken: null, isAuthenticated: false };
 };
 
 const persistAuth = (state: Partial<AuthState>) => {
   if (typeof window === 'undefined') return;
   try {
+    // Only store user and access token - refresh token is in HttpOnly cookie
     localStorage.setItem('bidforge-auth', JSON.stringify({
       user: state.user,
       accessToken: state.accessToken,
-      refreshToken: state.refreshToken,
     }));
   } catch (e) {
     console.error('Failed to persist auth:', e);
@@ -58,20 +56,19 @@ const persistAuth = (state: Partial<AuthState>) => {
 export const useAuthStore = create<AuthState>((set) => ({
   user: null,
   accessToken: null,
-  refreshToken: null,
   isAuthenticated: false,
   isLoading: true,
-  setAuth: (user, accessToken, refreshToken) => {
-    const newState = { user, accessToken, refreshToken, isAuthenticated: true, isLoading: false };
+  setAuth: (user, accessToken) => {
+    const newState = { user, accessToken, isAuthenticated: true, isLoading: false };
     persistAuth(newState);
     set(newState);
   },
   clearAuth: () => {
     localStorage.removeItem('bidforge-auth');
-    set({ user: null, accessToken: null, refreshToken: null, isAuthenticated: false, isLoading: false });
+    set({ user: null, accessToken: null, isAuthenticated: false, isLoading: false });
   },
   setLoading: (isLoading) => set({ isLoading }),
-  updateUser: (userData) => 
+  updateUser: (userData) =>
     set((state) => {
       const newUser = state.user ? { ...state.user, ...userData } : null;
       if (newUser) persistAuth({ ...state, user: newUser });
@@ -87,10 +84,10 @@ export async function apiRequest(
   endpoint: string,
   options: RequestInit = {}
 ): Promise<Response> {
-  const { accessToken, refreshToken, setAuth, clearAuth } = useAuthStore.getState();
-  
+  const { accessToken, setAuth, clearAuth } = useAuthStore.getState();
+
   const isFormData = options.body instanceof FormData;
-  
+
   const headers: HeadersInit = {
     ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
     ...options.headers,
@@ -103,26 +100,29 @@ export async function apiRequest(
   let response = await fetch(endpoint, {
     ...options,
     headers,
+    credentials: 'include', // Include cookies for refresh token
   });
 
-  if (response.status === 403 && refreshToken) {
+  // Handle 401 (Unauthorized) or 403 (Forbidden) by attempting refresh
+  if ((response.status === 401 || response.status === 403) && endpoint !== '/api/auth/refresh') {
     const refreshResponse = await fetch('/api/auth/refresh', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ refreshToken }),
+      credentials: 'include', // Send refresh token cookie
     });
 
     if (refreshResponse.ok) {
       const { accessToken: newAccessToken } = await refreshResponse.json();
       const state = useAuthStore.getState();
       if (state.user) {
-        setAuth(state.user, newAccessToken, refreshToken);
+        setAuth(state.user, newAccessToken);
       }
-      
+
       (headers as Record<string, string>)['Authorization'] = `Bearer ${newAccessToken}`;
       response = await fetch(endpoint, {
         ...options,
         headers,
+        credentials: 'include',
       });
     } else {
       clearAuth();
@@ -138,6 +138,7 @@ export async function login(email: string, password: string): Promise<{ success:
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password }),
+      credentials: 'include', // Include cookies for refresh token
     });
 
     const data = await response.json();
@@ -146,7 +147,8 @@ export async function login(email: string, password: string): Promise<{ success:
       return { success: false, error: data.error || 'Login failed' };
     }
 
-    useAuthStore.getState().setAuth(data.user, data.accessToken, data.refreshToken);
+    // Refresh token is now in HttpOnly cookie, only store access token
+    useAuthStore.getState().setAuth(data.user, data.accessToken);
     return { success: true };
   } catch (error) {
     return { success: false, error: 'Network error. Please try again.' };
@@ -164,6 +166,7 @@ export async function register(
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password, name, companyName }),
+      credentials: 'include', // Include cookies for refresh token
     });
 
     const data = await response.json();
@@ -172,7 +175,8 @@ export async function register(
       return { success: false, error: data.error || data.details?.[0]?.message || 'Registration failed' };
     }
 
-    useAuthStore.getState().setAuth(data.user, data.accessToken, data.refreshToken);
+    // Refresh token is now in HttpOnly cookie, only store access token
+    useAuthStore.getState().setAuth(data.user, data.accessToken);
     return { success: true };
   } catch (error) {
     return { success: false, error: 'Network error. Please try again.' };

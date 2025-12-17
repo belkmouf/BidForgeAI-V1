@@ -235,6 +235,69 @@ export const documentChunks = pgTable("document_chunks", {
   chunkIndex: integer("chunk_index").notNull(),
 });
 
+// Document Metadata Table (stores extracted information and processing details)
+export const documentMetadata = pgTable("document_metadata", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  documentId: integer("document_id").notNull().unique().references(() => documents.id, { onDelete: "cascade" }),
+  pageCount: integer("page_count"),
+  fileSize: integer("file_size"),
+  fileType: varchar("file_type", { length: 50 }),
+  keyInformation: jsonb("key_information").$type<{
+    projectType?: string;
+    location?: string;
+    deadline?: string;
+    budget?: string;
+    requirements?: string[];
+  }>(),
+  extractedEntities: jsonb("extracted_entities").$type<Array<{
+    type: 'date' | 'money' | 'location' | 'requirement' | 'contact' | 'deadline';
+    value: string;
+    confidence: number;
+    context?: string;
+  }>>(),
+  processingTimeMs: integer("processing_time_ms"),
+  processingStatus: varchar("processing_status", { length: 20 }).default("pending"),
+  processingError: text("processing_error"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export type DocumentMetadata = typeof documentMetadata.$inferSelect;
+export type InsertDocumentMetadata = typeof documentMetadata.$inferInsert;
+
+// Project Summaries Table (AI-generated summaries of project documents)
+export const projectSummaries = pgTable("project_summaries", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  projectId: varchar("project_id").notNull().unique().references(() => projects.id, { onDelete: "cascade" }),
+  overview: text("overview"),
+  scopeOfWork: jsonb("scope_of_work").$type<string[]>(),
+  keyRequirements: jsonb("key_requirements").$type<{
+    budget?: string;
+    timeline?: string;
+    certifications?: string[];
+    labor?: string;
+    insurance?: string[];
+    bonding?: string;
+  }>(),
+  riskFactors: jsonb("risk_factors").$type<string[]>(),
+  opportunities: jsonb("opportunities").$type<string[]>(),
+  missingInformation: jsonb("missing_information").$type<string[]>(),
+  coverageScore: integer("coverage_score").default(0), // 0-100
+  completenessScore: integer("completeness_score").default(0), // 0-100
+  isUserEdited: boolean("is_user_edited").default(false),
+  generatedAt: timestamp("generated_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export type ProjectSummary = typeof projectSummaries.$inferSelect;
+export type InsertProjectSummary = typeof projectSummaries.$inferInsert;
+
+export const insertProjectSummarySchema = createInsertSchema(projectSummaries).omit({
+  id: true,
+  generatedAt: true,
+  updatedAt: true,
+});
+
 // AI Instructions Table (company-scoped presets for bid generation)
 export const aiInstructions = pgTable("ai_instructions", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),

@@ -10,6 +10,7 @@ import {
   validatePassword,
   validateEmail,
   verifyToken,
+  verifyRefreshToken,
   hashRefreshToken,
   verifyRefreshTokenHash,
 } from '../lib/auth';
@@ -107,6 +108,15 @@ router.post('/register', async (req, res) => {
       expiresAt,
     });
 
+    // Set refresh token as HttpOnly cookie for security
+    res.cookie('refreshToken', refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production', // HTTPS only in production
+      sameSite: 'strict',
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+      path: '/api/auth/refresh', // Only sent to refresh endpoint
+    });
+
     res.status(201).json({
       user: {
         id: newUser.id,
@@ -118,7 +128,7 @@ router.post('/register', async (req, res) => {
         onboardingStatus: newUser.onboardingStatus,
       },
       accessToken,
-      refreshToken,
+      // Note: refreshToken no longer returned in response for security
     });
   } catch (error: any) {
     console.error('Registration error:', error);
@@ -203,6 +213,15 @@ router.post('/login', async (req, res) => {
       expiresAt,
     });
 
+    // Set refresh token as HttpOnly cookie for security
+    res.cookie('refreshToken', refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production', // HTTPS only in production
+      sameSite: 'strict',
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+      path: '/api/auth/refresh', // Only sent to refresh endpoint
+    });
+
     // Log successful login
     logContext.security('User logged in successfully', {
       userId: user.id,
@@ -231,7 +250,7 @@ router.post('/login', async (req, res) => {
         onboardingStatus: user.onboardingStatus,
       },
       accessToken,
-      refreshToken,
+      // Note: refreshToken no longer returned in response for security
     });
   } catch (error: any) {
     console.error('Login error:', error);
@@ -241,13 +260,15 @@ router.post('/login', async (req, res) => {
 
 router.post('/refresh', async (req, res) => {
   try {
-    const { refreshToken } = req.body;
+    // Read refresh token from HttpOnly cookie instead of request body
+    const refreshToken = req.cookies?.refreshToken;
 
     if (!refreshToken) {
       return res.status(400).json({ error: 'Refresh token required' });
     }
 
-    const payload = verifyToken(refreshToken);
+    // Use verifyRefreshToken for refresh tokens (separate secret)
+    const payload = verifyRefreshToken(refreshToken);
 
     if (!payload) {
       return res.status(403).json({ error: 'Invalid or expired refresh token' });
@@ -302,7 +323,16 @@ router.post('/refresh', async (req, res) => {
       })
       .where(eq(sessions.id, session.id));
 
-    res.json({ accessToken, refreshToken: newRefreshToken });
+    // Set new refresh token as HttpOnly cookie
+    res.cookie('refreshToken', newRefreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+      path: '/api/auth/refresh',
+    });
+
+    res.json({ accessToken });
   } catch (error: any) {
     console.error('Refresh error:', error);
     res.status(500).json({ error: 'Token refresh failed' });
@@ -424,7 +454,44 @@ router.post('/change-password', authenticateToken, async (req: AuthRequest, res)
 });
 
 router.post('/logout', authenticateToken, async (req: AuthRequest, res) => {
-  res.json({ message: 'Logged out successfully' });
+  try {
+    if (!req.user) {
+      return res.status(401).json({ error: 'Not authenticated' });
+    }
+
+    // Invalidate all sessions for this user from database
+    await db
+      .delete(sessions)
+      .where(eq(sessions.userId, req.user.userId));
+
+    // Clear the refresh token cookie
+    res.clearCookie('refreshToken', {
+      path: '/api/auth/refresh',
+    });
+
+    // Log successful logout
+    logContext.security('User logged out successfully', {
+      userId: req.user.userId,
+      email: req.user.email,
+      ip: req.ip,
+      userAgent: req.get('User-Agent'),
+      action: 'logout',
+      result: 'success'
+    });
+
+    logContext.audit('User logout', {
+      userId: req.user.userId,
+      email: req.user.email,
+      action: 'logout',
+      ip: req.ip,
+      userAgent: req.get('User-Agent')
+    });
+
+    res.json({ message: 'Logged out successfully' });
+  } catch (error: any) {
+    console.error('Logout error:', error);
+    res.status(500).json({ error: 'Logout failed' });
+  }
 });
 
 export default router;

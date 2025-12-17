@@ -4,6 +4,7 @@ import { serveStatic } from "./static";
 import { createServer } from "http";
 import helmet from "helmet";
 import cors from "cors";
+import cookieParser from "cookie-parser";
 import rateLimit from "express-rate-limit";
 import { logger, logContext, requestLogger, errorLogger } from "./lib/logger.js";
 import { cache } from "./lib/cache.js";
@@ -286,6 +287,9 @@ const uploadLimiter = rateLimit({
     });
   }
 });
+
+// Cookie parser middleware for reading HttpOnly cookies
+app.use(cookieParser());
 
 app.use('/api/', apiLimiter);
 app.use('/api/auth/login', authLimiter);
