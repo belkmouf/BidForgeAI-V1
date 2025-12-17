@@ -635,7 +635,7 @@ export default function DocumentSummary() {
             Save & Exit
           </Button>
           <Button
-            onClick={() => navigate(`/projects/${id}/generate`)}
+            onClick={() => navigate(`/projects/${id}`)}
             disabled={!data.stats.allProcessed || readinessPercentage < 50}
           >
             Generate Bid
