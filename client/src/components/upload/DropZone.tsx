@@ -226,7 +226,7 @@ export function DropZone({ onUpload, onUploadWithProgress, onDelete, files: init
                     <Button 
                       variant="destructive" 
                       size="sm" 
-                      className={file.name.endsWith('_analysis.txt') ? "flex-1 h-6 text-xs px-2" : "w-full h-6 text-xs px-2"}
+                      className={file.name.endsWith('_analysis.txt') ? "flex-1 h-6 text-xs px-2" : "w-1/2 h-6 text-xs px-2"}
                       onClick={(e) => {
                         e.stopPropagation();
                         onDelete(file.id);
