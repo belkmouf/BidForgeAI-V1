@@ -327,12 +327,12 @@ export class IngestionService {
         versionedFilename = `${base}_v${version}${ext}`;
       }
       
-      // Create the document with versioning
+      // Create the document with versioning - store full content without truncation
       const docResult = await client.query(
         `INSERT INTO documents (project_id, filename, original_filename, content, is_processed, version) 
          VALUES ($1, $2, $3, $4, $5, $6) 
          RETURNING id`,
-        [projectId, versionedFilename, filename, sanitizedContent.substring(0, 10000), false, version]
+        [projectId, versionedFilename, filename, sanitizedContent, false, version]
       );
       documentId = docResult.rows[0].id;
 

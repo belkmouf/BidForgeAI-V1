@@ -766,6 +766,18 @@ export async function registerRoutes(
 
               await storage.updateDocumentProcessed(txtDoc.id, true);
 
+              // Also save the full analysis to the filesystem for downloads
+              try {
+                const pathModule = await import('path');
+                const analysisDir = pathModule.join(process.cwd(), 'uploads', 'analysis');
+                await fs.mkdir(analysisDir, { recursive: true });
+                const txtPath = pathModule.join(analysisDir, txtFilename);
+                await fs.writeFile(txtPath, sketchContent, 'utf-8');
+                console.log(`Saved full analysis to filesystem: ${txtPath} (${sketchContent.length} bytes)`);
+              } catch (fsError: any) {
+                console.error(`Failed to save analysis to filesystem: ${fsError.message}`);
+              }
+
               processedFiles.push({
                 filename: txtFilename,
                 originalFilename: originalTxtFilename,
