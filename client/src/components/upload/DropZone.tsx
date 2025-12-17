@@ -173,32 +173,32 @@ export function DropZone({ onUpload, onUploadWithProgress, onDelete, files: init
       <ScrollArea className="flex-1 -mx-2 px-2">
         <div className="space-y-2">
           {allFiles.map((file) => (
-            <div key={file.id} className="p-3 rounded-md border-2 border-primary/30 bg-card hover:shadow-sm transition-all">
-              <div className="flex items-start gap-3">
-                <div className="mt-1">
+            <div key={file.id} className="p-2 rounded-md border-2 border-primary/30 bg-card hover:shadow-sm transition-all max-w-[160px]">
+              <div className="flex items-start gap-2">
+                <div className="mt-0.5 flex-shrink-0">
                   {(file.status !== 'completed' && file.status !== 'error') ? (
-                    <Loader2 className="h-5 w-5 text-primary animate-spin" />
+                    <Loader2 className="h-4 w-4 text-primary animate-spin" />
                   ) : (
                     getFileIcon(file.type)
                   )}
                 </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-start justify-between gap-2 mb-1">
-                    <p className="text-xs font-medium break-all leading-tight">{file.name}</p>
-                    {file.status === 'completed' && <CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" />}
-                    {file.status === 'error' && <AlertCircle className="h-4 w-4 text-destructive flex-shrink-0 mt-0.5" />}
+                <div className="flex-1 min-w-0 overflow-hidden">
+                  <div className="flex items-start gap-1 mb-1">
+                    <p className="text-xs font-medium break-words leading-tight">{file.name}</p>
+                    {file.status === 'completed' && <CheckCircle2 className="h-3 w-3 text-green-500 flex-shrink-0 mt-0.5" />}
+                    {file.status === 'error' && <AlertCircle className="h-3 w-3 text-destructive flex-shrink-0 mt-0.5" />}
                   </div>
-                  <div className="flex items-center justify-between text-xs text-muted-foreground">
+                  <div className="text-xs text-muted-foreground">
                     <span>{file.size}</span>
-                    {file.status === 'uploading' && <span className="text-primary font-medium">{file.statusMessage || `Uploading ${file.progress}%`}</span>}
-                    {file.status === 'parsing' && <span className="text-primary font-medium">{file.statusMessage || 'Parsing file...'}</span>}
-                    {file.status === 'chunking' && <span className="text-primary font-medium">{file.statusMessage || 'Splitting into chunks...'}</span>}
-                    {file.status === 'embedding' && <span className="text-primary font-medium">{file.statusMessage || `Embedding (${file.currentChunk || 0}/${file.totalChunks || 0})`}</span>}
-                    {file.status === 'completed' && <span className="text-green-600">Completed</span>}
-                    {file.status === 'error' && <span className="text-destructive">Error</span>}
+                    {file.status === 'uploading' && <span className="text-primary font-medium ml-1">{file.statusMessage || `${file.progress}%`}</span>}
+                    {file.status === 'parsing' && <span className="text-primary font-medium ml-1">Parsing...</span>}
+                    {file.status === 'chunking' && <span className="text-primary font-medium ml-1">Chunking...</span>}
+                    {file.status === 'embedding' && <span className="text-primary font-medium ml-1">{`${file.currentChunk || 0}/${file.totalChunks || 0}`}</span>}
+                    {file.status === 'completed' && <span className="text-green-600 ml-1">Done</span>}
+                    {file.status === 'error' && <span className="text-destructive ml-1">Error</span>}
                   </div>
                   {(file.status !== 'completed' && file.status !== 'error') && (
-                    <Progress value={file.progress} className="h-2 mt-2" />
+                    <Progress value={file.progress} className="h-1.5 mt-1" />
                   )}
                 </div>
               </div>
@@ -226,7 +226,7 @@ export function DropZone({ onUpload, onUploadWithProgress, onDelete, files: init
                     <Button 
                       variant="destructive" 
                       size="sm" 
-                      className={file.name.endsWith('_analysis.txt') ? "flex-1 h-6 text-xs px-2" : "w-1/2 h-6 text-xs px-2"}
+                      className="w-full h-5 text-xs px-2"
                       onClick={(e) => {
                         e.stopPropagation();
                         onDelete(file.id);

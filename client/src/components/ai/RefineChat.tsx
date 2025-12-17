@@ -61,7 +61,7 @@ export function RefineChat({ onRefine }: RefineChatProps) {
   };
 
   return (
-    <div className="flex flex-col h-full border-t border-border pt-4 mt-4">
+    <div className="flex flex-col h-full border-t border-border pt-2 mt-2">
       <div className="flex items-center gap-2 mb-3 px-1">
         <div className="bg-secondary p-1.5 rounded-md">
           <Bot className="h-4 w-4 text-primary" />
