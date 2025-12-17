@@ -475,8 +475,11 @@ export async function registerRoutes(
             tempPaths.push(tempPath);
           }
 
-          // Analyze sketches using Python agent
-          const context = req.body.context || `Project ${project.name || projectId}`;
+          // Analyze sketches using Python agent - include project description for better context
+          const projectContext = project.description 
+            ? `Project: ${project.name || projectId}\nDescription: ${project.description}`
+            : `Project: ${project.name || projectId}`;
+          const context = req.body.context || projectContext;
           const analysisResults = await pythonSketchClient.analyzeMultiple(tempPaths, context);
 
           // Extract successful results
@@ -675,7 +678,10 @@ export async function registerRoutes(
             tempPaths.push(tempPath);
           }
 
-          const context = `Project ${project.name || projectId}`;
+          // Include project description for better context in image analysis
+          const context = project.description 
+            ? `Project: ${project.name || projectId}\nDescription: ${project.description}`
+            : `Project: ${project.name || projectId}`;
           const analysisResults = await pythonSketchClient.analyzeMultiple(tempPaths, context);
           sketchResults = analysisResults.filter(r => r.success).map(r => r.result);
 
