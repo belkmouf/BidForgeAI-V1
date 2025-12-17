@@ -209,8 +209,9 @@ export async function registerRoutes(
   app.get('/api/downloads/analysis/:filename', async (req, res) => {
     try {
       const filename = req.params.filename;
-      // Sanitize filename to prevent directory traversal
-      const safeFilename = filename.replace(/[^a-zA-Z0-9._-]/g, '_');
+      // Sanitize filename to prevent directory traversal - match how files are saved
+      // Keep spaces and alphanumeric chars, replace dangerous chars only
+      const safeFilename = filename.replace(/[^\w\s.-]/g, '_').replace(/\.{2,}/g, '.').trim();
       const filePath = path.join(process.cwd(), 'uploads', 'analysis', safeFilename);
       
       // Check if file exists
