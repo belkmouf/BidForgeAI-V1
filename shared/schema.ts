@@ -202,6 +202,7 @@ export const projects = pgTable("projects", {
   companyId: integer("company_id").references(() => companies.id, { onDelete: "cascade" }),
   name: text("name").notNull(),
   clientName: text("client_name").notNull(),
+  description: text("description"),
   status: text("status").notNull().default("Active"),
   isArchived: boolean("is_archived").default(false).notNull(),
   metadata: jsonb("metadata").default(sql`'{}'::jsonb`),
@@ -551,6 +552,7 @@ export const userRolesRelations = relations(userRoles, ({ one }) => ({
 export const insertProjectSchema = z.object({
   name: z.string().min(1, "Project name is required"),
   clientName: z.string().min(1, "Client name is required"),
+  description: z.string().max(5000, "Description must be 5000 characters or less").optional(),
   status: projectStatusEnum.optional(),
   metadata: z.any().optional(),
 });

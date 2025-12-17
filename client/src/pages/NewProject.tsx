@@ -4,6 +4,7 @@ import { AppSidebar } from '@/components/layout/AppSidebar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ChevronLeft } from 'lucide-react';
 import { Link } from 'wouter';
@@ -14,6 +15,7 @@ export default function NewProject() {
   const [, setLocation] = useLocation();
   const [name, setName] = useState('');
   const [clientName, setClientName] = useState('');
+  const [description, setDescription] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -25,6 +27,7 @@ export default function NewProject() {
       const project = await createProject({
         name,
         clientName,
+        description: description || undefined,
         status: 'Active'
       });
       
@@ -89,6 +92,23 @@ export default function NewProject() {
                     onChange={(e) => setClientName(e.target.value)}
                     required
                   />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="description">Project Description (Optional)</Label>
+                  <Textarea
+                    id="description"
+                    data-testid="input-project-description"
+                    placeholder="Describe the project scope, requirements, and any important details..."
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    maxLength={5000}
+                    rows={4}
+                    className="resize-none"
+                  />
+                  <p className="text-xs text-muted-foreground text-right">
+                    {description.length}/5000 characters
+                  </p>
                 </div>
 
                 <div className="flex gap-3">

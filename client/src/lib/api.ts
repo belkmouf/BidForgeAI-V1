@@ -4,7 +4,7 @@ import { apiRequest, useAuthStore } from './auth';
 const API_BASE = '/api';
 
 // Projects API
-export async function createProject(data: { name: string; clientName: string; status?: string; metadata?: any }) {
+export async function createProject(data: { name: string; clientName: string; description?: string; status?: string; metadata?: any }) {
   const res = await apiRequest(`${API_BASE}/projects`, {
     method: 'POST',
     body: JSON.stringify(data),
