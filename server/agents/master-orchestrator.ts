@@ -69,11 +69,61 @@ export interface ProgressEvent {
 export class MasterOrchestrator extends EventEmitter {
   private maxIterationsPerAgent: number = 3;
   private acceptanceThreshold: number = 75;
+  private maxOutputChars: number = 50000;
   
   constructor(options?: { maxIterationsPerAgent?: number; acceptanceThreshold?: number }) {
     super();
     if (options?.maxIterationsPerAgent) this.maxIterationsPerAgent = options.maxIterationsPerAgent;
     if (options?.acceptanceThreshold) this.acceptanceThreshold = options.acceptanceThreshold;
+  }
+
+  private truncateOutput(output: unknown): string {
+    const fullJson = JSON.stringify(output, null, 2);
+    if (fullJson.length <= this.maxOutputChars) {
+      return fullJson;
+    }
+    
+    const data = typeof output === 'object' && output !== null ? output : { data: output };
+    const summary: Record<string, unknown> = {};
+    
+    for (const [key, value] of Object.entries(data as Record<string, unknown>)) {
+      if (Array.isArray(value)) {
+        const itemSample = value.slice(0, 3).map((item: unknown) => {
+          if (typeof item === 'object' && item !== null) {
+            const itemObj = item as Record<string, unknown>;
+            const truncatedItem: Record<string, unknown> = {};
+            for (const [k, v] of Object.entries(itemObj)) {
+              if (typeof v === 'string' && v.length > 500) {
+                truncatedItem[k] = v.substring(0, 500) + '... [truncated]';
+              } else {
+                truncatedItem[k] = v;
+              }
+            }
+            return truncatedItem;
+          }
+          return item;
+        });
+        summary[key] = {
+          type: 'array',
+          totalItems: value.length,
+          sampleItems: itemSample,
+          note: value.length > 3 ? `Showing 3 of ${value.length} items` : undefined,
+        };
+      } else if (typeof value === 'string' && value.length > 2000) {
+        summary[key] = value.substring(0, 2000) + '... [truncated]';
+      } else if (typeof value === 'object' && value !== null) {
+        const objJson = JSON.stringify(value);
+        if (objJson.length > 5000) {
+          summary[key] = { note: 'Large object truncated', keys: Object.keys(value as object) };
+        } else {
+          summary[key] = value;
+        }
+      } else {
+        summary[key] = value;
+      }
+    }
+    
+    return JSON.stringify(summary, null, 2);
   }
 
   emitProgress(event: ProgressEvent & { projectId?: string }): void {
@@ -137,10 +187,11 @@ Scoring Guidelines:
 Your evaluation threshold is ${this.acceptanceThreshold}/100. Accept outputs scoring at or above this threshold.
 REJECT any output with placeholder text like "[TBD]", "[INSERT]", or generic statements without specific technical details.`;
 
+    const truncatedOutput = this.truncateOutput(output);
     const userPrompt = `Evaluate this ${agentName} agent output (Iteration ${context.iteration}/${this.maxIterationsPerAgent}):
 
 Agent Output:
-${JSON.stringify(output, null, 2)}
+${truncatedOutput}
 ${previousContext}
 
 Provide your evaluation in JSON format:
@@ -192,10 +243,11 @@ Provide your evaluation in JSON format:
 
 Be direct and specific. Focus on the most impactful improvements.`;
 
+    const truncatedData = this.truncateOutput(output.data);
     const userPrompt = `Generate refinement feedback for ${agentName} agent.
 
 Current Output:
-${JSON.stringify(output.data, null, 2)}
+${truncatedData}
 
 Evaluation:
 - Score: ${evaluation.score}/100

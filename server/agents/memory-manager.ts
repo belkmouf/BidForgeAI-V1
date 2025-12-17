@@ -179,7 +179,7 @@ export class InMemoryArtifactStore implements IArtifactStore {
     const metadata: ArtifactMetadata = {
       id, type, projectId, agentName,
       size: JSON.stringify(data).length,
-      contentHash: btoa(JSON.stringify(data)).substring(0, 16),
+      contentHash: Buffer.from(JSON.stringify(data)).toString('base64').substring(0, 16),
       createdAt: new Date(),
       accessCount: 0,
     };

@@ -1,0 +1,59 @@
+{
+  "sketch_id": "sketch_1765991308344_GLAC_318705-Site_Visit_Attendees_0004",
+  "context_layer": {
+    "document_type": "List",
+    "description": "This document is a list of attendees for a site visit related to the GLAC 318705 project, which involves replacing utility systems at Glacier National Park. The list includes names, email addresses, company affiliations, addresses, and phone numbers of the attendees.",
+    "inferred_capacity": {
+      "value": 0,
+      "unit": null,
+      "reasoning": "This document does not relate to capacity."
+    },
+    "compliance_note": "No compliance requirements are mentioned in this document.",
+    "purpose": "Record of site visit attendees.",
+    "key_features": [
+      "List of attendees",
+      "Contact information",
+      "Company affiliations"
+    ]
+  },
+  "project_metadata": {
+    "project_title": "Replace Utility Systems",
+    "project_number": "GLAC 318705-140P2025R0112",
+    "revision": null,
+    "status": null,
+    "date": "10-Nov-25",
+    "scale": null,
+    "personnel": {
+      "drawn_by": null,
+      "checked_by": null,
+      "approved_by": null,
+      "client": "Glacier National Park",
+      "consultant": null,
+      "contractor": null
+    },
+    "drawing_number": null,
+    "sheet_of": null
+  },
+  "technical_data": {
+    "dimensions": [],
+    "materials": [],
+    "components": [],
+    "quantities": {
+      "concrete_volume_m3": 0,
+      "steel_weight_kg": 0,
+      "fabric_area_m2": 0,
+      "paint_area_m2": 0,
+      "foundation_count": 0
+    }
+  },
+  "specifications": [],
+  "standards": [],
+  "regional_codes": [],
+  "annotations": [],
+  "views_included": [],
+  "revisions": [],
+  "confidence_score": 0.95,
+  "processing_time": 5.932290554046631,
+  "notes": "This document is a record of attendees for a site visit related to the utility systems replacement project at Glacier National Park. It includes contact information for each attendee.",
+  "warnings": []
+}
