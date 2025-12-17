@@ -203,18 +203,17 @@ export function DropZone({ onUpload, onUploadWithProgress, onDelete, files: init
                 </div>
               </div>
               {file.status === 'completed' && (
-                <div className="mt-2 pt-2 border-t border-border flex gap-2">
+                <div className="mt-2 pt-2 border-t border-border flex flex-col gap-1">
                   {file.name.endsWith('_analysis.txt') && (
                     <a 
                       href={`/api/downloads/analysis/${encodeURIComponent(file.name)}`}
                       download={file.name}
                       onClick={(e) => e.stopPropagation()}
-                      className="flex-1"
                     >
                       <Button 
                         variant="outline" 
                         size="sm" 
-                        className="w-full h-7"
+                        className="w-full h-5 text-xs px-1"
                         data-testid={`button-download-document-${file.id}`}
                       >
                         <Download className="h-3 w-3 mr-1" />
@@ -226,7 +225,7 @@ export function DropZone({ onUpload, onUploadWithProgress, onDelete, files: init
                     <Button 
                       variant="destructive" 
                       size="sm" 
-                      className="w-full h-5 text-xs px-2"
+                      className="w-full h-5 text-xs px-1"
                       onClick={(e) => {
                         e.stopPropagation();
                         onDelete(file.id);
