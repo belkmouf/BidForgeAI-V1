@@ -13,7 +13,9 @@ import {
   MessageSquare,
   Loader2,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  Maximize2,
+  Minimize2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -115,6 +117,7 @@ export function AgentProgressPanel({ projectId, isActive, onComplete, onCancel }
   const [expandedEvents, setExpandedEvents] = useState<Set<number>>(new Set());
   const [startTime, setStartTime] = useState<Date | null>(null);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  const [isExpanded, setIsExpanded] = useState(false);
   const eventSourceRef = useRef<EventSource | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
@@ -251,30 +254,46 @@ export function AgentProgressPanel({ projectId, isActive, onComplete, onCancel }
     .filter((e) => e.type === 'agent_complete')
     .map((e) => e.agentName);
 
-  return (
-    <Card className="h-full flex flex-col" data-testid="agent-progress-panel">
+  const panelContent = (
+    <>
       <CardHeader className="py-3 border-b">
         <div className="flex items-center justify-between">
           <CardTitle className="text-sm font-medium flex items-center gap-2">
             <Bot className="h-4 w-4" />
             AI Agent Progress
           </CardTitle>
-          <Badge
-            variant={
-              status === 'running'
-                ? 'default'
-                : status === 'completed'
-                ? 'default'
-                : status === 'failed'
-                ? 'destructive'
-                : 'secondary'
-            }
-            className={status === 'completed' ? 'bg-green-500' : undefined}
-            data-testid="agent-status-badge"
-          >
-            {status === 'running' && <Loader2 className="h-3 w-3 animate-spin mr-1" />}
-            {status.charAt(0).toUpperCase() + status.slice(1)}
-          </Badge>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 w-7 p-0"
+              onClick={() => setIsExpanded(!isExpanded)}
+              data-testid="button-expand-progress"
+              title={isExpanded ? "Collapse" : "Expand"}
+            >
+              {isExpanded ? (
+                <Minimize2 className="h-4 w-4" />
+              ) : (
+                <Maximize2 className="h-4 w-4" />
+              )}
+            </Button>
+            <Badge
+              variant={
+                status === 'running'
+                  ? 'default'
+                  : status === 'completed'
+                  ? 'default'
+                  : status === 'failed'
+                  ? 'destructive'
+                  : 'secondary'
+              }
+              className={status === 'completed' ? 'bg-green-500' : undefined}
+              data-testid="agent-status-badge"
+            >
+              {status === 'running' && <Loader2 className="h-3 w-3 animate-spin mr-1" />}
+              {status.charAt(0).toUpperCase() + status.slice(1)}
+            </Badge>
+          </div>
         </div>
         {status === 'running' && (
           <div className="mt-2">
@@ -401,6 +420,34 @@ export function AgentProgressPanel({ projectId, isActive, onComplete, onCancel }
           </div>
         </ScrollArea>
       </CardContent>
+    </>
+  );
+
+  // Expanded modal view
+  if (isExpanded) {
+    return (
+      <>
+        {/* Backdrop */}
+        <div 
+          className="fixed inset-0 bg-black/50 z-40 animate-in fade-in duration-200"
+          onClick={() => setIsExpanded(false)}
+          data-testid="progress-modal-backdrop"
+        />
+        {/* Centered modal */}
+        <Card 
+          className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[90vw] max-w-3xl h-[80vh] z-50 flex flex-col shadow-2xl animate-in zoom-in-95 duration-200"
+          data-testid="agent-progress-panel-expanded"
+        >
+          {panelContent}
+        </Card>
+      </>
+    );
+  }
+
+  // Collapsed inline view
+  return (
+    <Card className="h-full flex flex-col" data-testid="agent-progress-panel">
+      {panelContent}
     </Card>
   );
 }
