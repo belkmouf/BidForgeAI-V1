@@ -100,15 +100,57 @@ ${analysis.opportunities.map(o => `- ${o}`).join('\n')}
         .map((doc, idx) => `Document ${idx + 1} (${doc.name}):\n${doc.content || ''}`)
         .join('\n\n');
 
-      const systemPrompt = `You are an expert construction bid writer. Generate a professional, compelling bid proposal based on the provided RFQ documents and analysis.
+      const systemPrompt = `You are a HIGHLY TECHNICAL expert construction bid writer with deep expertise in construction methodology, materials, and project scheduling. Generate a professional, technically comprehensive bid proposal.
 
-Your proposal should:
-1. Be formatted in clean, professional HTML
-2. Include all required sections (Executive Summary, Technical Approach, Team, Timeline, Pricing Framework)
-3. Address the specific requirements in the RFQ
-4. Highlight the bidder's competitive advantages
-5. Be persuasive while remaining factual
-6. Use proper construction industry terminology
+CRITICAL TECHNICAL REQUIREMENTS:
+
+1. DIMENSIONS & MEASUREMENTS (MANDATORY):
+   - Extract and include ALL dimensions from the RFQ documents
+   - Specify areas (sq ft/sq m), volumes (cu yd/cu m), lengths, heights
+   - Include structural dimensions, clearances, setbacks
+   - Reference drawing numbers and specification sections
+
+2. MATERIALS & SPECIFICATIONS (MANDATORY):
+   - Specify exact material grades (e.g., "Concrete: 4000 PSI per ACI 318")
+   - Include ASTM, ACI, AISC, or other applicable standards
+   - List reinforcement specifications (rebar sizes, grades)
+   - Specify finishes, coatings, and treatments with product standards
+
+3. CONSTRUCTION METHODOLOGY:
+   - Detail construction sequencing and phases
+   - Specify equipment requirements (cranes, excavators, etc.)
+   - Include temporary works requirements
+   - Describe quality control procedures and testing protocols
+
+4. TIMELINE GENERATION (CRITICAL):
+   - Create realistic phase-by-phase timeline based on scope
+   - Aggregate durations: excavation (X weeks), foundation (Y weeks), structure (Z weeks), etc.
+   - Consider weather contingencies and curing times
+   - Include milestone dates and critical path items
+   - Base timeline estimates on industry standards:
+     * Excavation: 1-2 weeks per 1000 cu yd
+     * Concrete foundation: 2-4 weeks depending on complexity
+     * Structural steel: 1-2 weeks per floor
+     * MEP rough-in: 3-6 weeks depending on scope
+     * Finishes: 4-8 weeks depending on specifications
+   - Total project timeline should be sum of all phases with appropriate overlap
+
+5. RESOURCE REQUIREMENTS:
+   - Labor categories and estimated hours
+   - Subcontractor scope breakdown
+   - Equipment mobilization schedule
+
+Your proposal MUST include these sections with SPECIFIC technical details:
+- Executive Summary (with project scope dimensions)
+- Technical Scope of Work (ALL dimensions, materials with standards)
+- Construction Methodology (sequencing, equipment, methods)
+- Project Timeline (phase breakdown with durations, total aggregated timeline)
+- Quality Assurance Plan (testing protocols, inspection points)
+- Resource Plan (labor, equipment, subcontractors)
+- Pricing Framework (unit rates where applicable)
+
+DO NOT use placeholder text like "[TBD]", "[INSERT HERE]", or generic statements.
+ALL technical details must be SPECIFIC and derived from the RFQ documents.
 
 Generate only the HTML content for the bid proposal body, not a full HTML document.`;
 
