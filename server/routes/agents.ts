@@ -325,10 +325,23 @@ router.post(
         .limit(1);
 
       if (existingState.length > 0 && existingState[0].status === "running") {
-        return res.status(409).json({
-          error: "Workflow already running for this project",
-          currentAgent: existingState[0].currentAgent,
-        });
+        // Check if the workflow is stale (running for more than 10 minutes)
+        const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
+        const isStale = existingState[0].updatedAt && new Date(existingState[0].updatedAt) < tenMinutesAgo;
+        
+        if (isStale) {
+          // Auto-reset stale workflows
+          await db
+            .update(agentStates)
+            .set({ status: "failed", updatedAt: new Date() })
+            .where(eq(agentStates.projectId, projectId));
+          console.log(`[AgentRoutes] Auto-reset stale workflow for project ${projectId}`);
+        } else {
+          return res.status(409).json({
+            error: "Workflow already running for this project",
+            currentAgent: existingState[0].currentAgent,
+          });
+        }
       }
 
       const projectDocs = await db
