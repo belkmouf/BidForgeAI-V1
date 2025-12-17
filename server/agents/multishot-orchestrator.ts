@@ -9,8 +9,9 @@ import { decisionAgent } from './decision-agent';
 import { generationAgent } from './generation-agent';
 import { reviewAgent } from './review-agent';
 import { db } from '../db';
-import { agentStates, agentExecutions } from '@shared/schema';
+import { agentStates, agentExecutions, projects } from '@shared/schema';
 import { eq } from 'drizzle-orm';
+import { storage } from '../storage';
 
 export interface WorkflowStep {
   name: string;
@@ -210,6 +211,44 @@ export class MultishotWorkflowOrchestrator {
       state.status = 'completed';
     }
 
+    // Calculate generation time in seconds
+    const generationTimeSeconds = Math.round((Date.now() - state.startedAt.getTime()) / 1000);
+
+    // Save the generated bid to the database if workflow completed successfully
+    let savedBidId: number | undefined;
+    const generationData = state.outputs.generation?.data as Record<string, unknown> | undefined;
+    const draft = generationData?.draft as { content?: string } | undefined;
+    if (state.status === 'completed' && draft?.content) {
+      try {
+        if (draft.content) {
+          // Get project details for company association
+          const [project] = await db
+            .select()
+            .from(projects)
+            .where(eq(projects.id, projectId))
+            .limit(1);
+
+          const savedBid = await storage.createBid({
+            projectId,
+            companyId: project?.companyId ?? null,
+            userId: userId,
+            content: draft.content,
+            rawContent: draft.content,
+            instructions: 'Generated via AI Agent Workflow',
+            tone: 'professional',
+            model: 'multishot-agent',
+            searchMethod: 'agent-workflow',
+            chunksUsed: 0,
+            generationTimeSeconds,
+          });
+          savedBidId = savedBid.id;
+          console.log(`[MultishotOrchestrator] Saved bid ${savedBid.id} for project ${projectId} (${generationTimeSeconds}s)`);
+        }
+      } catch (error) {
+        console.error('[MultishotOrchestrator] Failed to save bid:', error);
+      }
+    }
+
     await this.finalizeWorkflowState(projectId, state);
 
     this.emitWithProject(projectId, {
@@ -221,6 +260,8 @@ export class MultishotWorkflowOrchestrator {
         status: state.status,
         stepsCompleted: state.currentStep,
         totalMessages: state.messages.length,
+        generationTimeSeconds,
+        bidId: savedBidId,
       },
     });
 

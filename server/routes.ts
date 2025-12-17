@@ -995,6 +995,7 @@ export async function registerRoutes(
   // Generate a bid using RAG (requires authentication + AI input sanitization, company-scoped)
   // Supports multi-model comparison when 'models' array is provided
   app.post("/api/projects/:id/generate", authenticateToken, async (req: AuthRequest, res) => {
+    const generationStartTime = Date.now();
     try {
       const { instructions, tone, model, models } = generateBidSchema.parse(req.body);
       const projectId = req.params.id;
@@ -1301,6 +1302,7 @@ or contact details from other sources.
         for (const genResult of generatedBids) {
           if (genResult.success && genResult.html) {
             try {
+              const generationTimeSeconds = Math.round((Date.now() - generationStartTime) / 1000);
               const savedBid = await storage.createBid({
                 projectId,
                 companyId: companyId,
@@ -1313,6 +1315,7 @@ or contact details from other sources.
                 searchMethod,
                 chunksUsed,
                 lmmCost: genResult.lmmCost,
+                generationTimeSeconds,
               });
               results.push({ ...genResult, bidId: savedBid.id, version: savedBid.version });
             } catch (saveError: any) {
@@ -1348,6 +1351,7 @@ or contact details from other sources.
         const lmmCost = calculateLMMCost(selectedModel, result.inputTokens, result.outputTokens);
         
         // Save the generated bid to database
+        const generationTimeSeconds = Math.round((Date.now() - generationStartTime) / 1000);
         const savedBid = await storage.createBid({
           projectId,
           companyId: companyId,
@@ -1360,6 +1364,7 @@ or contact details from other sources.
           searchMethod,
           chunksUsed,
           lmmCost,
+          generationTimeSeconds,
         });
 
         console.log(`Bid saved with ID: ${savedBid.id}, version: ${savedBid.version}, LMM cost: $${lmmCost} (${result.inputTokens} input + ${result.outputTokens} output tokens)`);

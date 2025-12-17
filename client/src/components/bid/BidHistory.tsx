@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { History, Clock, Cpu, FileText, ChevronRight } from 'lucide-react';
+import { History, Clock, Cpu, FileText, ChevronRight, Timer } from 'lucide-react';
 import { listBids } from '@/lib/api';
 import type { Bid } from '@shared/schema';
 
@@ -43,6 +43,15 @@ export function BidHistory({ projectId, onSelectBid, refreshTrigger }: BidHistor
       hour: '2-digit',
       minute: '2-digit',
     });
+  };
+
+  const formatGenerationTime = (seconds: number) => {
+    if (seconds < 60) {
+      return `${seconds}s`;
+    }
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+    return remainingSeconds > 0 ? `${minutes}m ${remainingSeconds}s` : `${minutes}m`;
   };
 
   const getModelColor = (model: string) => {
@@ -137,6 +146,13 @@ export function BidHistory({ projectId, onSelectBid, refreshTrigger }: BidHistor
                       <div className="flex items-center gap-2 text-xs text-muted-foreground">
                         <Clock className="h-3 w-3" />
                         {formatDate(bid.createdAt)}
+                        {bid.generationTimeSeconds && (
+                          <>
+                            <span className="text-muted-foreground/50">•</span>
+                            <Timer className="h-3 w-3" />
+                            <span>{formatGenerationTime(bid.generationTimeSeconds)}</span>
+                          </>
+                        )}
                       </div>
                     </div>
                     <div className="flex flex-col items-end gap-1">

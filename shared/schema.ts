@@ -364,6 +364,7 @@ export const bids = pgTable("bids", {
   shareToken: varchar("share_token", { length: 64 }).unique(),
   
   lmmCost: real("lmm_cost").default(0),
+  generationTimeSeconds: integer("generation_time_seconds"),
   
   createdAt: timestamp("created_at").defaultNow().notNull(),
   deletedAt: timestamp("deleted_at"),
