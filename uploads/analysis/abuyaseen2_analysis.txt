@@ -1,0 +1,27 @@
+{
+  "sketch_id": "sketch_1765934541878_abuyaseen2",
+  "context_layer": {
+    "document_type": "Structural Detail Drawing",
+    "description": "Detailed structural drawing for a double bay shaded parking structure, showing plan, side view, sections, and connection details. Includes foundation details, material specifications, and anchor bolt schedule.",
+    "inferred_capacity": {
+      "value": 2,
+      "unit": "vehicles",
+      "reasoning": "Drawing title indicates 'Double Bay Shaded Parking', implying capacity for two vehicles."
+    },
+    "compliance_note": "All materials finishes shall be as per specifications & approved by the clients/consultants.",
+    "purpose": "Provide shade for parked vehicles.",
+    "key_features": [
+      "Double bay design",
+      "Detailed foundation and base plate details",
+      "Anchor bolt schedule"
+    ]
+  },
+  "project_metadata": {
+    "project_title": "PROPOSED DIRECTORATE BUILDING AT AL MUDHAIBI",
+    "project_number": "174/2023",
+    "revision": "00",
+    "status": "ISSUED FOR APPROVAL",
+    "date": "NOV.-2023",
+    "scale": "1:100"
+  }
+}
