@@ -11,7 +11,9 @@ import {
   BarChart3,
   Shield,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Pin,
+  PinOff
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuthStore, apiRequest } from "@/lib/auth";
@@ -20,14 +22,22 @@ import { create } from 'zustand';
 
 interface SidebarStore {
   isCollapsed: boolean;
+  isAutoHide: boolean;
+  isPinned: boolean;
   toggle: () => void;
   setCollapsed: (collapsed: boolean) => void;
+  toggleAutoHide: () => void;
+  togglePinned: () => void;
 }
 
 export const useSidebarStore = create<SidebarStore>((set) => ({
-  isCollapsed: false,
+  isCollapsed: true,
+  isAutoHide: true,
+  isPinned: false,
   toggle: () => set((state) => ({ isCollapsed: !state.isCollapsed })),
   setCollapsed: (collapsed) => set({ isCollapsed: collapsed }),
+  toggleAutoHide: () => set((state) => ({ isAutoHide: !state.isAutoHide, isCollapsed: !state.isAutoHide })),
+  togglePinned: () => set((state) => ({ isPinned: !state.isPinned, isCollapsed: state.isPinned })),
 }));
 
 interface CompanyBranding {
@@ -41,7 +51,19 @@ export function AppSidebar() {
   const [location] = useLocation();
   const { user, isAuthenticated, clearAuth } = useAuthStore();
   const [branding, setBranding] = useState<CompanyBranding | null>(null);
-  const { isCollapsed, toggle } = useSidebarStore();
+  const { isCollapsed, isAutoHide, isPinned, toggle, setCollapsed, togglePinned } = useSidebarStore();
+
+  const handleMouseEnter = () => {
+    if (isAutoHide && !isPinned) {
+      setCollapsed(false);
+    }
+  };
+
+  const handleMouseLeave = () => {
+    if (isAutoHide && !isPinned) {
+      setCollapsed(true);
+    }
+  };
 
   useEffect(() => {
     const fetchBranding = async () => {
@@ -87,6 +109,8 @@ export function AppSidebar() {
       )}
       style={{ backgroundColor: primaryColor }}
       data-testid="app-sidebar"
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
     >
       <div className={cn(
         "flex items-center border-b border-white/20 relative",
@@ -104,14 +128,15 @@ export function AppSidebar() {
           </div>
         )}
         <button
-          onClick={toggle}
+          onClick={togglePinned}
           className="absolute -right-3 top-1/2 -translate-y-1/2 bg-white rounded-full p-1 shadow-md hover:bg-gray-100 transition-colors"
           data-testid="button-toggle-sidebar"
+          title={isPinned ? "Unpin sidebar" : "Pin sidebar open"}
         >
-          {isCollapsed ? (
-            <ChevronRight className="h-4 w-4 text-gray-600" />
+          {isPinned ? (
+            <PinOff className="h-4 w-4 text-gray-600" />
           ) : (
-            <ChevronLeft className="h-4 w-4 text-gray-600" />
+            <Pin className="h-4 w-4 text-gray-600" />
           )}
         </button>
       </div>
