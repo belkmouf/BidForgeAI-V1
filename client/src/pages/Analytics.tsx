@@ -216,7 +216,7 @@ export default function Analytics() {
   return (
     <div className="min-h-screen bg-gray-100 text-slate-900">
       <div className="max-w-7xl mx-auto px-6 py-8">
-        <div className="flex items-center justify-between mb-8 p-4 border-2 border-primary/30 rounded-xl !bg-teal-100 shadow-md">
+        <div className="flex items-center justify-between mb-8 p-4 border border-primary/20 rounded-xl bg-card shadow-md">
           <div className="flex items-center gap-4">
             <Link href="/dashboard">
               <Button variant="ghost" size="icon" className="text-slate-600 hover:text-slate-900 border-2 border-primary/20">
@@ -230,7 +230,7 @@ export default function Analytics() {
           </div>
           <div className="flex items-center gap-3">
             <Select value={period} onValueChange={setPeriod}>
-              <SelectTrigger className="w-40 border-2 border-primary/30 bg-white" data-testid="select-period">
+              <SelectTrigger className="w-40 border border-primary/20 bg-white" data-testid="select-period">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -242,7 +242,7 @@ export default function Analytics() {
             </Select>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="gap-2 border-2 border-primary/30" data-testid="button-export">
+                <Button variant="outline" className="gap-2 border border-primary/20" data-testid="button-export">
                   <Download className="h-4 w-4" />
                   Export
                 </Button>
@@ -273,14 +273,14 @@ export default function Analytics() {
             icon={Target}
             trend={overview?.bidding.winRate && overview.bidding.winRate > 50 ? 'up' : 'down'}
             subtitle={`${overview?.bidding.won || 0} won / ${overview?.bidding.totalBids || 0} total`}
-            color="text-[#0d7377]"
+            color="text-primary"
           />
           <MetricCard
             title="Active Projects"
             value={overview?.projects.byStatus['Active'] || 0}
             icon={FileText}
             subtitle={`${overview?.projects.total || 0} total projects`}
-            color="text-[#b8995a]"
+            color="text-secondary"
           />
           <MetricCard
             title="Documents Processed"
@@ -299,20 +299,20 @@ export default function Analytics() {
         </div>
 
         <Tabs defaultValue="overview" className="space-y-6">
-          <TabsList className="bg-teal-100 border-2 border-primary/30">
-            <TabsTrigger value="overview" className="data-[state=active]:bg-[#0d7377] data-[state=active]:text-white">
+          <TabsList className="bg-card border border-primary/20">
+            <TabsTrigger value="overview" className="data-[state=active]:bg-primary data-[state=active]:text-white">
               <BarChart3 className="h-4 w-4 mr-2" />
               Overview
             </TabsTrigger>
-            <TabsTrigger value="trends" className="data-[state=active]:bg-[#0d7377] data-[state=active]:text-white">
+            <TabsTrigger value="trends" className="data-[state=active]:bg-primary data-[state=active]:text-white">
               <Activity className="h-4 w-4 mr-2" />
               Trends
             </TabsTrigger>
-            <TabsTrigger value="clients" className="data-[state=active]:bg-[#0d7377] data-[state=active]:text-white">
+            <TabsTrigger value="clients" className="data-[state=active]:bg-primary data-[state=active]:text-white">
               <Building2 className="h-4 w-4 mr-2" />
               Clients
             </TabsTrigger>
-            <TabsTrigger value="insights" className="data-[state=active]:bg-[#0d7377] data-[state=active]:text-white">
+            <TabsTrigger value="insights" className="data-[state=active]:bg-primary data-[state=active]:text-white">
               <AlertTriangle className="h-4 w-4 mr-2" />
               Analysis Insights
             </TabsTrigger>
@@ -321,10 +321,10 @@ export default function Analytics() {
           <TabsContent value="overview" className="space-y-6">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Project Status Distribution */}
-              <Card className="border-2 border-primary/30 !bg-teal-100 shadow-md">
+              <Card className="border border-primary/20 bg-card shadow-md">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
-                    <PieChartIcon className="h-5 w-5 text-[#0d7377]" />
+                    <PieChartIcon className="h-5 w-5 text-primary" />
                     Project Status Distribution
                   </CardTitle>
                 </CardHeader>
@@ -360,10 +360,10 @@ export default function Analytics() {
               </Card>
 
               {/* Win/Loss Breakdown */}
-              <Card className="border-2 border-primary/30 !bg-teal-100 shadow-md">
+              <Card className="border border-primary/20 bg-card shadow-md">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
-                    <Award className="h-5 w-5 text-[#b8995a]" />
+                    <Award className="h-5 w-5 text-secondary" />
                     Bidding Performance
                   </CardTitle>
                 </CardHeader>
@@ -371,7 +371,7 @@ export default function Analytics() {
                   <div className="space-y-6">
                     <div className="flex items-center justify-center">
                       <div className="text-center">
-                        <div className="text-5xl font-bold text-[#0d7377]">
+                        <div className="text-5xl font-bold text-primary">
                           {overview?.bidding.winRate || 0}%
                         </div>
                         <div className="text-slate-500 mt-1">Win Rate</div>
@@ -400,7 +400,7 @@ export default function Analytics() {
           <TabsContent value="trends" className="space-y-6">
             <div className="grid grid-cols-1 gap-6">
               {/* Project Creation Trend */}
-              <Card className="border-2 border-primary/30 !bg-teal-100 shadow-md">
+              <Card className="border border-primary/20 bg-card shadow-md">
                 <CardHeader>
                   <CardTitle>Projects Created Over Time</CardTitle>
                   <CardDescription>New projects created in the selected period</CardDescription>
@@ -438,7 +438,7 @@ export default function Analytics() {
               </Card>
 
               {/* Activity Trend */}
-              <Card className="border-2 border-primary/30 !bg-teal-100 shadow-md">
+              <Card className="border border-primary/20 bg-card shadow-md">
                 <CardHeader>
                   <CardTitle>User Activity</CardTitle>
                   <CardDescription>System activity over time</CardDescription>
@@ -472,10 +472,10 @@ export default function Analytics() {
           </TabsContent>
 
           <TabsContent value="clients" className="space-y-6">
-            <Card className="border-2 border-primary/30 !bg-teal-100 shadow-md">
+            <Card className="border border-primary/20 bg-card shadow-md">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Building2 className="h-5 w-5 text-[#0d7377]" />
+                  <Building2 className="h-5 w-5 text-primary" />
                   Client Performance
                 </CardTitle>
                 <CardDescription>Project statistics by client</CardDescription>
@@ -540,14 +540,14 @@ export default function Analytics() {
           <TabsContent value="insights" className="space-y-6">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Average Analysis Scores */}
-              <Card className="border-2 border-primary/30 !bg-teal-100 shadow-md">
+              <Card className="border border-primary/20 bg-card shadow-md">
                 <CardHeader>
                   <CardTitle>Average Analysis Scores</CardTitle>
                   <CardDescription>Based on {insights?.totalAnalyses || 0} analyses</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
-                    <ScoreBar label="Quality" value={insights?.averageScores.quality || 0} color="bg-[#0d7377]" />
+                    <ScoreBar label="Quality" value={insights?.averageScores.quality || 0} color="bg-primary" />
                     <ScoreBar label="Doability" value={insights?.averageScores.doability || 0} color="bg-emerald-500" />
                     <ScoreBar label="Clarity" value={insights?.averageScores.clarity || 0} color="bg-blue-500" />
                     <ScoreBar label="Vendor Risk" value={100 - (insights?.averageScores.vendorRisk || 0)} color="bg-amber-500" inverted />
@@ -556,7 +556,7 @@ export default function Analytics() {
               </Card>
 
               {/* Risk Distribution */}
-              <Card className="border-2 border-primary/30 !bg-teal-100 shadow-md">
+              <Card className="border border-primary/20 bg-card shadow-md">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <AlertTriangle className="h-5 w-5 text-amber-500" />
@@ -608,9 +608,9 @@ interface MetricCardProps {
   color?: string;
 }
 
-function MetricCard({ title, value, icon: Icon, trend, subtitle, color = 'text-[#0d7377]' }: MetricCardProps) {
+function MetricCard({ title, value, icon: Icon, trend, subtitle, color = 'text-primary' }: MetricCardProps) {
   return (
-    <Card className="border-2 border-primary/30 !bg-teal-100 shadow-md">
+    <Card className="border border-primary/20 bg-card shadow-md">
       <CardContent className="pt-6">
         <div className="flex items-start justify-between">
           <div>

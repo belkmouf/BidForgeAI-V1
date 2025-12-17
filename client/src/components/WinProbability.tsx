@@ -131,7 +131,7 @@ export function WinProbability({ projectId }: Props) {
       <Card data-testid="win-probability-empty">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <BarChart3 className="h-5 w-5 text-deep-teal" />
+            <BarChart3 className="h-5 w-5 text-primary" />
             Win Probability
           </CardTitle>
           <CardDescription>
@@ -174,7 +174,7 @@ export function WinProbability({ projectId }: Props) {
           <div className="flex items-center justify-between">
             <div>
               <CardTitle className="flex items-center gap-2">
-                <BarChart3 className="h-5 w-5 text-deep-teal" />
+                <BarChart3 className="h-5 w-5 text-primary" />
                 Win Probability
               </CardTitle>
               <CardDescription>
@@ -259,7 +259,7 @@ export function WinProbability({ projectId }: Props) {
               <ul className="space-y-1">
                 {prediction.recommendations.map((rec, i) => (
                   <li key={i} className="text-sm text-muted-foreground flex items-start gap-2" data-testid={`text-recommendation-${i}`}>
-                    <span className="text-deep-teal mt-1">•</span>
+                    <span className="text-primary mt-1">•</span>
                     {rec}
                   </li>
                 ))}

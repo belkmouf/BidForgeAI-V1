@@ -143,7 +143,7 @@ export function ProjectComments({ projectId }: ProjectCommentsProps) {
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <CardTitle className="text-lg flex items-center gap-2">
-            <MessageSquare className="h-5 w-5 text-[#0d7377]" />
+            <MessageSquare className="h-5 w-5 text-primary" />
             Comments
             <Badge variant="secondary" className="ml-1">
               {comments.filter(c => !c.isResolved).length}
@@ -232,7 +232,7 @@ export function ProjectComments({ projectId }: ProjectCommentsProps) {
             <Button
               onClick={handleSubmit}
               disabled={!newComment.trim() || addCommentMutation.isPending}
-              className="self-end bg-[#0d7377] hover:bg-[#0d7377]/90"
+              className="self-end bg-primary hover:bg-primary/90"
               data-testid="button-add-comment"
             >
               <Send className="h-4 w-4" />
@@ -273,7 +273,7 @@ function CommentItem({
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-start gap-3">
           <Avatar className="h-7 w-7">
-            <AvatarFallback className="bg-[#0d7377]/20 text-[#0d7377] text-xs">
+            <AvatarFallback className="bg-primary/20 text-primary text-xs">
               {getInitials(comment.userName, comment.userEmail)}
             </AvatarFallback>
           </Avatar>

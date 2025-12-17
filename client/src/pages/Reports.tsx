@@ -354,7 +354,7 @@ export default function Reports() {
   const renderWidget = (widget: DashboardWidget) => {
     const commonProps = {
       key: widget.id,
-      className: "bg-charcoal-light border-charcoal-lighter relative group",
+      className: "bg-gradient-to-br from-card via-card to-card/95 border border-border/50 shadow-xl hover:shadow-2xl transition-all duration-300 relative group backdrop-blur-sm",
     };
 
     const removeButton = isCustomizing && (
@@ -371,28 +371,41 @@ export default function Reports() {
 
     switch (widget.type) {
       case 'win_rate_gauge':
+        const winRate = overview?.bidding?.winRate || 0;
         return (
-          <Card {...commonProps} data-testid={`widget-${widget.id}`}>
+          <Card {...commonProps} data-testid={`widget-${widget.id}`} className={`${commonProps.className} overflow-hidden relative`}>
+            <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-secondary/5 opacity-50" />
             {removeButton}
-            <CardHeader className="pb-2">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <Target className="h-5 w-5 text-deep-teal" />
+            <CardHeader className="pb-3 relative z-10">
+              <CardTitle className="text-lg font-display font-semibold flex items-center gap-2.5">
+                <div className="p-2 rounded-lg bg-primary/10 border border-primary/20">
+                  <Target className="h-5 w-5 text-primary" />
+                </div>
                 {widget.title}
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="flex flex-col items-center">
-                <div className="text-5xl font-bold text-deep-teal">
-                  {overview?.bidding?.winRate || 0}%
+            <CardContent className="relative z-10">
+              <div className="flex flex-col items-center py-4">
+                <div className="relative">
+                  <div className="text-6xl font-display font-bold bg-gradient-to-br from-primary via-primary to-secondary bg-clip-text text-transparent">
+                    {winRate}%
+                  </div>
+                  <div className="absolute -top-2 -right-2">
+                    {winRate >= 50 ? (
+                      <TrendingUp className="h-6 w-6 text-emerald-500" />
+                    ) : (
+                      <TrendingDown className="h-6 w-6 text-amber-500" />
+                    )}
+                  </div>
                 </div>
-                <div className="text-sm text-muted-foreground mt-2">
-                  {overview?.bidding?.won || 0} won / {overview?.bidding?.totalBids || 0} total
+                <div className="text-sm text-muted-foreground mt-3 font-medium">
+                  {overview?.bidding?.won || 0} won / {overview?.bidding?.totalBids || 0} total bids
                 </div>
-                <div className="flex gap-4 mt-4">
-                  <Badge variant="outline" className="bg-emerald-500/10 text-emerald-400 border-emerald-500/30">
+                <div className="flex gap-3 mt-6">
+                  <Badge variant="outline" className="bg-gradient-to-r from-emerald-500/15 to-emerald-600/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 px-4 py-1.5 font-semibold shadow-sm">
                     Won: {overview?.bidding?.won || 0}
                   </Badge>
-                  <Badge variant="outline" className="bg-red-500/10 text-red-400 border-red-500/30">
+                  <Badge variant="outline" className="bg-gradient-to-r from-red-500/15 to-red-600/10 text-red-600 dark:text-red-400 border-red-500/30 px-4 py-1.5 font-semibold shadow-sm">
                     Lost: {overview?.bidding?.lost || 0}
                   </Badge>
                 </div>
@@ -418,31 +431,43 @@ export default function Reports() {
         }, [] as { date: string; won: number; lost: number }[]) || [];
 
         return (
-          <Card {...commonProps} data-testid={`widget-${widget.id}`}>
+          <Card {...commonProps} data-testid={`widget-${widget.id}`} className={`${commonProps.className} overflow-hidden`}>
+            <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-secondary/5 opacity-50" />
             {removeButton}
-            <CardHeader className="pb-2">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <TrendingUp className="h-5 w-5 text-deep-teal" />
+            <CardHeader className="pb-3 relative z-10">
+              <CardTitle className="text-lg font-display font-semibold flex items-center gap-2.5">
+                <div className="p-2 rounded-lg bg-primary/10 border border-primary/20">
+                  <TrendingUp className="h-5 w-5 text-primary" />
+                </div>
                 {widget.title}
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="h-[200px]">
+            <CardContent className="relative z-10">
+              <div className="h-[240px]">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={trendData.slice(-14)}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
                     <XAxis 
                       dataKey="date" 
-                      tick={{ fill: '#9ca3af', fontSize: 10 }}
+                      tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11, fontWeight: 500 }}
                       tickFormatter={(v) => v.slice(5)}
+                      axisLine={{ stroke: 'hsl(var(--border))' }}
                     />
-                    <YAxis tick={{ fill: '#9ca3af', fontSize: 10 }} />
+                    <YAxis 
+                      tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11, fontWeight: 500 }}
+                      axisLine={{ stroke: 'hsl(var(--border))' }}
+                    />
                     <Tooltip 
-                      contentStyle={{ backgroundColor: '#1f2937', border: 'none' }}
-                      labelStyle={{ color: '#fff' }}
+                      contentStyle={{ 
+                        backgroundColor: 'hsl(var(--card))', 
+                        border: '1px solid hsl(var(--border))',
+                        borderRadius: '8px',
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
+                      }}
+                      labelStyle={{ color: 'hsl(var(--foreground))', fontWeight: 600 }}
                     />
-                    <Bar dataKey="won" fill="#10b981" name="Won" />
-                    <Bar dataKey="lost" fill="#ef4444" name="Lost" />
+                    <Bar dataKey="won" fill="hsl(var(--primary))" name="Won" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="lost" fill="#ef4444" name="Lost" radius={[4, 4, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
@@ -458,34 +483,42 @@ export default function Reports() {
         })) || [];
 
         return (
-          <Card {...commonProps} data-testid={`widget-${widget.id}`}>
+          <Card {...commonProps} data-testid={`widget-${widget.id}`} className={`${commonProps.className} overflow-hidden`}>
+            <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-secondary/5 opacity-50" />
             {removeButton}
-            <CardHeader className="pb-2">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <PieChartIcon className="h-5 w-5 text-deep-teal" />
+            <CardHeader className="pb-3 relative z-10">
+              <CardTitle className="text-lg font-display font-semibold flex items-center gap-2.5">
+                <div className="p-2 rounded-lg bg-primary/10 border border-primary/20">
+                  <PieChartIcon className="h-5 w-5 text-primary" />
+                </div>
                 {widget.title}
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="h-[200px]">
+            <CardContent className="relative z-10">
+              <div className="h-[240px]">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
                       data={typeData}
                       cx="50%"
                       cy="50%"
-                      innerRadius={40}
-                      outerRadius={70}
+                      innerRadius={50}
+                      outerRadius={80}
                       dataKey="value"
                       label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
                       labelLine={false}
                     >
                       {typeData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.fill} />
+                        <Cell key={`cell-${index}`} fill={entry.fill} stroke="hsl(var(--card))" strokeWidth={2} />
                       ))}
                     </Pie>
                     <Tooltip 
-                      contentStyle={{ backgroundColor: '#1f2937', border: 'none' }}
+                      contentStyle={{ 
+                        backgroundColor: 'hsl(var(--card))', 
+                        border: '1px solid hsl(var(--border))',
+                        borderRadius: '8px',
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
+                      }}
                     />
                   </PieChart>
                 </ResponsiveContainer>
@@ -497,33 +530,49 @@ export default function Reports() {
       case 'client_performance':
         const topClients = clients?.clients?.slice(0, 5) || [];
         return (
-          <Card {...commonProps} data-testid={`widget-${widget.id}`}>
+          <Card {...commonProps} data-testid={`widget-${widget.id}`} className={`${commonProps.className} overflow-hidden`}>
+            <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-secondary/5 opacity-50" />
             {removeButton}
-            <CardHeader className="pb-2">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <Building2 className="h-5 w-5 text-deep-teal" />
+            <CardHeader className="pb-3 relative z-10">
+              <CardTitle className="text-lg font-display font-semibold flex items-center gap-2.5">
+                <div className="p-2 rounded-lg bg-primary/10 border border-primary/20">
+                  <Building2 className="h-5 w-5 text-primary" />
+                </div>
                 {widget.title}
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
+            <CardContent className="relative z-10">
+              <div className="space-y-4">
                 {topClients.map((client, i) => (
-                  <div key={i} className="flex items-center justify-between text-sm">
-                    <span className="truncate max-w-[150px]">{client.name}</span>
-                    <div className="flex items-center gap-2">
-                      <Badge variant="secondary" className="text-xs">
+                  <div key={i} className="flex items-center justify-between p-3 rounded-lg bg-muted/30 border border-border/50 hover:bg-muted/50 transition-colors">
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                      <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-primary/20 to-secondary/20 border border-primary/30 flex items-center justify-center">
+                        <span className="text-xs font-bold text-primary">{i + 1}</span>
+                      </div>
+                      <span className="truncate font-medium text-sm">{client.name}</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <Badge variant="secondary" className="text-xs font-semibold px-2.5 py-1">
                         {client.projects} projects
                       </Badge>
                       {client.winRate !== null && (
-                        <span className={client.winRate >= 50 ? 'text-emerald-400' : 'text-amber-400'}>
+                        <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full font-semibold text-xs ${
+                          client.winRate >= 50 
+                            ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30' 
+                            : 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30'
+                        }`}>
+                          {client.winRate >= 50 ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
                           {client.winRate}%
-                        </span>
+                        </div>
                       )}
                     </div>
                   </div>
                 ))}
                 {topClients.length === 0 && (
-                  <p className="text-muted-foreground text-sm">No client data yet</p>
+                  <div className="text-center py-8">
+                    <Building2 className="h-12 w-12 text-muted-foreground/30 mx-auto mb-3" />
+                    <p className="text-muted-foreground text-sm font-medium">No client data yet</p>
+                  </div>
                 )}
               </div>
             </CardContent>
@@ -534,32 +583,49 @@ export default function Reports() {
         const revenueData = revenue?.byOutcome?.map((r, i) => ({
           name: r.outcome,
           value: r.totalAmount,
-          fill: r.outcome === 'won' ? '#10b981' : r.outcome === 'lost' ? '#ef4444' : COLORS[i],
+          fill: r.outcome === 'won' ? 'hsl(var(--primary))' : r.outcome === 'lost' ? '#ef4444' : COLORS[i],
         })) || [];
 
         return (
-          <Card {...commonProps} data-testid={`widget-${widget.id}`}>
+          <Card {...commonProps} data-testid={`widget-${widget.id}`} className={`${commonProps.className} overflow-hidden`}>
+            <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-secondary/5 opacity-50" />
             {removeButton}
-            <CardHeader className="pb-2">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <DollarSign className="h-5 w-5 text-deep-teal" />
+            <CardHeader className="pb-3 relative z-10">
+              <CardTitle className="text-lg font-display font-semibold flex items-center gap-2.5">
+                <div className="p-2 rounded-lg bg-primary/10 border border-primary/20">
+                  <DollarSign className="h-5 w-5 text-primary" />
+                </div>
                 {widget.title}
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="h-[200px]">
+            <CardContent className="relative z-10">
+              <div className="h-[240px]">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={revenueData} layout="vertical">
-                    <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                    <XAxis type="number" tick={{ fill: '#9ca3af', fontSize: 10 }} 
-                      tickFormatter={(v) => `$${(v/1000).toFixed(0)}k`}
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
+                    <XAxis 
+                      type="number" 
+                      tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11, fontWeight: 500 }}
+                      tickFormatter={(v) => `$${(v/1000000).toFixed(1)}M`}
+                      axisLine={{ stroke: 'hsl(var(--border))' }}
                     />
-                    <YAxis dataKey="name" type="category" tick={{ fill: '#9ca3af', fontSize: 10 }} width={60} />
+                    <YAxis 
+                      dataKey="name" 
+                      type="category" 
+                      tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11, fontWeight: 500 }} 
+                      width={70}
+                      axisLine={{ stroke: 'hsl(var(--border))' }}
+                    />
                     <Tooltip 
-                      contentStyle={{ backgroundColor: '#1f2937', border: 'none' }}
-                      formatter={(value: number) => [`$${value.toLocaleString()}`, 'Total']}
+                      contentStyle={{ 
+                        backgroundColor: 'hsl(var(--card))', 
+                        border: '1px solid hsl(var(--border))',
+                        borderRadius: '8px',
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
+                      }}
+                      formatter={(value: number) => [`$${value.toLocaleString()}`, 'Total Revenue']}
                     />
-                    <Bar dataKey="value" radius={4}>
+                    <Bar dataKey="value" radius={[0, 4, 4, 0]}>
                       {revenueData.map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={entry.fill} />
                       ))}
@@ -574,31 +640,59 @@ export default function Reports() {
       case 'recent_outcomes':
         const recentMonthly = revenue?.monthly?.slice(-6) || [];
         return (
-          <Card {...commonProps} data-testid={`widget-${widget.id}`}>
+          <Card {...commonProps} data-testid={`widget-${widget.id}`} className={`${commonProps.className} overflow-hidden`}>
+            <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-secondary/5 opacity-50" />
             {removeButton}
-            <CardHeader className="pb-2">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <Activity className="h-5 w-5 text-deep-teal" />
+            <CardHeader className="pb-3 relative z-10">
+              <CardTitle className="text-lg font-display font-semibold flex items-center gap-2.5">
+                <div className="p-2 rounded-lg bg-primary/10 border border-primary/20">
+                  <Activity className="h-5 w-5 text-primary" />
+                </div>
                 {widget.title}
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="h-[200px]">
+            <CardContent className="relative z-10">
+              <div className="h-[240px]">
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={recentMonthly}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
                     <XAxis 
                       dataKey="month" 
-                      tick={{ fill: '#9ca3af', fontSize: 10 }}
+                      tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11, fontWeight: 500 }}
                       tickFormatter={(v) => v.slice(5)}
+                      axisLine={{ stroke: 'hsl(var(--border))' }}
                     />
-                    <YAxis tick={{ fill: '#9ca3af', fontSize: 10 }} />
+                    <YAxis 
+                      tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11, fontWeight: 500 }}
+                      axisLine={{ stroke: 'hsl(var(--border))' }}
+                    />
                     <Tooltip 
-                      contentStyle={{ backgroundColor: '#1f2937', border: 'none' }}
+                      contentStyle={{ 
+                        backgroundColor: 'hsl(var(--card))', 
+                        border: '1px solid hsl(var(--border))',
+                        borderRadius: '8px',
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
+                      }}
                     />
-                    <Legend />
-                    <Line type="monotone" dataKey="wonCount" stroke="#10b981" name="Won" strokeWidth={2} />
-                    <Line type="monotone" dataKey="lostCount" stroke="#ef4444" name="Lost" strokeWidth={2} />
+                    <Legend wrapperStyle={{ paddingTop: '20px' }} />
+                    <Line 
+                      type="monotone" 
+                      dataKey="wonCount" 
+                      stroke="hsl(var(--primary))" 
+                      name="Won" 
+                      strokeWidth={3}
+                      dot={{ fill: 'hsl(var(--primary))', r: 4 }}
+                      activeDot={{ r: 6 }}
+                    />
+                    <Line 
+                      type="monotone" 
+                      dataKey="lostCount" 
+                      stroke="#ef4444" 
+                      name="Lost" 
+                      strokeWidth={3}
+                      dot={{ fill: '#ef4444', r: 4 }}
+                      activeDot={{ r: 6 }}
+                    />
                   </LineChart>
                 </ResponsiveContainer>
               </div>
@@ -612,33 +706,36 @@ export default function Reports() {
         const lostAvg = avgData.find(a => a.outcome === 'lost')?.avgAmount || 0;
 
         return (
-          <Card {...commonProps} data-testid={`widget-${widget.id}`}>
+          <Card {...commonProps} data-testid={`widget-${widget.id}`} className={`${commonProps.className} overflow-hidden`}>
+            <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-secondary/5 opacity-50" />
             {removeButton}
-            <CardHeader className="pb-2">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <BarChart3 className="h-5 w-5 text-deep-teal" />
+            <CardHeader className="pb-3 relative z-10">
+              <CardTitle className="text-lg font-display font-semibold flex items-center gap-2.5">
+                <div className="p-2 rounded-lg bg-primary/10 border border-primary/20">
+                  <BarChart3 className="h-5 w-5 text-primary" />
+                </div>
                 {widget.title}
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="flex flex-col items-center space-y-4">
+            <CardContent className="relative z-10">
+              <div className="flex flex-col items-center space-y-6 py-4">
                 <div className="grid grid-cols-2 gap-6 w-full">
-                  <div className="text-center">
-                    <div className="text-3xl font-bold text-emerald-400">
-                      ${(wonAvg / 1000).toFixed(0)}k
+                  <div className="text-center p-4 rounded-xl bg-gradient-to-br from-emerald-500/10 to-emerald-600/5 border border-emerald-500/20">
+                    <div className="text-4xl font-display font-bold bg-gradient-to-br from-emerald-600 to-emerald-500 bg-clip-text text-transparent">
+                      ${(wonAvg / 1000000).toFixed(1)}M
                     </div>
-                    <div className="text-sm text-muted-foreground">Avg Won Bid</div>
+                    <div className="text-sm text-muted-foreground mt-2 font-medium">Avg Won Bid</div>
                   </div>
-                  <div className="text-center">
-                    <div className="text-3xl font-bold text-red-400">
-                      ${(lostAvg / 1000).toFixed(0)}k
+                  <div className="text-center p-4 rounded-xl bg-gradient-to-br from-red-500/10 to-red-600/5 border border-red-500/20">
+                    <div className="text-4xl font-display font-bold bg-gradient-to-br from-red-600 to-red-500 bg-clip-text text-transparent">
+                      ${(lostAvg / 1000000).toFixed(1)}M
                     </div>
-                    <div className="text-sm text-muted-foreground">Avg Lost Bid</div>
+                    <div className="text-sm text-muted-foreground mt-2 font-medium">Avg Lost Bid</div>
                   </div>
                 </div>
                 {wonAvg > lostAvg && (
-                  <Badge variant="outline" className="bg-emerald-500/10 text-emerald-400 border-emerald-500/30">
-                    <TrendingUp className="h-3 w-3 mr-1" />
+                  <Badge variant="outline" className="bg-gradient-to-r from-emerald-500/15 to-emerald-600/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 px-4 py-2 font-semibold shadow-sm">
+                    <TrendingUp className="h-4 w-4 mr-1.5" />
                     Winning bigger bids
                   </Badge>
                 )}
@@ -648,25 +745,36 @@ export default function Reports() {
         );
 
       case 'prediction_accuracy':
+        const avgProb = overview?.predictions?.averageProbability || 0;
         return (
-          <Card {...commonProps} data-testid={`widget-${widget.id}`}>
+          <Card {...commonProps} data-testid={`widget-${widget.id}`} className={`${commonProps.className} overflow-hidden relative`}>
+            <div className="absolute inset-0 bg-gradient-to-br from-secondary/5 via-transparent to-primary/5 opacity-50" />
             {removeButton}
-            <CardHeader className="pb-2">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <Target className="h-5 w-5 text-deep-teal" />
+            <CardHeader className="pb-3 relative z-10">
+              <CardTitle className="text-lg font-display font-semibold flex items-center gap-2.5">
+                <div className="p-2 rounded-lg bg-secondary/10 border border-secondary/20">
+                  <Target className="h-5 w-5 text-secondary" />
+                </div>
                 {widget.title}
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="flex flex-col items-center">
-                <div className="text-4xl font-bold text-antique-gold">
-                  {overview?.predictions?.averageProbability || 0}%
+            <CardContent className="relative z-10">
+              <div className="flex flex-col items-center py-4">
+                <div className="relative">
+                  <div className="text-6xl font-display font-bold bg-gradient-to-br from-secondary via-secondary to-primary bg-clip-text text-transparent">
+                    {avgProb}%
+                  </div>
+                  <div className="absolute -top-2 -right-2">
+                    <Target className="h-6 w-6 text-secondary/60" />
+                  </div>
                 </div>
-                <div className="text-sm text-muted-foreground mt-2">
-                  Avg Win Probability
+                <div className="text-sm text-muted-foreground mt-3 font-medium">
+                  Average Win Probability
                 </div>
-                <div className="text-sm text-muted-foreground">
-                  {overview?.predictions?.total || 0} predictions made
+                <div className="mt-4 px-4 py-2 rounded-lg bg-secondary/10 border border-secondary/20">
+                  <div className="text-xs text-muted-foreground font-medium">
+                    {overview?.predictions?.total || 0} AI predictions analyzed
+                  </div>
                 </div>
               </div>
             </CardContent>
@@ -680,98 +788,111 @@ export default function Reports() {
 
   if (configLoading) {
     return (
-      <div className="min-h-screen bg-charcoal flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-deep-teal"></div>
+      <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20 flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <div className="animate-spin rounded-full h-12 w-12 border-4 border-primary/20 border-t-primary"></div>
+          <p className="text-muted-foreground font-medium">Loading executive dashboard...</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-charcoal" data-testid="reports-page">
-      <div className="container mx-auto px-6 py-8">
-        <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center gap-4">
-            <Link href="/dashboard">
-              <Button variant="ghost" size="icon" data-testid="back-to-dashboard">
-                <ArrowLeft className="h-5 w-5" />
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20" data-testid="reports-page">
+      {/* Premium Header Section */}
+      <div className="border-b border-border/50 bg-gradient-to-r from-card/50 via-card to-card/50 backdrop-blur-sm sticky top-0 z-40">
+        <div className="container mx-auto px-6 py-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-6">
+              <Link href="/dashboard">
+                <Button variant="ghost" size="icon" className="hover:bg-primary/10 hover:text-primary transition-colors" data-testid="back-to-dashboard">
+                  <ArrowLeft className="h-5 w-5" />
+                </Button>
+              </Link>
+              <div>
+                <h1 className="text-4xl font-display font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent" data-testid="reports-title">
+                  Executive Analytics
+                </h1>
+                <p className="text-muted-foreground mt-1.5 font-medium">
+                  Strategic insights for billion-dollar opportunities
+                </p>
+              </div>
+            </div>
+            
+            <div className="flex items-center gap-3">
+              <Select value={dateRange} onValueChange={setDateRange}>
+                <SelectTrigger className="w-[160px] border-border/50 bg-card/50 backdrop-blur-sm font-medium" data-testid="date-range-select">
+                  <Calendar className="h-4 w-4 mr-2 text-primary" />
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="7">Last 7 days</SelectItem>
+                  <SelectItem value="30">Last 30 days</SelectItem>
+                  <SelectItem value="90">Last 90 days</SelectItem>
+                  <SelectItem value="365">Last year</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" className="border-border/50 bg-card/50 backdrop-blur-sm font-medium hover:bg-primary/10 hover:border-primary/50 transition-all" data-testid="export-button">
+                    <Download className="h-4 w-4 mr-2" />
+                    Export
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="bg-card/95 backdrop-blur-md border-border/50">
+                  <DropdownMenuItem onClick={() => handleExport('csv')} className="cursor-pointer">
+                    <FileSpreadsheet className="h-4 w-4 mr-2" />
+                    Export as CSV
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleExport('json')} className="cursor-pointer">
+                    <Download className="h-4 w-4 mr-2" />
+                    Export as JSON
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+
+              <Button
+                variant={isCustomizing ? "default" : "outline"}
+                onClick={() => setIsCustomizing(!isCustomizing)}
+                className={isCustomizing ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20" : "border-border/50 bg-card/50 backdrop-blur-sm font-medium hover:bg-primary/10 hover:border-primary/50"}
+                data-testid="customize-button"
+              >
+                <Settings2 className="h-4 w-4 mr-2" />
+                {isCustomizing ? 'Done' : 'Customize'}
               </Button>
-            </Link>
-            <div>
-              <h1 className="text-3xl font-bold font-display" data-testid="reports-title">
-                Reports Dashboard
-              </h1>
-              <p className="text-muted-foreground">
-                Track bid success rates and identify trends
-              </p>
             </div>
           </div>
-          
-          <div className="flex items-center gap-3">
-            <Select value={dateRange} onValueChange={setDateRange}>
-              <SelectTrigger className="w-[140px]" data-testid="date-range-select">
-                <Calendar className="h-4 w-4 mr-2" />
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="7">Last 7 days</SelectItem>
-                <SelectItem value="30">Last 30 days</SelectItem>
-                <SelectItem value="90">Last 90 days</SelectItem>
-                <SelectItem value="365">Last year</SelectItem>
-              </SelectContent>
-            </Select>
-
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" data-testid="export-button">
-                  <Download className="h-4 w-4 mr-2" />
-                  Export
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent>
-                <DropdownMenuItem onClick={() => handleExport('csv')}>
-                  <FileSpreadsheet className="h-4 w-4 mr-2" />
-                  Export as CSV
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleExport('json')}>
-                  <Download className="h-4 w-4 mr-2" />
-                  Export as JSON
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-
-            <Button
-              variant={isCustomizing ? "default" : "outline"}
-              onClick={() => setIsCustomizing(!isCustomizing)}
-              data-testid="customize-button"
-            >
-              <Settings2 className="h-4 w-4 mr-2" />
-              {isCustomizing ? 'Done' : 'Customize'}
-            </Button>
-          </div>
         </div>
+      </div>
+
+      <div className="container mx-auto px-6 py-8">
 
         {isCustomizing && (
-          <Card className="mb-6 bg-charcoal-light border-deep-teal/30 border-dashed">
-            <CardContent className="py-4">
+          <Card className="mb-8 bg-gradient-to-r from-primary/5 via-card to-secondary/5 border-2 border-dashed border-primary/30 shadow-lg">
+            <CardContent className="py-5">
               <div className="flex items-center justify-between">
-                <p className="text-muted-foreground text-sm">
-                  Customizing dashboard. Click the X on widgets to remove them.
-                </p>
+                <div>
+                  <p className="text-foreground font-semibold mb-1">Customize Your Dashboard</p>
+                  <p className="text-muted-foreground text-sm">
+                    Click the X on widgets to remove them, or add new widgets below
+                  </p>
+                </div>
                 <Dialog open={showAddWidget} onOpenChange={setShowAddWidget}>
                   <DialogTrigger asChild>
-                    <Button variant="outline" size="sm" data-testid="add-widget-button">
+                    <Button variant="default" size="default" className="bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20 font-semibold" data-testid="add-widget-button">
                       <Plus className="h-4 w-4 mr-2" />
                       Add Widget
                     </Button>
                   </DialogTrigger>
-                  <DialogContent className="bg-charcoal-light border-charcoal-lighter">
+                  <DialogContent className="bg-card/95 backdrop-blur-md border-border/50 max-w-2xl">
                     <DialogHeader>
-                      <DialogTitle>Add Widget</DialogTitle>
-                      <DialogDescription>
-                        Choose a widget to add to your dashboard
+                      <DialogTitle className="text-2xl font-display font-bold">Add Analytics Widget</DialogTitle>
+                      <DialogDescription className="text-base">
+                        Choose a widget to add to your executive dashboard
                       </DialogDescription>
                     </DialogHeader>
-                    <div className="grid grid-cols-2 gap-3 mt-4">
+                    <div className="grid grid-cols-2 gap-4 mt-6">
                       {WIDGET_OPTIONS.map((option) => {
                         const Icon = option.icon;
                         const alreadyAdded = widgets.some(w => w.type === option.type);
@@ -780,16 +901,22 @@ export default function Reports() {
                             key={option.type}
                             onClick={() => !alreadyAdded && addWidget(option.type)}
                             disabled={alreadyAdded}
-                            className={`p-4 rounded-lg border text-left transition-colors ${
+                            className={`p-5 rounded-xl border-2 text-left transition-all duration-200 ${
                               alreadyAdded 
-                                ? 'border-charcoal-lighter bg-charcoal opacity-50 cursor-not-allowed'
-                                : 'border-charcoal-lighter hover:border-deep-teal hover:bg-charcoal'
+                                ? 'border-border/30 bg-muted/30 opacity-50 cursor-not-allowed'
+                                : 'border-border/50 bg-card/50 hover:border-primary hover:bg-primary/5 hover:shadow-lg hover:scale-[1.02]'
                             }`}
                             data-testid={`add-widget-${option.type}`}
                           >
-                            <Icon className="h-5 w-5 text-deep-teal mb-2" />
-                            <div className="font-medium text-sm">{option.label}</div>
-                            <div className="text-xs text-muted-foreground">{option.description}</div>
+                            <div className="flex items-start gap-3">
+                              <div className={`p-2.5 rounded-lg ${alreadyAdded ? 'bg-muted' : 'bg-primary/10 border border-primary/20'}`}>
+                                <Icon className={`h-5 w-5 ${alreadyAdded ? 'text-muted-foreground' : 'text-primary'}`} />
+                              </div>
+                              <div className="flex-1">
+                                <div className={`font-semibold text-sm mb-1 ${alreadyAdded ? 'text-muted-foreground' : 'text-foreground'}`}>{option.label}</div>
+                                <div className="text-xs text-muted-foreground">{option.description}</div>
+                              </div>
+                            </div>
                           </button>
                         );
                       })}
@@ -806,15 +933,21 @@ export default function Reports() {
         </div>
 
         {widgets.length === 0 && (
-          <Card className="bg-charcoal-light border-charcoal-lighter">
-            <CardContent className="py-12 text-center">
-              <BarChart3 className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-medium mb-2">No widgets added</h3>
-              <p className="text-muted-foreground mb-4">
-                Click "Customize" to add widgets to your dashboard
+          <Card className="bg-gradient-to-br from-card via-card to-card/95 border-2 border-dashed border-border/50 shadow-xl">
+            <CardContent className="py-16 text-center">
+              <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-br from-primary/10 to-secondary/10 border-2 border-primary/20 mb-6">
+                <BarChart3 className="h-10 w-10 text-primary" />
+              </div>
+              <h3 className="text-2xl font-display font-bold mb-2">Build Your Executive Dashboard</h3>
+              <p className="text-muted-foreground mb-6 max-w-md mx-auto">
+                Customize your analytics dashboard with widgets that matter most to your business
               </p>
-              <Button onClick={() => { setIsCustomizing(true); setShowAddWidget(true); }}>
-                <Plus className="h-4 w-4 mr-2" />
+              <Button 
+                onClick={() => { setIsCustomizing(true); setShowAddWidget(true); }}
+                className="bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20 font-semibold px-8"
+                size="lg"
+              >
+                <Plus className="h-5 w-5 mr-2" />
                 Add Your First Widget
               </Button>
             </CardContent>

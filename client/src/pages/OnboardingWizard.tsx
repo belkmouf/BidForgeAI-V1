@@ -198,7 +198,7 @@ export default function OnboardingWizard() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-100 to-slate-200">
         <div className="flex flex-col items-center gap-4">
-          <Loader2 className="h-8 w-8 animate-spin text-deep-teal" />
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
           <p className="text-slate-600">Loading your branding profile...</p>
         </div>
       </div>
@@ -209,7 +209,7 @@ export default function OnboardingWizard() {
     <div className="min-h-screen flex bg-gradient-to-br from-slate-100 to-slate-200">
       <div className="flex-1 flex flex-col h-screen">
         <div className="flex-1 overflow-y-auto p-8">
-          <Card className="w-full max-w-2xl mx-auto bg-white border-deep-teal/30 shadow-xl">
+          <Card className="w-full max-w-2xl mx-auto bg-white border-primary/30 shadow-xl">
             <CardHeader className="text-center">
               <div className="mx-auto mb-4">
                 <img 
@@ -240,7 +240,7 @@ export default function OnboardingWizard() {
                         type="button" 
                         variant="outline" 
                         size="sm"
-                        className="text-deep-teal border-deep-teal/50 hover:bg-deep-teal/10"
+                        className="text-primary border-primary/50 hover:bg-primary/10"
                         data-testid="button-auto-fill"
                       >
                         <Sparkles className="h-4 w-4 mr-2" />
@@ -628,7 +628,7 @@ export default function OnboardingWizard() {
                     href={websiteUrl} 
                     target="_blank" 
                     rel="noopener noreferrer"
-                    className="text-xs text-deep-teal hover:underline flex items-center gap-1"
+                    className="text-xs text-primary hover:underline flex items-center gap-1"
                   >
                     {websiteUrl}
                     <ExternalLink className="h-3 w-3" />

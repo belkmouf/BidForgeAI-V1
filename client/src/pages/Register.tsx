@@ -48,7 +48,7 @@ export default function Register() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-100 to-slate-200 p-4">
-      <Card className="w-full max-w-md bg-white border-deep-teal/30 shadow-xl">
+      <Card className="w-full max-w-md bg-white border-primary/30 shadow-xl">
         <CardHeader className="text-center">
           <div className="mx-auto mb-4">
             <img 
@@ -158,7 +158,7 @@ export default function Register() {
           <CardFooter className="flex flex-col gap-4">
             <Button
               type="submit"
-              className="w-full hover:bg-deep-teal/80 text-white bg-[#151719]"
+              className="w-full text-white bg-primary hover:bg-primary/90"
               disabled={isLoading}
               data-testid="button-register"
             >
@@ -174,7 +174,7 @@ export default function Register() {
               Already have an account?{" "}
               <a 
                 href="/login" 
-                className="text-deep-teal hover:underline font-medium"
+                className="text-primary hover:underline font-medium"
                 data-testid="link-login"
               >
                 Sign in

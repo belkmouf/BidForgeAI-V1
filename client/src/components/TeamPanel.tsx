@@ -259,7 +259,7 @@ export function TeamPanel({ projectId }: TeamPanelProps) {
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <CardTitle className="text-lg flex items-center gap-2">
-            <Users className="h-5 w-5 text-[#0d7377]" />
+            <Users className="h-5 w-5 text-primary" />
             Team
             <Badge variant="secondary" className="ml-1">
               {members.length}
@@ -349,7 +349,7 @@ export function TeamPanel({ projectId }: TeamPanelProps) {
                     <div className="flex items-center gap-3">
                       <div className="relative">
                         <Avatar className="h-8 w-8">
-                          <AvatarFallback className="bg-[#0d7377]/20 text-[#0d7377] text-xs">
+                          <AvatarFallback className="bg-[#0d7377]/20 text-primary text-xs">
                             {getInitials(member.userName, member.userEmail)}
                           </AvatarFallback>
                         </Avatar>

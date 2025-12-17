@@ -120,9 +120,9 @@ export default function AcceptInvite() {
   if (isLoadingInvite) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-100 to-slate-200 p-4">
-        <Card className="w-full max-w-md bg-white border-deep-teal/30 shadow-xl">
+        <Card className="w-full max-w-md bg-white border-primary/30 shadow-xl">
           <CardContent className="flex items-center justify-center py-16">
-            <Loader2 className="h-8 w-8 animate-spin text-[#0d7377]" />
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
           </CardContent>
         </Card>
       </div>
@@ -154,7 +154,7 @@ export default function AcceptInvite() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-100 to-slate-200 p-4">
-      <Card className="w-full max-w-md bg-white border-deep-teal/30 shadow-xl">
+      <Card className="w-full max-w-md bg-white border-primary/30 shadow-xl">
         <CardHeader className="text-center">
           <div className="mx-auto mb-4">
             <img 
@@ -244,7 +244,7 @@ export default function AcceptInvite() {
           <CardFooter className="flex flex-col gap-4">
             <Button
               type="submit"
-              className="w-full hover:bg-deep-teal/80 text-white bg-[#151719]"
+              className="w-full hover:bg-primary/90 text-white bg-primary"
               disabled={isLoading || !name || !password}
               data-testid="button-accept-invite"
             >
@@ -260,7 +260,7 @@ export default function AcceptInvite() {
               Already have an account?{" "}
               <a 
                 href="/login" 
-                className="text-deep-teal hover:underline font-medium"
+                className="text-primary hover:underline font-medium"
                 data-testid="link-login"
               >
                 Sign in

@@ -208,7 +208,7 @@ export default function Dashboard() {
             {displayStats.map((stat, i) => (
               <Card
                 key={i}
-                className="hover:shadow-md transition-shadow border-2 border-primary/30 shadow-md !bg-teal-100"
+                className="hover:shadow-md transition-shadow border border-primary/20 shadow-md bg-card"
               >
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium text-muted-foreground">
@@ -248,7 +248,7 @@ export default function Dashboard() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* Left Column: Projects Table */}
             <div className="lg:col-span-2 space-y-6">
-              <Card className="border-2 border-primary/30 shadow-md h-full !bg-teal-100">
+              <Card className="border border-primary/20 shadow-md h-full bg-card">
                 <CardHeader className="flex flex-row items-center justify-between">
                   <div>
                     <CardTitle>Recent Projects</CardTitle>
@@ -371,7 +371,7 @@ export default function Dashboard() {
 
             {/* Right Column: Pipeline Chart */}
             <div className="space-y-6">
-              <Card className="border-2 border-primary/30 shadow-md !bg-teal-100">
+              <Card className="border border-primary/20 shadow-md bg-card">
                 <CardHeader>
                   <CardTitle>Pipeline Health</CardTitle>
                   <CardDescription>

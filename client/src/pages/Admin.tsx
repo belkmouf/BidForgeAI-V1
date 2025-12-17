@@ -459,14 +459,14 @@ export default function Admin() {
             value={stats?.users.total || 0}
             subtitle={`${stats?.users.active || 0} active`}
             icon={Users}
-            color="text-[#0d7377]"
+            color="text-primary"
           />
           <StatCard
             title="Projects"
             value={stats?.projects.total || 0}
             subtitle={`${stats?.projects.active || 0} active`}
             icon={FolderOpen}
-            color="text-[#b8995a]"
+            color="text-secondary"
           />
           <StatCard
             title="Documents"
@@ -486,15 +486,15 @@ export default function Admin() {
 
         <Tabs defaultValue="team" className="space-y-6">
           <TabsList className="bg-white shadow-sm border">
-            <TabsTrigger value="team" className="data-[state=active]:bg-[#0d7377] data-[state=active]:text-white">
+            <TabsTrigger value="team" className="data-[state=active]:bg-primary data-[state=active]:text-white">
               <Building2 className="h-4 w-4 mr-2" />
               My Team
             </TabsTrigger>
-            <TabsTrigger value="users" className="data-[state=active]:bg-[#0d7377] data-[state=active]:text-white">
+            <TabsTrigger value="users" className="data-[state=active]:bg-primary data-[state=active]:text-white">
               <Users className="h-4 w-4 mr-2" />
               All Users
             </TabsTrigger>
-            <TabsTrigger value="settings" className="data-[state=active]:bg-[#0d7377] data-[state=active]:text-white">
+            <TabsTrigger value="settings" className="data-[state=active]:bg-primary data-[state=active]:text-white">
               <Settings className="h-4 w-4 mr-2" />
               Settings
             </TabsTrigger>
@@ -507,7 +507,7 @@ export default function Admin() {
               <Card className="border-slate-200 bg-white shadow-sm">
                 <CardHeader className="pb-3">
                   <CardTitle className="flex items-center gap-2 text-slate-800">
-                    <Building2 className="h-5 w-5 text-[#0d7377]" />
+                    <Building2 className="h-5 w-5 text-primary" />
                     {companyData.company.name}
                   </CardTitle>
                   <CardDescription className="text-slate-500">
@@ -523,7 +523,7 @@ export default function Admin() {
                 <div className="flex items-center justify-between">
                   <div>
                     <CardTitle className="flex items-center gap-2 text-slate-800">
-                      <Users className="h-5 w-5 text-[#0d7377]" />
+                      <Users className="h-5 w-5 text-primary" />
                       Team Members
                     </CardTitle>
                     <CardDescription className="text-slate-500">
@@ -532,7 +532,7 @@ export default function Admin() {
                   </div>
                   <Dialog open={isInviteOpen} onOpenChange={setIsInviteOpen}>
                     <DialogTrigger asChild>
-                      <Button className="gap-2 bg-[#0d7377] hover:bg-[#0d7377]/90" data-testid="button-invite-member">
+                      <Button className="gap-2 bg-primary hover:bg-primary/90" data-testid="button-invite-member">
                         <Mail className="h-4 w-4" />
                         Invite Member
                       </Button>
@@ -683,7 +683,7 @@ export default function Admin() {
             <Card className="border-slate-200 bg-white shadow-sm">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-slate-800">
-                  <Mail className="h-5 w-5 text-[#b8995a]" />
+                  <Mail className="h-5 w-5 text-secondary" />
                   Pending Invitations
                 </CardTitle>
                 <CardDescription className="text-slate-500">
@@ -802,14 +802,14 @@ export default function Admin() {
                 <div className="flex items-center justify-between">
                   <div>
                     <CardTitle className="flex items-center gap-2 text-slate-800">
-                      <Users className="h-5 w-5 text-[#0d7377]" />
+                      <Users className="h-5 w-5 text-primary" />
                       User Management
                     </CardTitle>
                     <CardDescription className="text-slate-500">Manage user accounts and permissions</CardDescription>
                   </div>
                   <Dialog open={isAddUserOpen} onOpenChange={setIsAddUserOpen}>
                     <DialogTrigger asChild>
-                      <Button className="gap-2 bg-[#0d7377] hover:bg-[#0d7377]/90">
+                      <Button className="gap-2 bg-primary hover:bg-primary/90">
                         <UserPlus className="h-4 w-4" />
                         Add User
                       </Button>
@@ -994,7 +994,7 @@ export default function Admin() {
             <Card className="border-slate-200 bg-white shadow-sm">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-slate-800">
-                  <Settings className="h-5 w-5 text-[#0d7377]" />
+                  <Settings className="h-5 w-5 text-primary" />
                   System Settings
                 </CardTitle>
                 <CardDescription className="text-slate-500">Configure system-wide settings</CardDescription>

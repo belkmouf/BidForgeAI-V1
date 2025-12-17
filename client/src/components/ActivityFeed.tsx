@@ -91,7 +91,7 @@ export function ActivityFeed({ projectId, limit = 20 }: ActivityFeedProps) {
     <Card className="border-white/10 bg-[#1a1a1a]">
       <CardHeader className="pb-3">
         <CardTitle className="text-lg flex items-center gap-2">
-          <Activity className="h-5 w-5 text-[#0d7377]" />
+          <Activity className="h-5 w-5 text-primary" />
           Recent Activity
         </CardTitle>
       </CardHeader>
@@ -129,7 +129,7 @@ export function ActivityFeed({ projectId, limit = 20 }: ActivityFeedProps) {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <Avatar className="h-5 w-5">
-                          <AvatarFallback className="bg-[#0d7377]/20 text-[#0d7377] text-[10px]">
+                          <AvatarFallback className="bg-primary/20 text-primary text-[10px]">
                             {getInitials(activity.userName, activity.userEmail)}
                           </AvatarFallback>
                         </Avatar>

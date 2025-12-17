@@ -124,7 +124,7 @@ export default function ProjectsList() {
         <div className="max-w-6xl mx-auto space-y-8">
           
           {/* Header */}
-          <div className="flex items-center justify-between p-4 border-2 border-primary/30 rounded-xl !bg-teal-100 shadow-md">
+          <div className="flex items-center justify-between p-4 border border-primary/20 rounded-xl bg-card shadow-md">
             <div>
               <h1 className="text-3xl font-display font-bold tracking-tight text-foreground">Projects</h1>
               <p className="text-muted-foreground mt-1">Manage all your construction bids and proposals.</p>
@@ -141,7 +141,7 @@ export default function ProjectsList() {
                    Show archived
                  </Label>
                </div>
-               <Button variant="outline" className="gap-2 border-2 border-primary/30">
+               <Button variant="outline" className="gap-2 border border-primary/20">
                 <Filter className="h-4 w-4" />
                 Filter
                </Button>
@@ -154,13 +154,13 @@ export default function ProjectsList() {
             </div>
           </div>
 
-          <Card className="border-2 border-primary/30 !bg-teal-100 shadow-md">
+          <Card className="border border-primary/20 bg-card shadow-md">
             <CardHeader className="flex flex-row items-center justify-between">
               <div className="relative w-72">
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input 
                   placeholder="Search projects..." 
-                  className="pl-9 bg-white border-2 border-primary/30"
+                  className="pl-9 bg-white border border-primary/20"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   data-testid="input-search-projects"
