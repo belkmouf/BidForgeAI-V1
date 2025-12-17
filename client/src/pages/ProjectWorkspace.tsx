@@ -7,6 +7,7 @@ import { GeneratePanel } from '@/components/ai/GeneratePanel';
 import { RefineChat } from '@/components/ai/RefineChat';
 import { BidHistory } from '@/components/bid/BidHistory';
 import { Button } from '@/components/ui/button';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { ChevronLeft, Save, Share2, Eye, Edit3, ShieldCheck, AlertTriangle, Loader2, FileText } from 'lucide-react';
 import { Link } from 'wouter';
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
@@ -468,34 +469,36 @@ export default function ProjectWorkspace() {
             
             {/* Left: Upload Zone + Bid History */}
             <ResizablePanel defaultSize={20} minSize={15} maxSize={30} className="bg-primary/20">
-              <div className="h-full p-4 flex flex-col gap-4">
-                <div className="flex-shrink-0">
-                  <h2 className="font-semibold text-sm mb-4 flex items-center gap-2">
-                    Source Documents
-                  </h2>
-                  <DropZone 
-                    files={documents.filter(doc => doc).map(doc => ({
-                      name: doc.filename,
-                      size: 0,
-                      uploadedAt: new Date(doc.uploadedAt),
-                      id: doc.id.toString(),
-                      isProcessed: doc.isProcessed
-                    }))}
-                    onUploadWithProgress={handleFileUploadWithProgress}
-                    onDelete={handleDeleteDocument}
-                  />
+              <ScrollArea className="h-full">
+                <div className="p-4 flex flex-col gap-4">
+                  <div>
+                    <h2 className="font-semibold text-sm mb-4 flex items-center gap-2">
+                      Source Documents
+                    </h2>
+                    <DropZone 
+                      files={documents.filter(doc => doc).map(doc => ({
+                        name: doc.filename,
+                        size: 0,
+                        uploadedAt: new Date(doc.uploadedAt),
+                        id: doc.id.toString(),
+                        isProcessed: doc.isProcessed
+                      }))}
+                      onUploadWithProgress={handleFileUploadWithProgress}
+                      onDelete={handleDeleteDocument}
+                    />
+                  </div>
+                  <div>
+                    <BidHistory 
+                      projectId={projectId} 
+                      onSelectBid={(content, bidId) => {
+                        setEditorContent(content);
+                        if (bidId) setCurrentBidId(bidId);
+                      }}
+                      refreshTrigger={bidRefreshTrigger}
+                    />
+                  </div>
                 </div>
-                <div className="flex-1 min-h-0 overflow-hidden">
-                  <BidHistory 
-                    projectId={projectId} 
-                    onSelectBid={(content, bidId) => {
-                      setEditorContent(content);
-                      if (bidId) setCurrentBidId(bidId);
-                    }}
-                    refreshTrigger={bidRefreshTrigger}
-                  />
-                </div>
-              </div>
+              </ScrollArea>
             </ResizablePanel>
 
             <ResizableHandle />

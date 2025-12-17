@@ -147,7 +147,7 @@ export function DropZone({ onUpload, onUploadWithProgress, onDelete, files: init
   };
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col">
       <div
         {...getRootProps()}
         className={cn(
