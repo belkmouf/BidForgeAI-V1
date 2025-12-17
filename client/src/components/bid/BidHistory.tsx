@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { History, Clock, Cpu, FileText, ChevronRight, Timer } from 'lucide-react';
+import { History, Clock, FileText, Timer } from 'lucide-react';
 import { listBids } from '@/lib/api';
 import type { Bid } from '@shared/schema';
 
@@ -149,35 +149,29 @@ export function BidHistory({ projectId, onSelectBid, refreshTrigger }: BidHistor
                   onClick={() => onSelectBid(bid.rawContent || bid.content, bid.id)}
                   data-testid={`bid-history-item-${bid.id}`}
                 >
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="font-medium text-sm">
-                          Version {bid.version}
-                        </span>
-                        {bid.generationTimeSeconds && (
-                          <span className="text-[10px] text-muted-foreground flex items-center gap-0.5">
-                            <Timer className="h-3 w-3" />
-                            {formatGenerationTime(bid.generationTimeSeconds)}
-                          </span>
-                        )}
-                        {bid.isLatest && (
-                          <Badge variant="default" className="text-[10px] h-4 px-1.5">
-                            Latest
-                          </Badge>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                        <Clock className="h-3 w-3" />
-                        {formatDate(bid.createdAt)}
-                      </div>
-                    </div>
-                    <div className="flex flex-col items-end gap-1">
-                      <Badge variant="outline" className={`text-[10px] ${getModelColor(bid.model)}`}>
-                        <Cpu className="h-2.5 w-2.5 mr-1" />
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="font-medium text-sm">
+                        Version {bid.version}
+                      </span>
+                      <Badge variant="outline" className={`text-[10px] h-4 px-1 ${getModelColor(bid.model)}`}>
                         {getModelDisplayName(bid.model)}
                       </Badge>
-                      <ChevronRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                      {bid.isLatest && (
+                        <Badge variant="default" className="text-[10px] h-4 px-1.5">
+                          Latest
+                        </Badge>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+                      <Clock className="h-3 w-3" />
+                      {formatDate(bid.createdAt)}
+                      {bid.generationTimeSeconds && (
+                        <span className="flex items-center gap-0.5">
+                          <Timer className="h-3 w-3" />
+                          {formatGenerationTime(bid.generationTimeSeconds)}
+                        </span>
+                      )}
                     </div>
                   </div>
                   {bid.instructions && (

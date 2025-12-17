@@ -327,7 +327,7 @@ export class MultishotWorkflowOrchestrator {
             rawContent: draft.content,
             instructions: 'Generated via AI Agent Workflow',
             tone: 'professional',
-            model: 'multishot-agent',
+            model: 'anthropic',
             searchMethod: 'agent-workflow',
             chunksUsed: 0,
             generationTimeSeconds,
