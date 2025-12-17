@@ -105,7 +105,7 @@ export function RefineChat({ onRefine }: RefineChatProps) {
 
       <div className="flex gap-2 mt-2 pt-2">
         <Input
-          placeholder="Type your feedback..."
+          placeholder="Refine this bid..."
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && handleSend()}
