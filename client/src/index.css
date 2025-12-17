@@ -237,21 +237,6 @@ html {
   background: #14a39e;
 }
 
-@media (min-width: 1024px) {
-  body {
-    cursor: none;
-  }
-  a, button, [role="button"], input, textarea, select {
-    cursor: none;
-  }
-}
-
-@media (max-width: 1023px) {
-  body {
-    cursor: auto;
-  }
-}
-
 @layer base {
   * {
     @apply border-border;
