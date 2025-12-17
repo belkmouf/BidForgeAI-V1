@@ -7,7 +7,7 @@ import { GeneratePanel } from '@/components/ai/GeneratePanel';
 import { RefineChat } from '@/components/ai/RefineChat';
 import { BidHistory } from '@/components/bid/BidHistory';
 import { Button } from '@/components/ui/button';
-import { ChevronLeft, Save, Share2, Eye, Edit3, ShieldCheck, AlertTriangle, Loader2 } from 'lucide-react';
+import { ChevronLeft, Save, Share2, Eye, Edit3, ShieldCheck, AlertTriangle, Loader2, FileText } from 'lucide-react';
 import { Link } from 'wouter';
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -379,6 +379,12 @@ export default function ProjectWorkspace() {
           </div>
           
           <div className="flex items-center gap-2">
+            <Link href={`/projects/${projectId}/documents`}>
+              <Button variant="outline" size="sm" className="gap-2 h-8" data-testid="button-documents">
+                <FileText className="h-3.5 w-3.5" />
+                Documents
+              </Button>
+            </Link>
             <Link href={`/projects/${projectId}/analysis`}>
               <Button variant="outline" size="sm" className="gap-2 h-8" data-testid="button-analysis">
                 <ShieldCheck className="h-3.5 w-3.5" />
