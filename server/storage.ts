@@ -90,6 +90,7 @@ export interface IStorage {
     companyId: number | null,
   ): Promise<Document | undefined>;
   listDocumentsByProject(projectId: string): Promise<Document[]>;
+  getNextVersionForFilename(projectId: string, originalFilename: string): Promise<number>;
   updateDocumentProcessed(id: number, isProcessed: boolean): Promise<void>;
   updateDocument(id: number, companyId: number | null, updates: Partial<Document>): Promise<Document | undefined>;
   deleteDocument(id: number, companyId: number | null): Promise<boolean>;
@@ -420,6 +421,20 @@ export class DatabaseStorage implements IStorage {
       .from(documents)
       .where(eq(documents.projectId, projectId))
       .orderBy(desc(documents.uploadedAt));
+  }
+
+  async getNextVersionForFilename(projectId: string, originalFilename: string): Promise<number> {
+    // Find the highest version for this original filename in this project
+    const result = await db
+      .select({ maxVersion: sql<number>`COALESCE(MAX(${documents.version}), 0)` })
+      .from(documents)
+      .where(
+        and(
+          eq(documents.projectId, projectId),
+          sql`(${documents.originalFilename} = ${originalFilename} OR ${documents.filename} = ${originalFilename})`
+        )
+      );
+    return (result[0]?.maxVersion || 0) + 1;
   }
 
   async updateDocumentProcessed(
