@@ -1088,49 +1088,128 @@ export async function registerRoutes(
           sketchAnalysisContext = '\n\n--- SKETCH/DRAWING ANALYSIS (Use this technical data in the bid) ---\n';
           sketchAnalysisContext += sketchResults.map((sketch: any, i: number) => {
             const parts: string[] = [];
-            parts.push(`\n[Sketch ${i + 1}: ${sketch.document_type || 'Technical Drawing'}]`);
-            parts.push(`Project Phase: ${sketch.project_phase || 'Not specified'}`);
             
-            if (sketch.dimensions?.length > 0) {
-              parts.push(`Dimensions: ${sketch.dimensions.map((d: any) => 
-                `${d.type}: ${d.value} ${d.unit}${d.location ? ` (${d.location})` : ''}`
-              ).join(', ')}`);
+            // Handle both new schema (context_layer, technical_data) and legacy schema
+            const contextLayer = sketch.context_layer || {};
+            const technicalData = sketch.technical_data || {};
+            const projectMeta = sketch.project_metadata || {};
+            
+            // Document type and description
+            const docType = contextLayer.document_type || sketch.document_type || 'Technical Drawing';
+            parts.push(`\n[Sketch ${i + 1}: ${docType}]`);
+            
+            if (contextLayer.description) {
+              parts.push(`Description: ${contextLayer.description}`);
             }
             
-            if (sketch.materials?.length > 0) {
-              parts.push(`Materials: ${sketch.materials.map((m: any) => 
-                `${m.name}${m.grade ? ` (${m.grade})` : ''}${m.specification ? ` - ${m.specification}` : ''}${m.quantity ? ` x${m.quantity} ${m.unit || ''}` : ''}`
-              ).join(', ')}`);
+            if (contextLayer.purpose) {
+              parts.push(`Purpose: ${contextLayer.purpose}`);
             }
             
-            if (sketch.specifications?.length > 0) {
-              parts.push(`Specifications: ${sketch.specifications.join(', ')}`);
+            // Project metadata
+            if (projectMeta.project_title) {
+              parts.push(`Project Title: ${projectMeta.project_title}`);
+            }
+            if (projectMeta.project_number) {
+              parts.push(`Project Number: ${projectMeta.project_number}`);
+            }
+            if (projectMeta.status) {
+              parts.push(`Status: ${projectMeta.status}`);
+            }
+            if (projectMeta.scale && projectMeta.scale !== 'NTS') {
+              parts.push(`Scale: ${projectMeta.scale}`);
             }
             
-            if (sketch.components?.length > 0) {
-              parts.push(`Components: ${sketch.components.map((c: any) => 
-                `${c.type}${c.size ? ` (${c.size})` : ''}${c.count ? ` x${c.count}` : ''}${c.location ? ` at ${c.location}` : ''}`
-              ).join(', ')}`);
+            // Dimensions (handle both nested and flat structure)
+            const dimensions = technicalData.dimensions || sketch.dimensions || [];
+            if (dimensions.length > 0) {
+              parts.push(`Dimensions:\n${dimensions.map((d: any) => 
+                `  - ${d.label || d.type}: ${d.value} ${d.unit}${d.location ? ` (${d.location})` : ''}`
+              ).join('\n')}`);
             }
             
-            if (sketch.standards?.length > 0) {
-              parts.push(`Standards: ${sketch.standards.join(', ')}`);
+            // Materials (handle both nested and flat structure)
+            const materials = technicalData.materials || sketch.materials || [];
+            if (materials.length > 0) {
+              parts.push(`Materials:\n${materials.map((m: any) => {
+                const name = m.component || m.name || 'Unknown';
+                const spec = m.spec || m.specification || '';
+                const grade = m.grade ? ` Grade: ${m.grade}` : '';
+                const qty = m.quantity ? ` Qty: ${m.quantity} ${m.unit || ''}` : '';
+                return `  - ${name}${spec ? `: ${spec}` : ''}${grade}${qty}`;
+              }).join('\n')}`);
             }
             
-            if (sketch.regional_codes?.length > 0) {
-              parts.push(`Regional Codes: ${sketch.regional_codes.join(', ')}`);
+            // Components (handle both nested and flat structure)
+            const components = technicalData.components || sketch.components || [];
+            if (components.length > 0) {
+              parts.push(`Components:\n${components.map((c: any) => {
+                const type = c.type || 'Component';
+                const desc = c.description ? `: ${c.description}` : '';
+                const size = c.size ? ` Size: ${c.size}` : '';
+                const count = c.count ? ` x${c.count}` : '';
+                const loc = c.location ? ` at ${c.location}` : '';
+                const mat = c.material ? ` (${c.material})` : '';
+                return `  - ${type}${desc}${size}${count}${loc}${mat}`;
+              }).join('\n')}`);
             }
             
-            if (sketch.annotations?.length > 0) {
-              parts.push(`Annotations: ${sketch.annotations.join(', ')}`);
+            // Quantities
+            const quantities = technicalData.quantities || {};
+            if (Object.keys(quantities).length > 0) {
+              const qtyParts = [];
+              if (quantities.concrete_volume_m3 > 0) qtyParts.push(`Concrete: ${quantities.concrete_volume_m3} m³`);
+              if (quantities.steel_weight_kg > 0) qtyParts.push(`Steel: ${quantities.steel_weight_kg} kg`);
+              if (quantities.foundation_count > 0) qtyParts.push(`Foundations: ${quantities.foundation_count}`);
+              if (qtyParts.length > 0) parts.push(`Quantities: ${qtyParts.join(', ')}`);
             }
             
+            // Specifications
+            const specifications = sketch.specifications || [];
+            if (specifications.length > 0) {
+              parts.push(`Specifications:\n${specifications.map((s: string) => `  - ${s}`).join('\n')}`);
+            }
+            
+            // Standards and codes
+            const standards = sketch.standards || [];
+            if (standards.length > 0) {
+              parts.push(`Standards: ${standards.join(', ')}`);
+            }
+            
+            const regionalCodes = sketch.regional_codes || [];
+            if (regionalCodes.length > 0) {
+              parts.push(`Regional Codes: ${regionalCodes.join(', ')}`);
+            }
+            
+            // Annotations
+            const annotations = sketch.annotations || [];
+            if (annotations.length > 0) {
+              parts.push(`Key Annotations: ${annotations.slice(0, 10).join(', ')}${annotations.length > 10 ? '...' : ''}`);
+            }
+            
+            // Views included
+            const views = sketch.views_included || [];
+            if (views.length > 0) {
+              parts.push(`Views: ${views.join(', ')}`);
+            }
+            
+            // Notes and warnings
             if (sketch.notes) {
               parts.push(`Notes: ${sketch.notes}`);
             }
             
+            const warnings = sketch.warnings || [];
+            if (warnings.length > 0) {
+              parts.push(`Warnings: ${warnings.join(', ')}`);
+            }
+            
+            // Confidence score
+            if (sketch.confidence_score) {
+              parts.push(`Analysis Confidence: ${(sketch.confidence_score * 100).toFixed(0)}%`);
+            }
+            
             return parts.join('\n');
-          }).join('\n');
+          }).join('\n\n');
           sketchAnalysisContext += '\n--- END SKETCH ANALYSIS ---';
         }
         
