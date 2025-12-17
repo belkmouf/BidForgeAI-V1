@@ -3,6 +3,7 @@ import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { CustomCursor, DynamicBackground } from "@/components/ui/custom-cursor";
 import { useAuthStore } from "@/lib/auth";
 import { useEffect } from "react";
 import NotFound from "@/pages/not-found";
@@ -182,6 +183,8 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
+        <CustomCursor />
+        <DynamicBackground />
         <AppInit />
         <Toaster />
         <Router />
