@@ -1,0 +1,70 @@
+{
+  "sketch_id": "sketch_1766085537002_InspectorAgent",
+  "context_layer": {
+    "document_type": "Workflow Diagram",
+    "description": "This diagram illustrates the workflow of the Inspector Agent, an AI-powered quality control system. It outlines the steps from document upload to inspection, review, and final action, highlighting key features and user choices.",
+    "inferred_capacity": {
+      "value": 0,
+      "unit": "documents",
+      "reasoning": "The diagram describes a process for handling documents, but doesn't specify a capacity."
+    },
+    "compliance_note": "The system validates 7 critical fields: Scope, Budget, Timeline, Deadline, Client Info, Tech, Requirements, and Deliverables.",
+    "purpose": "To illustrate the workflow of the Inspector Agent for quality control.",
+    "key_features": [
+      "Document Upload",
+      "AI Inspection",
+      "Workflow Pauses for Review",
+      "User Receives Inspection Report",
+      "Workflow Resumes or Stops"
+    ]
+  },
+  "project_metadata": {
+    "project_title": "The Inspector Agent: AI-Powered Quality Control for Our Workflow",
+    "project_number": null,
+    "revision": null,
+    "status": null,
+    "date": null,
+    "scale": "NTS",
+    "personnel": {
+      "drawn_by": null,
+      "checked_by": null,
+      "approved_by": null,
+      "client": null,
+      "consultant": null,
+      "contractor": null
+    },
+    "drawing_number": null,
+    "sheet_of": null
+  },
+  "technical_data": {
+    "dimensions": [],
+    "materials": [],
+    "components": [],
+    "quantities": {
+      "concrete_volume_m3": 0,
+      "steel_weight_kg": 0,
+      "fabric_area_m2": 0,
+      "paint_area_m2": 0,
+      "foundation_count": 0
+    }
+  },
+  "specifications": [],
+  "standards": [],
+  "regional_codes": [],
+  "annotations": [
+    "Document Upload: A user uploads an RFQ document to begin the workflow.",
+    "AI Inspection: The Inspector Agent automatically analyzes the document's content and quality.",
+    "Workflow Pauses for Review: The automated process halts, awaiting a required human decision.",
+    "User Receives Inspection Report: A pop-up modal displays a checklist, quality score, and recommendations.",
+    "Workflow Resumes or Stops: Based on the user's action, the workflow continues, pauses for more info, or is cancelled.",
+    "7 Critical Fields Validated: Checks for scope, budget, timeline, deadline, client info, tech requirements, and deliverables.",
+    "The User Is in Control: Users can Approve, Reject, Upload More Documents, or use Manual Entry to fix issues.",
+    "<60 Second Target: The performance goal is to complete the automated inspection in under one minute."
+  ],
+  "views_included": [],
+  "revisions": [],
+  "confidence_score": 0.95,
+  "processing_time": 7.786162376403809,
+  "notes": "This is a workflow diagram for a software application, not a construction drawing. Therefore, many fields are not applicable.",
+  "warnings": []
+}
