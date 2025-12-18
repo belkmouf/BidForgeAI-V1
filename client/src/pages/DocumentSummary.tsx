@@ -599,87 +599,150 @@ export default function DocumentSummary() {
                 <CardTitle className="text-lg">Project Files</CardTitle>
                 <Badge variant="secondary" className="ml-1">{data.documents.length}</Badge>
               </div>
-              <label className="cursor-pointer">
-                <input
-                  type="file"
-                  multiple
-                  className="hidden"
-                  accept=".pdf,.docx,.doc,.xlsx,.xls,.csv,.txt,.png,.jpg,.jpeg,.gif,.tiff,.bmp,.webp"
-                  onChange={(e) => {
-                    const files = e.target.files;
-                    if (files) {
-                      Array.from(files).forEach(file => {
-                        handleFileUpload(file, () => {});
-                      });
-                    }
-                    e.target.value = '';
-                  }}
-                />
-                <Button size="sm" className="gap-2" asChild>
-                  <span>
-                    <Upload className="w-4 h-4" />
-                    Upload
-                  </span>
-                </Button>
-              </label>
             </div>
           </CardHeader>
           <CardContent className="pt-0">
-            {data.documents.length === 0 ? (
-              <div className="py-8 text-center text-muted-foreground">
-                <FileText className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                <p>No files uploaded yet</p>
-                <p className="text-sm mt-1">Click Upload to add your RFP documents</p>
-              </div>
-            ) : (
-              <div className="divide-y">
-                {data.documents.map((doc) => (
-                  <div 
-                    key={doc.id} 
-                    className="flex items-center justify-between py-3 group hover:bg-muted/30 -mx-6 px-6 transition-colors"
-                    data-testid={`file-row-${doc.id}`}
-                  >
-                    <div className="flex items-center gap-3 min-w-0 flex-1">
-                      {getFileIcon(doc.filename)}
-                      <span className="truncate text-sm font-medium">{doc.originalFilename || doc.filename}</span>
-                    </div>
-                    <div className="flex items-center gap-4">
-                      {doc.isProcessed ? (
-                        <span className="flex items-center gap-1 text-sm text-green-600">
-                          <CheckCircle className="w-4 h-4" />
-                          Done
-                        </span>
-                      ) : (
-                        <span className="flex items-center gap-1 text-sm text-yellow-600">
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                          Processing
-                        </span>
-                      )}
-                      <button 
-                        className="p-1.5 hover:bg-muted rounded-md text-muted-foreground hover:text-foreground transition-colors"
-                        title="Download"
-                        data-testid={`download-${doc.id}`}
-                      >
-                        <Download className="w-4 h-4" />
-                      </button>
-                      <button 
-                        className="p-1.5 hover:bg-red-50 rounded-md text-muted-foreground hover:text-red-600 transition-colors"
-                        onClick={() => handleDeleteDocument(doc.id.toString())}
-                        title="Delete"
-                        data-testid={`delete-${doc.id}`}
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-            <div className="pt-4 mt-2 border-t text-xs text-muted-foreground">
-              Supports PDF, DOCX, XLSX, images, and more • Max 50MB
-            </div>
+            {/* Upload Zone */}
+            <DropZone
+              files={data.documents.map(doc => ({
+                id: doc.id.toString(),
+                name: doc.filename,
+                size: doc.fileSize || 0,
+                uploadedAt: new Date(doc.uploadedAt),
+                isProcessed: doc.isProcessed,
+              }))}
+              onUploadWithProgress={handleFileUpload}
+              onDelete={handleDeleteDocument}
+            />
           </CardContent>
         </Card>
+
+        {/* Document Preview Panel */}
+        {data.documents.length > 0 && (
+          <Card className="mb-6">
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-lg flex items-center gap-2">
+                  {selectedDocument && isImageFile(selectedDocument.filename) ? (
+                    <ImageIcon className="w-5 h-5 text-primary" />
+                  ) : (
+                    <FileCheck className="w-5 h-5 text-primary" />
+                  )}
+                  {selectedDocument && isImageFile(selectedDocument.filename) ? 'Image Preview' : 'Document Preview'}
+                </CardTitle>
+                {/* File selector buttons */}
+                <div className="flex flex-wrap gap-2">
+                  {data.documents.map((doc) => (
+                    <Button
+                      key={doc.id}
+                      variant={selectedDocumentId === doc.id ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setSelectedDocumentId(doc.id)}
+                      className="gap-1 text-xs"
+                    >
+                      {getFileIcon(doc.filename)}
+                      <span className="truncate max-w-[100px]">{doc.filename}</span>
+                    </Button>
+                  ))}
+                </div>
+              </div>
+              {selectedDocument && (
+                <CardDescription className="truncate mt-2">
+                  {selectedDocument.filename}
+                </CardDescription>
+              )}
+            </CardHeader>
+            <CardContent>
+              <ScrollArea className="h-[400px]" data-testid="summary-scroll-area">
+                {selectedDocument ? (
+                  isImageFile(selectedDocument.filename) ? (
+                    <div className="flex flex-col items-center space-y-4">
+                      <div className="relative w-full h-[300px] bg-muted/50 rounded-lg overflow-hidden flex items-center justify-center">
+                        <img
+                          src={getImageUrl(selectedDocument.filename)}
+                          alt={selectedDocument.filename}
+                          className="max-w-full max-h-full object-contain"
+                          data-testid="image-preview"
+                          onError={(e) => {
+                            const target = e.target as HTMLImageElement;
+                            target.style.display = 'none';
+                            target.parentElement!.innerHTML = '<div class="text-center text-muted-foreground"><p>Image preview not available</p><p class="text-xs mt-1">The image may still be processing</p></div>';
+                          }}
+                        />
+                      </div>
+                      {selectedDocument.summary && (
+                        <div className="w-full p-3 bg-muted/30 rounded-lg">
+                          <h4 className="text-sm font-medium mb-2">AI Analysis</h4>
+                          <div 
+                            className="prose prose-sm max-w-none text-xs text-muted-foreground"
+                            dangerouslySetInnerHTML={{ __html: selectedDocument.summary.summaryContent }}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  ) : selectedDocument.summary ? (
+                    <div className="space-y-4">
+                      <div 
+                        className="prose prose-sm max-w-none text-sm text-foreground leading-relaxed [&_h2]:text-base [&_h2]:font-semibold [&_h2]:mt-4 [&_h2]:mb-2 [&_ul]:list-disc [&_ul]:pl-4 [&_li]:mb-1 [&_table]:w-full [&_table]:text-xs [&_th]:bg-muted [&_th]:p-2 [&_td]:p-2 [&_td]:border"
+                        dangerouslySetInnerHTML={{ __html: selectedDocument.summary.summaryContent }}
+                      />
+                      {selectedDocument.keyInformation && Object.keys(selectedDocument.keyInformation).length > 0 && (
+                        <div className="pt-4 border-t">
+                          <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
+                            <AlertCircle className="w-4 h-4 text-blue-500" />
+                            Key Information
+                          </h4>
+                          <div className="space-y-2 text-sm">
+                            {selectedDocument.keyInformation.projectType && (
+                              <div className="flex gap-2">
+                                <span className="font-medium text-muted-foreground">Type:</span>
+                                <span>{selectedDocument.keyInformation.projectType}</span>
+                              </div>
+                            )}
+                            {selectedDocument.keyInformation.location && (
+                              <div className="flex gap-2">
+                                <span className="font-medium text-muted-foreground">Location:</span>
+                                <span>{selectedDocument.keyInformation.location}</span>
+                              </div>
+                            )}
+                            {selectedDocument.keyInformation.deadline && (
+                              <div className="flex gap-2">
+                                <span className="font-medium text-muted-foreground">Deadline:</span>
+                                <span>{selectedDocument.keyInformation.deadline}</span>
+                              </div>
+                            )}
+                            {selectedDocument.keyInformation.budget && (
+                              <div className="flex gap-2">
+                                <span className="font-medium text-muted-foreground">Budget:</span>
+                                <span>{selectedDocument.keyInformation.budget}</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center h-full py-12 text-center">
+                      <Clock className="w-12 h-12 text-muted-foreground/50 mb-4" />
+                      <h3 className="font-medium text-muted-foreground mb-2">Summary Pending</h3>
+                      <p className="text-sm text-muted-foreground/70">
+                        Summary will appear here once the document is processed.
+                      </p>
+                    </div>
+                  )
+                ) : (
+                  <div className="flex flex-col items-center justify-center h-full py-12 text-center">
+                    <FileText className="w-12 h-12 text-muted-foreground/50 mb-4" />
+                    <h3 className="font-medium text-muted-foreground mb-2">No Document Selected</h3>
+                    <p className="text-sm text-muted-foreground/70">
+                      Click on a document above to view its summary.
+                    </p>
+                  </div>
+                )}
+              </ScrollArea>
+            </CardContent>
+          </Card>
+        )}
 
       {/* Quick Stats and Readiness Score */}
       <div className="grid md:grid-cols-2 gap-6 mb-6">
