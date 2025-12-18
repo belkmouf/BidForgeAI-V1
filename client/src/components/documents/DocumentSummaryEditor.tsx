@@ -17,7 +17,7 @@ import {
   Edit3
 } from 'lucide-react';
 import {
-  getDocumentSummary,
+  getIndividualDocumentSummary,
   updateSummary,
   regenerateDocumentSummary
 } from '@/lib/api';
@@ -48,7 +48,7 @@ export function DocumentSummaryEditor({
   async function loadSummary() {
     setIsLoading(true);
     try {
-      const data = await getDocumentSummary(documentId);
+      const data = await getIndividualDocumentSummary(documentId);
       setSummary(data);
       setContent(data.summaryContent);
       setHasChanges(false);

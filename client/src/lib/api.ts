@@ -613,9 +613,9 @@ export async function exportProjectSummary(projectId: string, format: 'pdf' | 'j
   }
 }
 
-// ============ DOCUMENT SUMMARY API CALLS ============
+// ============ INDIVIDUAL DOCUMENT SUMMARY API CALLS ============
 
-export async function getDocumentSummary(documentId: number) {
+export async function getIndividualDocumentSummary(documentId: number) {
   const res = await apiRequest(`${API_BASE}/documents/${documentId}/summary`);
   if (!res.ok) {
     if (res.status === 404) {
