@@ -48,7 +48,7 @@ export default function ProjectWorkspace() {
   const [isSharing, setIsSharing] = useState(false);
   const [showAgentProgress, setShowAgentProgress] = useState(false);
   const [selectedDocumentId, setSelectedDocumentId] = useState<number | null>(null);
-  const [selectedModel, setSelectedModel] = useState<AIModel>('openai');
+  const [selectedModel, setSelectedModel] = useState<AIModel>('deepseek');
   const [toneStyle, setToneStyle] = useState('technical');
   const [refinementMessage, setRefinementMessage] = useState('');
   const [summaryTab, setSummaryTab] = useState<'narrative' | 'structured'>('narrative');
