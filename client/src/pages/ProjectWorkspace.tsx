@@ -273,28 +273,28 @@ export default function ProjectWorkspace() {
   }
 
   return (
-    <div className="flex h-screen bg-slate-900 overflow-hidden">
+    <div className="flex h-screen bg-background overflow-hidden">
       <ResizablePanelGroup direction="horizontal" className="h-full">
         
-        {/* Left Sidebar - Dark */}
+        {/* Left Sidebar */}
         <ResizablePanel defaultSize={20} minSize={15} maxSize={30}>
-          <div className="h-full flex flex-col bg-slate-900 text-white">
+          <div className="h-full flex flex-col bg-card border-r">
             {/* Header */}
-            <div className="p-4 border-b border-slate-700">
+            <div className="p-4 border-b">
               <div className="flex items-center gap-3 mb-2">
                 <Link href="/">
-                  <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-white hover:bg-slate-800">
+                  <Button variant="ghost" size="icon" className="h-8 w-8">
                     <ChevronLeft className="h-4 w-4" />
                   </Button>
                 </Link>
                 <div className="flex-1">
                   <div className="flex items-center gap-2">
                     <h1 className="font-semibold text-lg">{project.name}</h1>
-                    <Badge className="bg-teal-500 text-white text-[10px] uppercase">
+                    <Badge className="bg-primary text-primary-foreground text-[10px] uppercase">
                       {project.status || 'Active'}
                     </Badge>
                   </div>
-                  <p className="text-sm text-slate-400">{project.clientName}</p>
+                  <p className="text-sm text-muted-foreground">{project.clientName}</p>
                 </div>
               </div>
             </div>
@@ -304,7 +304,7 @@ export default function ProjectWorkspace() {
               <div className="p-4 pb-2">
                 <div className="flex items-center justify-between mb-3">
                   <h2 className="font-semibold text-sm">Documents</h2>
-                  <span className="text-xs text-slate-400">{documents.length} files</span>
+                  <span className="text-xs text-muted-foreground">{documents.length} files</span>
                 </div>
               </div>
 
@@ -316,8 +316,8 @@ export default function ProjectWorkspace() {
                       onClick={() => setSelectedDocumentId(doc.id)}
                       className={`p-3 rounded-lg cursor-pointer transition-colors ${
                         selectedDocumentId === doc.id 
-                          ? 'bg-slate-700 border border-teal-500/50' 
-                          : 'bg-slate-800 hover:bg-slate-700'
+                          ? 'bg-primary/10 border border-primary/50' 
+                          : 'bg-muted/50 hover:bg-muted'
                       }`}
                       data-testid={`document-card-${doc.id}`}
                     >
@@ -326,12 +326,12 @@ export default function ProjectWorkspace() {
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium truncate">{doc.filename}</p>
                           <div className="flex items-center gap-2 mt-1">
-                            <span className="text-xs text-teal-400">● 85% confident</span>
-                            <span className="text-xs text-slate-500">{formatDate(doc.uploadedAt)}</span>
+                            <span className="text-xs text-primary">● 85% confident</span>
+                            <span className="text-xs text-muted-foreground">{formatDate(doc.uploadedAt)}</span>
                           </div>
                         </div>
                         {doc.isProcessed && (
-                          <CheckCircle className="w-4 h-4 text-teal-500 flex-shrink-0" />
+                          <CheckCircle className="w-4 h-4 text-primary flex-shrink-0" />
                         )}
                       </div>
                     </div>
@@ -350,7 +350,7 @@ export default function ProjectWorkspace() {
                     onChange={handleFileUpload}
                     data-testid="file-input"
                   />
-                  <Button variant="outline" className="w-full gap-2 bg-transparent border-slate-600 text-slate-300 hover:bg-slate-800 hover:text-white" asChild>
+                  <Button variant="outline" className="w-full gap-2" asChild>
                     <span>
                       <Plus className="w-4 h-4" />
                       Add Document
@@ -360,19 +360,19 @@ export default function ProjectWorkspace() {
               </div>
 
               {/* Project Stats */}
-              <div className="p-4 border-t border-slate-700">
-                <h3 className="text-xs font-semibold text-slate-400 uppercase mb-3">Project Stats</h3>
+              <div className="p-4 border-t">
+                <h3 className="text-xs font-semibold text-muted-foreground uppercase mb-3">Project Stats</h3>
                 <div className="space-y-3">
                   <div className="flex justify-between">
-                    <span className="text-sm text-slate-400">Total Value</span>
-                    <span className="text-sm font-semibold text-teal-400">$2.4M</span>
+                    <span className="text-sm text-muted-foreground">Total Value</span>
+                    <span className="text-sm font-semibold text-primary">$2.4M</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-sm text-slate-400">Completion</span>
-                    <span className="text-sm font-semibold text-teal-400">87%</span>
+                    <span className="text-sm text-muted-foreground">Completion</span>
+                    <span className="text-sm font-semibold text-primary">87%</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-sm text-slate-400">Due Date</span>
+                    <span className="text-sm text-muted-foreground">Due Date</span>
                     <span className="text-sm">Jan 15, 2026</span>
                   </div>
                 </div>
@@ -381,17 +381,17 @@ export default function ProjectWorkspace() {
           </div>
         </ResizablePanel>
 
-        <ResizableHandle className="bg-slate-700 w-px" />
+        <ResizableHandle />
 
-        {/* Center Panel - Light */}
+        {/* Center Panel */}
         <ResizablePanel defaultSize={50} minSize={35}>
-          <div className="h-full flex flex-col bg-slate-50">
+          <div className="h-full flex flex-col bg-muted/30">
             {/* Document Summary Header */}
-            <div className="p-4 bg-white border-b">
+            <div className="p-4 bg-card border-b">
               <div className="flex items-center justify-between mb-2">
                 <div>
-                  <h2 className="text-xl font-bold text-slate-900">Document Summary</h2>
-                  <p className="text-sm text-slate-500">{selectedDocument?.filename || 'Select a document'}</p>
+                  <h2 className="text-xl font-bold">Document Summary</h2>
+                  <p className="text-sm text-muted-foreground">{selectedDocument?.filename || 'Select a document'}</p>
                 </div>
                 <div className="flex items-center gap-2">
                   <Button variant="ghost" size="icon" className="h-8 w-8">
@@ -401,30 +401,30 @@ export default function ProjectWorkspace() {
               </div>
               <div className="flex items-center gap-4 text-sm">
                 <span className="flex items-center gap-1">
-                  <span className="text-slate-500">Confidence:</span>
-                  <span className="text-teal-600 font-semibold">88%</span>
+                  <span className="text-muted-foreground">Confidence:</span>
+                  <span className="text-primary font-semibold">88%</span>
                 </span>
-                <span className="flex items-center gap-1 text-slate-500">
+                <span className="flex items-center gap-1 text-muted-foreground">
                   <Clock className="w-3.5 h-3.5" />
-                  Generated in <span className="font-semibold text-slate-700">15.6s</span>
+                  Generated in <span className="font-semibold">15.6s</span>
                 </span>
               </div>
             </div>
 
             {/* Tabs */}
-            <div className="bg-white border-b px-4">
+            <div className="bg-card border-b px-4">
               <Tabs value={summaryTab} onValueChange={(v) => setSummaryTab(v as 'narrative' | 'structured')}>
                 <TabsList className="bg-transparent h-12 p-0 gap-4">
                   <TabsTrigger 
                     value="narrative" 
-                    className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-teal-500 rounded-none px-0 pb-3"
+                    className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-0 pb-3"
                   >
                     <Sparkles className="w-4 h-4 mr-2" />
                     Narrative Summary
                   </TabsTrigger>
                   <TabsTrigger 
                     value="structured"
-                    className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-teal-500 rounded-none px-0 pb-3"
+                    className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-0 pb-3"
                   >
                     <FileText className="w-4 h-4 mr-2" />
                     Structured Data
@@ -436,26 +436,26 @@ export default function ProjectWorkspace() {
             {/* Tab Content */}
             <div className="flex-1 overflow-hidden p-4">
               {summaryTab === 'narrative' ? (
-                <div className="h-full bg-white rounded-lg border shadow-sm overflow-hidden">
+                <div className="h-full bg-card rounded-lg border shadow-sm overflow-hidden">
                   <TiptapEditor content={editorContent} onChange={setEditorContent} />
                 </div>
               ) : (
-                <div className="h-full bg-white rounded-lg border shadow-sm overflow-hidden p-6">
+                <div className="h-full bg-card rounded-lg border shadow-sm overflow-hidden p-6">
                   <ScrollArea className="h-full">
                     <div className="space-y-6">
                       <div>
                         <h3 className="font-semibold text-lg mb-3">Extracted Requirements</h3>
                         <div className="space-y-2">
                           <div className="flex justify-between py-2 border-b">
-                            <span className="text-slate-600">Project Type</span>
+                            <span className="text-muted-foreground">Project Type</span>
                             <span className="font-medium">{project?.description?.includes('parking') ? 'Parking Structure' : 'Construction'}</span>
                           </div>
                           <div className="flex justify-between py-2 border-b">
-                            <span className="text-slate-600">Location</span>
+                            <span className="text-muted-foreground">Location</span>
                             <span className="font-medium">{project?.clientName || 'Not specified'}</span>
                           </div>
                           <div className="flex justify-between py-2 border-b">
-                            <span className="text-slate-600">Documents Analyzed</span>
+                            <span className="text-muted-foreground">Documents Analyzed</span>
                             <span className="font-medium">{documents.length}</span>
                           </div>
                         </div>
@@ -464,19 +464,19 @@ export default function ProjectWorkspace() {
                         <h3 className="font-semibold text-lg mb-3">Key Specifications</h3>
                         <ul className="space-y-2 text-sm">
                           <li className="flex items-center gap-2">
-                            <ChevronRight className="w-4 h-4 text-teal-500" />
+                            <ChevronRight className="w-4 h-4 text-primary" />
                             <span>Construction of main structure as per specifications</span>
                           </li>
                           <li className="flex items-center gap-2">
-                            <ChevronRight className="w-4 h-4 text-teal-500" />
+                            <ChevronRight className="w-4 h-4 text-primary" />
                             <span>Installation of required support systems</span>
                           </li>
                           <li className="flex items-center gap-2">
-                            <ChevronRight className="w-4 h-4 text-teal-500" />
+                            <ChevronRight className="w-4 h-4 text-primary" />
                             <span>Foundation works including base preparation</span>
                           </li>
                           <li className="flex items-center gap-2">
-                            <ChevronRight className="w-4 h-4 text-teal-500" />
+                            <ChevronRight className="w-4 h-4 text-primary" />
                             <span>Compliance with all material specifications</span>
                           </li>
                         </ul>
@@ -489,23 +489,23 @@ export default function ProjectWorkspace() {
           </div>
         </ResizablePanel>
 
-        <ResizableHandle className="bg-slate-700 w-px" />
+        <ResizableHandle />
 
-        {/* Right Sidebar - Dark */}
+        {/* Right Sidebar */}
         <ResizablePanel defaultSize={30} minSize={20} maxSize={40}>
-          <div className="h-full flex flex-col bg-slate-900 text-white">
+          <div className="h-full flex flex-col bg-card border-l">
             {/* Header */}
-            <div className="p-4 border-b border-slate-700 flex items-center justify-between">
+            <div className="p-4 border-b flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <Button variant="ghost" size="sm" className="gap-1 text-slate-400 hover:text-white px-2" onClick={handlePreviewPDF}>
+                <Button variant="ghost" size="sm" className="gap-1 px-2" onClick={handlePreviewPDF}>
                   <Eye className="w-4 h-4" />
                   Preview PDF
                 </Button>
-                <Button variant="ghost" size="sm" className="gap-1 text-slate-400 hover:text-white px-2" onClick={handleShare} disabled={isSharing}>
+                <Button variant="ghost" size="sm" className="gap-1 px-2" onClick={handleShare} disabled={isSharing}>
                   <Share2 className="w-4 h-4" />
                   Share
                 </Button>
-                <Button size="sm" className="gap-1 bg-teal-500 hover:bg-teal-600 text-white" onClick={handleSave}>
+                <Button size="sm" className="gap-1" onClick={handleSave}>
                   <Save className="w-4 h-4" />
                   Save Changes
                 </Button>
@@ -517,16 +517,16 @@ export default function ProjectWorkspace() {
                 {/* AI Bid Generator Section */}
                 <div>
                   <div className="flex items-center gap-2 mb-1">
-                    <Sparkles className="w-5 h-5 text-teal-400" />
+                    <Sparkles className="w-5 h-5 text-primary" />
                     <h3 className="font-semibold">AI Bid Generator</h3>
                   </div>
-                  <p className="text-xs text-slate-400 mb-4">Powered by Claude</p>
+                  <p className="text-xs text-muted-foreground mb-4">Powered by Claude</p>
 
                   <div className="space-y-4">
                     <div>
-                      <label className="text-xs text-slate-400 block mb-1.5">AI Model</label>
+                      <label className="text-xs text-muted-foreground block mb-1.5">AI Model</label>
                       <Select value={selectedModel} onValueChange={(v) => setSelectedModel(v as AIModel)}>
-                        <SelectTrigger className="bg-slate-800 border-slate-600 text-white">
+                        <SelectTrigger>
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -539,9 +539,9 @@ export default function ProjectWorkspace() {
                     </div>
 
                     <div>
-                      <label className="text-xs text-slate-400 block mb-1.5">Tone & Style</label>
+                      <label className="text-xs text-muted-foreground block mb-1.5">Tone & Style</label>
                       <Select value={toneStyle} onValueChange={setToneStyle}>
-                        <SelectTrigger className="bg-slate-800 border-slate-600 text-white">
+                        <SelectTrigger>
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -554,9 +554,9 @@ export default function ProjectWorkspace() {
                     </div>
 
                     <div>
-                      <label className="text-xs text-slate-400 block mb-1.5">Instructions Preset</label>
+                      <label className="text-xs text-muted-foreground block mb-1.5">Instructions Preset</label>
                       <Select defaultValue="default">
-                        <SelectTrigger className="bg-slate-800 border-slate-600 text-white">
+                        <SelectTrigger>
                           <SelectValue placeholder="Select instruction preset" />
                         </SelectTrigger>
                         <SelectContent>
@@ -568,7 +568,7 @@ export default function ProjectWorkspace() {
                     </div>
 
                     <Button 
-                      className="w-full gap-2 bg-teal-500 hover:bg-teal-600 text-white h-11"
+                      className="w-full gap-2 h-11"
                       onClick={handleGenerate}
                       disabled={isGenerating}
                       data-testid="button-generate"
@@ -594,12 +594,12 @@ export default function ProjectWorkspace() {
                 )}
 
                 {/* Refinement Chat */}
-                <div className="pt-4 border-t border-slate-700">
+                <div className="pt-4 border-t">
                   <h3 className="font-semibold mb-2 flex items-center gap-2">
-                    <RefreshCw className="w-4 h-4 text-teal-400" />
+                    <RefreshCw className="w-4 h-4 text-primary" />
                     Refinement Chat
                   </h3>
-                  <p className="text-xs text-slate-400 mb-3">
+                  <p className="text-xs text-muted-foreground mb-3">
                     I can help you refine this bid. What would you like to change? You can ask me to "expand the safety section" or "make the tone more persuasive".
                   </p>
                   <div className="flex gap-2">
@@ -608,12 +608,10 @@ export default function ProjectWorkspace() {
                       value={refinementMessage}
                       onChange={(e) => setRefinementMessage(e.target.value)}
                       onKeyDown={(e) => e.key === 'Enter' && handleRefine()}
-                      className="bg-slate-800 border-slate-600 text-white placeholder:text-slate-500"
                       data-testid="input-refine"
                     />
                     <Button 
                       size="icon" 
-                      className="bg-teal-500 hover:bg-teal-600"
                       onClick={handleRefine}
                       data-testid="button-refine"
                     >
@@ -623,24 +621,24 @@ export default function ProjectWorkspace() {
                 </div>
 
                 {/* Document Insights */}
-                <div className="pt-4 border-t border-slate-700">
+                <div className="pt-4 border-t">
                   <h3 className="font-semibold mb-3 flex items-center gap-2">
-                    <Lightbulb className="w-4 h-4 text-teal-400" />
+                    <Lightbulb className="w-4 h-4 text-primary" />
                     Document Insights
                   </h3>
                   <div className="space-y-3">
                     <div className="flex items-start gap-3">
-                      <div className="w-2 h-2 rounded-full bg-teal-500 mt-1.5" />
+                      <div className="w-2 h-2 rounded-full bg-primary mt-1.5" />
                       <div>
                         <p className="text-sm font-medium">Technical specs identified</p>
-                        <p className="text-xs text-slate-400">All requirements extracted</p>
+                        <p className="text-xs text-muted-foreground">All requirements extracted</p>
                       </div>
                     </div>
                     <div className="flex items-start gap-3">
                       <div className="w-2 h-2 rounded-full bg-amber-500 mt-1.5" />
                       <div>
                         <p className="text-sm font-medium">Missing cost breakdown</p>
-                        <p className="text-xs text-slate-400">Consider adding details</p>
+                        <p className="text-xs text-muted-foreground">Consider adding details</p>
                       </div>
                     </div>
                   </div>
