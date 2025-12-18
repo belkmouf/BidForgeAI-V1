@@ -8,6 +8,19 @@ import { getProjectSummaries, generateAllProjectSummaries } from '@/lib/api';
 import { toast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 
+function stripHtml(html: string): string {
+  return html.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
+}
+
+function truncateFilename(filename: string, maxLength: number = 20): string {
+  if (filename.length <= maxLength) return filename;
+  const ext = filename.lastIndexOf('.') > 0 ? filename.slice(filename.lastIndexOf('.')) : '';
+  const nameWithoutExt = filename.slice(0, filename.lastIndexOf('.') > 0 ? filename.lastIndexOf('.') : filename.length);
+  const availableLength = maxLength - ext.length - 3;
+  if (availableLength <= 0) return filename.slice(0, maxLength - 3) + '...';
+  return nameWithoutExt.slice(0, availableLength) + '...' + ext;
+}
+
 interface ProjectSummariesPanelProps {
   projectId: string;
   onSelectDocument?: (documentId: number, documentName: string) => void;
@@ -110,7 +123,9 @@ export function ProjectSummariesPanel({
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-2">
                     <FileText className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                    <span className="font-medium text-sm truncate">{document.filename}</span>
+                    <span className="font-medium text-sm truncate" title={document.filename}>
+                      {truncateFilename(document.filename, 20)}
+                    </span>
                     {summary.isUserEdited && (
                       <Badge variant="secondary" className="text-xs flex-shrink-0">
                         <Edit3 className="h-2 w-2 mr-1" />
@@ -120,7 +135,7 @@ export function ProjectSummariesPanel({
                   </div>
 
                   <p className="text-xs text-muted-foreground line-clamp-2">
-                    {summary.summaryContent.substring(0, 150)}...
+                    {stripHtml(summary.summaryContent).substring(0, 150)}...
                   </p>
 
                   <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
