@@ -12,6 +12,7 @@ import { db } from '../db';
 import { agentStates, agentExecutions, projects, projectSummaries } from '@shared/schema';
 import { eq } from 'drizzle-orm';
 import { storage } from '../storage';
+import { estimateAgentWorkflowCost } from '../lib/pricing';
 
 interface ProjectSummaryContext {
   overview?: string;
@@ -322,6 +323,10 @@ export class MultishotWorkflowOrchestrator {
             .where(eq(projects.id, projectId))
             .limit(1);
 
+          // Calculate estimated LMM cost for the agent workflow
+          const modelUsed = state.model || 'anthropic';
+          const lmmCost = estimateAgentWorkflowCost(modelUsed);
+          
           const savedBid = await storage.createBid({
             projectId,
             companyId: project?.companyId ?? null,
@@ -330,10 +335,11 @@ export class MultishotWorkflowOrchestrator {
             rawContent: draft.content,
             instructions: 'Generated via AI Agent Workflow',
             tone: 'professional',
-            model: state.model || 'anthropic',
+            model: modelUsed,
             searchMethod: 'agent-workflow',
             chunksUsed: 0,
             generationTimeSeconds,
+            lmmCost,
           });
           savedBidId = savedBid.id;
           console.log(`[MultishotOrchestrator] Saved bid ${savedBid.id} for project ${projectId} (${generationTimeSeconds}s)`);
