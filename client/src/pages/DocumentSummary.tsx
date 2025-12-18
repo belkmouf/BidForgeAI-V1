@@ -17,7 +17,7 @@ import { Badge } from '../components/ui/badge';
 import { Progress } from '../components/ui/progress';
 import { Separator } from '../components/ui/separator';
 import { ScrollArea } from '../components/ui/scroll-area';
-import { Loader2, FileText, CheckCircle, AlertCircle, Clock, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, FileCheck, AlertTriangle, TrendingUp, Download, RefreshCw, Edit2, Save, X, Upload, Image as ImageIcon } from 'lucide-react';
+import { Loader2, FileText, CheckCircle, AlertCircle, Clock, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, FileCheck, AlertTriangle, TrendingUp, Download, RefreshCw, Edit2, Save, X, Upload, Image as ImageIcon, FileSpreadsheet } from 'lucide-react';
 import { Textarea } from '../components/ui/textarea';
 import { Alert, AlertDescription } from '../components/ui/alert';
 import { ProjectWorkflowLayout, getWorkflowSteps } from '../components/workflow/ProjectWorkflowLayout';
@@ -52,6 +52,26 @@ function isImageFile(filename: string): boolean {
 
 function getImageUrl(filename: string): string {
   return `/api/documents/image/${encodeURIComponent(filename)}`;
+}
+
+function getFileIcon(filename: string): React.ReactNode {
+  const ext = filename.toLowerCase().match(/\.[^.]*$/)?.[0] || '';
+  if (['.pdf'].includes(ext)) {
+    return <FileText className="w-5 h-5 text-red-500" />;
+  }
+  if (['.png', '.jpg', '.jpeg', '.gif', '.tiff', '.bmp', '.webp'].includes(ext)) {
+    return <ImageIcon className="w-5 h-5 text-blue-500" />;
+  }
+  if (['.xlsx', '.xls', '.csv'].includes(ext)) {
+    return <FileSpreadsheet className="w-5 h-5 text-green-600" />;
+  }
+  if (['.docx', '.doc'].includes(ext)) {
+    return <FileText className="w-5 h-5 text-blue-600" />;
+  }
+  if (['.txt'].includes(ext)) {
+    return <FileText className="w-5 h-5 text-gray-500" />;
+  }
+  return <FileText className="w-5 h-5 text-gray-400" />;
 }
 
 function DocumentCard({ 
@@ -570,29 +590,94 @@ export default function DocumentSummary() {
           </p>
         </div>
 
-        {/* Upload Section */}
+        {/* Project Files Section - Clean Design */}
         <Card className="mb-6">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Upload className="w-5 h-5" />
-              Upload Documents
-            </CardTitle>
-            <CardDescription>
-              Drag and drop files or click to browse. Supports PDF, DOCX, XLSX, images, and more.
-            </CardDescription>
+          <CardHeader className="pb-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Upload className="w-5 h-5 text-muted-foreground" />
+                <CardTitle className="text-lg">Project Files</CardTitle>
+                <Badge variant="secondary" className="ml-1">{data.documents.length}</Badge>
+              </div>
+              <label className="cursor-pointer">
+                <input
+                  type="file"
+                  multiple
+                  className="hidden"
+                  accept=".pdf,.docx,.doc,.xlsx,.xls,.csv,.txt,.png,.jpg,.jpeg,.gif,.tiff,.bmp,.webp"
+                  onChange={(e) => {
+                    const files = e.target.files;
+                    if (files) {
+                      Array.from(files).forEach(file => {
+                        handleFileUpload(file, () => {});
+                      });
+                    }
+                    e.target.value = '';
+                  }}
+                />
+                <Button size="sm" className="gap-2" asChild>
+                  <span>
+                    <Upload className="w-4 h-4" />
+                    Upload
+                  </span>
+                </Button>
+              </label>
+            </div>
           </CardHeader>
-          <CardContent>
-            <DropZone
-              files={data.documents.map(doc => ({
-                id: doc.id.toString(),
-                name: doc.filename,
-                size: doc.fileSize || 0,
-                uploadedAt: new Date(doc.uploadedAt),
-                isProcessed: doc.isProcessed,
-              }))}
-              onUploadWithProgress={handleFileUpload}
-              onDelete={handleDeleteDocument}
-            />
+          <CardContent className="pt-0">
+            {data.documents.length === 0 ? (
+              <div className="py-8 text-center text-muted-foreground">
+                <FileText className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                <p>No files uploaded yet</p>
+                <p className="text-sm mt-1">Click Upload to add your RFP documents</p>
+              </div>
+            ) : (
+              <div className="divide-y">
+                {data.documents.map((doc) => (
+                  <div 
+                    key={doc.id} 
+                    className="flex items-center justify-between py-3 group hover:bg-muted/30 -mx-6 px-6 transition-colors"
+                    data-testid={`file-row-${doc.id}`}
+                  >
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                      {getFileIcon(doc.filename)}
+                      <span className="truncate text-sm font-medium">{doc.originalFilename || doc.filename}</span>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      {doc.isProcessed ? (
+                        <span className="flex items-center gap-1 text-sm text-green-600">
+                          <CheckCircle className="w-4 h-4" />
+                          Done
+                        </span>
+                      ) : (
+                        <span className="flex items-center gap-1 text-sm text-yellow-600">
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          Processing
+                        </span>
+                      )}
+                      <button 
+                        className="p-1.5 hover:bg-muted rounded-md text-muted-foreground hover:text-foreground transition-colors"
+                        title="Download"
+                        data-testid={`download-${doc.id}`}
+                      >
+                        <Download className="w-4 h-4" />
+                      </button>
+                      <button 
+                        className="p-1.5 hover:bg-red-50 rounded-md text-muted-foreground hover:text-red-600 transition-colors"
+                        onClick={() => handleDeleteDocument(doc.id.toString())}
+                        title="Delete"
+                        data-testid={`delete-${doc.id}`}
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            <div className="pt-4 mt-2 border-t text-xs text-muted-foreground">
+              Supports PDF, DOCX, XLSX, images, and more • Max 50MB
+            </div>
           </CardContent>
         </Card>
 
@@ -685,153 +770,6 @@ export default function DocumentSummary() {
         </Card>
       </div>
 
-      {/* Documents List with Summary Panel */}
-      <div className="mb-6">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-2xl font-bold flex items-center">
-            <FileText className="w-6 h-6 mr-2" />
-            Uploaded Documents
-          </h2>
-          <Button variant="outline" onClick={() => navigate(`/projects/${id}`)}>
-            + Upload More
-          </Button>
-        </div>
-
-        {data.documents.length === 0 ? (
-          <Card>
-            <CardContent className="py-12 text-center">
-              <FileText className="w-16 h-16 mx-auto mb-4 text-gray-400" />
-              <h3 className="text-lg font-semibold mb-2">No documents uploaded yet</h3>
-              <p className="text-gray-600 mb-4">Upload RFQ/RFP documents to get started</p>
-              <Button onClick={() => navigate(`/projects/${id}`)}>
-                Upload Documents
-              </Button>
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Documents List - Left Side */}
-            <div>
-              {data.documents.map((doc) => (
-                <DocumentCard 
-                  key={doc.id} 
-                  document={doc} 
-                  isSelected={selectedDocumentId === doc.id}
-                  onClick={() => setSelectedDocumentId(doc.id)}
-                />
-              ))}
-            </div>
-
-            {/* Summary Panel - Right Side */}
-            <div className="lg:sticky lg:top-4 lg:self-start">
-              <Card className="h-[500px] flex flex-col">
-                <CardHeader className="pb-3 flex-shrink-0">
-                  <CardTitle className="text-lg flex items-center gap-2">
-                    {selectedDocument && isImageFile(selectedDocument.filename) ? (
-                      <ImageIcon className="w-5 h-5 text-primary" />
-                    ) : (
-                      <FileCheck className="w-5 h-5 text-primary" />
-                    )}
-                    {selectedDocument && isImageFile(selectedDocument.filename) ? 'Image Preview' : 'Document Summary'}
-                  </CardTitle>
-                  {selectedDocument && (
-                    <CardDescription className="truncate">
-                      {selectedDocument.filename}
-                    </CardDescription>
-                  )}
-                </CardHeader>
-                <ScrollArea className="flex-1 px-6 pb-4" data-testid="summary-scroll-area">
-                  {selectedDocument ? (
-                    isImageFile(selectedDocument.filename) ? (
-                      <div className="flex flex-col items-center justify-center h-full space-y-4">
-                        <div className="relative w-full h-[350px] bg-muted/50 rounded-lg overflow-hidden flex items-center justify-center">
-                          <img
-                            src={getImageUrl(selectedDocument.filename)}
-                            alt={selectedDocument.filename}
-                            className="max-w-full max-h-full object-contain"
-                            data-testid="image-preview"
-                            onError={(e) => {
-                              const target = e.target as HTMLImageElement;
-                              target.style.display = 'none';
-                              target.parentElement!.innerHTML = '<div class="text-center text-muted-foreground"><p>Image preview not available</p><p class="text-xs mt-1">The image may still be processing</p></div>';
-                            }}
-                          />
-                        </div>
-                        {selectedDocument.summary && (
-                          <div className="w-full p-3 bg-muted/30 rounded-lg">
-                            <h4 className="text-sm font-medium mb-2">AI Analysis</h4>
-                            <div 
-                              className="prose prose-sm max-w-none text-xs text-muted-foreground"
-                              dangerouslySetInnerHTML={{ __html: selectedDocument.summary.summaryContent }}
-                            />
-                          </div>
-                        )}
-                      </div>
-                    ) : selectedDocument.summary ? (
-                      <div className="space-y-4">
-                        <div 
-                          className="prose prose-sm max-w-none text-sm text-foreground leading-relaxed [&_h2]:text-base [&_h2]:font-semibold [&_h2]:mt-4 [&_h2]:mb-2 [&_ul]:list-disc [&_ul]:pl-4 [&_li]:mb-1 [&_table]:w-full [&_table]:text-xs [&_th]:bg-muted [&_th]:p-2 [&_td]:p-2 [&_td]:border"
-                          dangerouslySetInnerHTML={{ __html: selectedDocument.summary.summaryContent }}
-                        />
-                        {selectedDocument.keyInformation && Object.keys(selectedDocument.keyInformation).length > 0 && (
-                          <div className="pt-4 border-t">
-                            <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
-                              <AlertCircle className="w-4 h-4 text-blue-500" />
-                              Key Information
-                            </h4>
-                            <div className="space-y-2 text-sm">
-                              {selectedDocument.keyInformation.projectType && (
-                                <div className="flex gap-2">
-                                  <span className="font-medium text-muted-foreground">Type:</span>
-                                  <span>{selectedDocument.keyInformation.projectType}</span>
-                                </div>
-                              )}
-                              {selectedDocument.keyInformation.location && (
-                                <div className="flex gap-2">
-                                  <span className="font-medium text-muted-foreground">Location:</span>
-                                  <span>{selectedDocument.keyInformation.location}</span>
-                                </div>
-                              )}
-                              {selectedDocument.keyInformation.deadline && (
-                                <div className="flex gap-2">
-                                  <span className="font-medium text-muted-foreground">Deadline:</span>
-                                  <span>{selectedDocument.keyInformation.deadline}</span>
-                                </div>
-                              )}
-                              {selectedDocument.keyInformation.budget && (
-                                <div className="flex gap-2">
-                                  <span className="font-medium text-muted-foreground">Budget:</span>
-                                  <span>{selectedDocument.keyInformation.budget}</span>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    ) : (
-                      <div className="flex flex-col items-center justify-center h-full py-12 text-center">
-                        <Clock className="w-12 h-12 text-muted-foreground/50 mb-4" />
-                        <h3 className="font-medium text-muted-foreground mb-2">Summary Pending</h3>
-                        <p className="text-sm text-muted-foreground/70">
-                          Summary will appear here once the document is processed.
-                        </p>
-                      </div>
-                    )
-                  ) : (
-                    <div className="flex flex-col items-center justify-center h-full py-12 text-center">
-                      <FileText className="w-12 h-12 text-muted-foreground/50 mb-4" />
-                      <h3 className="font-medium text-muted-foreground mb-2">No Document Selected</h3>
-                      <p className="text-sm text-muted-foreground/70">
-                        Click on a document to view its summary.
-                      </p>
-                    </div>
-                  )}
-                </ScrollArea>
-              </Card>
-            </div>
-          </div>
-        )}
-      </div>
 
       {/* Project Summary */}
       <div className="mb-6">
