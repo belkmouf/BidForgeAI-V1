@@ -1,7 +1,7 @@
 import { ReactNode } from 'react';
 import { Link, useLocation } from 'wouter';
 import { Button } from '@/components/ui/button';
-import { ChevronLeft, ChevronRight, FileText, ShieldCheck, AlertTriangle, Sparkles, Check, Lock } from 'lucide-react';
+import { ChevronLeft, ChevronRight, FileText, ShieldCheck, AlertTriangle, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export interface WorkflowStep {
@@ -64,9 +64,9 @@ export function ProjectWorkflowLayout({
     <div className="min-h-screen bg-background flex flex-col">
       <header className="border-b bg-card sticky top-0 z-10">
         <div className="container mx-auto px-4 py-3">
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <Link href={`/projects/${projectId}`}>
+              <Link href="/projects">
                 <Button variant="ghost" size="icon" className="h-8 w-8" data-testid="button-back">
                   <ChevronLeft className="h-4 w-4" />
                 </Button>
@@ -78,68 +78,10 @@ export function ProjectWorkflowLayout({
                 )}
               </div>
             </div>
+            <div className="text-sm text-muted-foreground">
+              Step {currentStep + 1} of {steps.length}
+            </div>
           </div>
-
-          <nav className="flex items-center justify-between">
-            <ol className="flex items-center gap-2 overflow-x-auto pb-2">
-              {steps.map((step, index) => {
-                const isActive = index === currentStep;
-                const isPast = index < currentStep;
-                const canNavigate = step.isAccessible || isPast;
-
-                return (
-                  <li key={step.id} className="flex items-center">
-                    {index > 0 && (
-                      <div
-                        className={cn(
-                          "w-8 h-0.5 mx-1",
-                          isPast || isActive ? "bg-primary" : "bg-muted"
-                        )}
-                      />
-                    )}
-                    <Link
-                      href={canNavigate ? step.path : '#'}
-                      onClick={(e) => !canNavigate && e.preventDefault()}
-                    >
-                      <div
-                        className={cn(
-                          "flex items-center gap-2 px-3 py-2 rounded-lg transition-colors",
-                          isActive && "bg-primary text-primary-foreground",
-                          !isActive && canNavigate && "hover:bg-muted cursor-pointer",
-                          !isActive && !canNavigate && "opacity-50 cursor-not-allowed"
-                        )}
-                        data-testid={`step-${step.id}`}
-                      >
-                        <div
-                          className={cn(
-                            "w-7 h-7 rounded-full flex items-center justify-center text-xs font-medium",
-                            isActive && "bg-primary-foreground text-primary",
-                            isPast && step.isCompleted && "bg-green-500 text-white",
-                            !isActive && !isPast && "bg-muted text-muted-foreground"
-                          )}
-                        >
-                          {step.isCompleted && isPast ? (
-                            <Check className="w-4 h-4" />
-                          ) : !step.isAccessible && !isPast && !isActive ? (
-                            <Lock className="w-3 h-3" />
-                          ) : (
-                            index + 1
-                          )}
-                        </div>
-                        <span className={cn(
-                          "text-sm font-medium whitespace-nowrap hidden sm:inline",
-                          isActive && "text-primary-foreground",
-                          !isActive && "text-muted-foreground"
-                        )}>
-                          {step.title}
-                        </span>
-                      </div>
-                    </Link>
-                  </li>
-                );
-              })}
-            </ol>
-          </nav>
         </div>
       </header>
 
