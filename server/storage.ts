@@ -14,6 +14,12 @@ import {
   knowledgeBaseDocuments,
   knowledgeBaseChunks,
   templates,
+  projectIntakeProfiles,
+  checklistItems,
+  documentIntegrityReports,
+  projectRequirements,
+  requirementCoverages,
+  verificationGates,
   type Project,
   type InsertProject,
   type Document,
@@ -24,6 +30,7 @@ import {
   type InsertBid,
   type ProjectStatus,
   type WorkflowStatus,
+  type IntakeStatus,
   type RFPAnalysis,
   type InsertRFPAnalysis,
   type AnalysisAlert,
@@ -45,6 +52,18 @@ import {
   type InsertAIInstruction,
   type Template,
   type InsertTemplate,
+  type ProjectIntakeProfile,
+  type InsertProjectIntakeProfile,
+  type ChecklistItem,
+  type InsertChecklistItem,
+  type DocumentIntegrityReport,
+  type InsertDocumentIntegrityReport,
+  type ProjectRequirement,
+  type InsertProjectRequirement,
+  type RequirementCoverage,
+  type InsertRequirementCoverage,
+  type VerificationGate,
+  type InsertVerificationGate,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, sql, and, isNull, or } from "drizzle-orm";
@@ -253,6 +272,85 @@ export interface IStorage {
     >,
   ): Promise<Template | undefined>;
   deleteTemplate(id: number, companyId: number): Promise<boolean>;
+
+  // ==================== CHECKLIST & VERIFICATION SYSTEM ====================
+
+  // Project Intake Profiles
+  getIntakeProfile(projectId: string): Promise<ProjectIntakeProfile | undefined>;
+  createIntakeProfile(profile: InsertProjectIntakeProfile): Promise<ProjectIntakeProfile>;
+  updateIntakeProfile(
+    projectId: string,
+    updates: Partial<ProjectIntakeProfile>,
+  ): Promise<ProjectIntakeProfile | undefined>;
+  updateIntakeStatus(
+    projectId: string,
+    status: IntakeStatus,
+    companyId: number | null,
+  ): Promise<Project | undefined>;
+
+  // Checklist Items
+  getChecklistItems(projectId: string): Promise<ChecklistItem[]>;
+  getChecklistWithProgress(projectId: string): Promise<{
+    items: ChecklistItem[];
+    totalRequired: number;
+    uploadedCount: number;
+    verifiedCount: number;
+    completionPercentage: number;
+  }>;
+  createChecklistItem(item: InsertChecklistItem): Promise<ChecklistItem>;
+  createChecklistItems(items: InsertChecklistItem[]): Promise<ChecklistItem[]>;
+  updateChecklistItem(
+    id: number,
+    updates: Partial<ChecklistItem>,
+  ): Promise<ChecklistItem | undefined>;
+  linkDocumentToChecklistItem(
+    checklistItemId: number,
+    documentId: number,
+    confidence: number,
+  ): Promise<ChecklistItem | undefined>;
+  deleteChecklistItem(id: number): Promise<boolean>;
+  deleteChecklistItemsByProject(projectId: string): Promise<void>;
+
+  // Document Integrity Reports
+  getDocumentIntegrityReport(documentId: number): Promise<DocumentIntegrityReport | undefined>;
+  getIntegrityReportsByProject(projectId: string): Promise<DocumentIntegrityReport[]>;
+  upsertDocumentIntegrityReport(report: InsertDocumentIntegrityReport): Promise<DocumentIntegrityReport>;
+  updateDocumentIntegrityReport(
+    documentId: number,
+    updates: Partial<DocumentIntegrityReport>,
+  ): Promise<DocumentIntegrityReport | undefined>;
+
+  // Project Requirements
+  getProjectRequirements(projectId: string): Promise<ProjectRequirement[]>;
+  getRequirementsWithCoverage(projectId: string): Promise<Array<ProjectRequirement & {
+    coverages: RequirementCoverage[];
+  }>>;
+  createProjectRequirement(requirement: InsertProjectRequirement): Promise<ProjectRequirement>;
+  createProjectRequirements(requirements: InsertProjectRequirement[]): Promise<ProjectRequirement[]>;
+  updateProjectRequirement(
+    id: number,
+    updates: Partial<ProjectRequirement>,
+  ): Promise<ProjectRequirement | undefined>;
+  deleteProjectRequirementsByProject(projectId: string): Promise<void>;
+
+  // Requirement Coverages
+  getRequirementCoverages(requirementId: number): Promise<RequirementCoverage[]>;
+  createRequirementCoverage(coverage: InsertRequirementCoverage): Promise<RequirementCoverage>;
+  updateRequirementCoverage(
+    id: number,
+    updates: Partial<RequirementCoverage>,
+  ): Promise<RequirementCoverage | undefined>;
+
+  // Verification Gates
+  getVerificationGate(projectId: string, gateNumber: number): Promise<VerificationGate | undefined>;
+  getVerificationGates(projectId: string): Promise<VerificationGate[]>;
+  createOrUpdateVerificationGate(gate: Omit<InsertVerificationGate, 'id'>): Promise<VerificationGate>;
+  acknowledgeGate(
+    projectId: string,
+    gateNumber: number,
+    userId: number,
+    withRisks: boolean,
+  ): Promise<VerificationGate | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1603,6 +1701,346 @@ export class DatabaseStorage implements IStorage {
       .delete(templates)
       .where(and(eq(templates.id, id), eq(templates.companyId, companyId)));
     return (result.rowCount ?? 0) > 0;
+  }
+
+  // ==================== CHECKLIST & VERIFICATION SYSTEM ====================
+
+  // Project Intake Profiles
+  async getIntakeProfile(projectId: string): Promise<ProjectIntakeProfile | undefined> {
+    const [profile] = await db
+      .select()
+      .from(projectIntakeProfiles)
+      .where(eq(projectIntakeProfiles.projectId, projectId));
+    return profile || undefined;
+  }
+
+  async createIntakeProfile(profile: InsertProjectIntakeProfile): Promise<ProjectIntakeProfile> {
+    const [result] = await db
+      .insert(projectIntakeProfiles)
+      .values(profile)
+      .returning();
+    return result;
+  }
+
+  async updateIntakeProfile(
+    projectId: string,
+    updates: Partial<ProjectIntakeProfile>,
+  ): Promise<ProjectIntakeProfile | undefined> {
+    const [result] = await db
+      .update(projectIntakeProfiles)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(projectIntakeProfiles.projectId, projectId))
+      .returning();
+    return result || undefined;
+  }
+
+  async updateIntakeStatus(
+    projectId: string,
+    status: IntakeStatus,
+    companyId: number | null,
+  ): Promise<Project | undefined> {
+    const [project] = await db
+      .update(projects)
+      .set({ intakeStatus: status })
+      .where(and(eq(projects.id, projectId), this.companyFilter(companyId)))
+      .returning();
+    return project || undefined;
+  }
+
+  // Checklist Items
+  async getChecklistItems(projectId: string): Promise<ChecklistItem[]> {
+    return await db
+      .select()
+      .from(checklistItems)
+      .where(eq(checklistItems.projectId, projectId))
+      .orderBy(checklistItems.sortOrder, checklistItems.id);
+  }
+
+  async getChecklistWithProgress(projectId: string): Promise<{
+    items: ChecklistItem[];
+    totalRequired: number;
+    uploadedCount: number;
+    verifiedCount: number;
+    completionPercentage: number;
+  }> {
+    const items = await this.getChecklistItems(projectId);
+    const requiredItems = items.filter(item => item.isRequired);
+    const totalRequired = requiredItems.length;
+    const uploadedCount = requiredItems.filter(item => item.documentId !== null).length;
+    const verifiedCount = requiredItems.filter(item => item.status === 'verified').length;
+    const completionPercentage = totalRequired > 0 
+      ? Math.round((verifiedCount / totalRequired) * 100) 
+      : 0;
+
+    return {
+      items,
+      totalRequired,
+      uploadedCount,
+      verifiedCount,
+      completionPercentage,
+    };
+  }
+
+  async createChecklistItem(item: InsertChecklistItem): Promise<ChecklistItem> {
+    const [result] = await db
+      .insert(checklistItems)
+      .values(item)
+      .returning();
+    return result;
+  }
+
+  async createChecklistItems(items: InsertChecklistItem[]): Promise<ChecklistItem[]> {
+    if (items.length === 0) return [];
+    const results = await db
+      .insert(checklistItems)
+      .values(items)
+      .returning();
+    return results;
+  }
+
+  async updateChecklistItem(
+    id: number,
+    updates: Partial<ChecklistItem>,
+  ): Promise<ChecklistItem | undefined> {
+    const [result] = await db
+      .update(checklistItems)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(checklistItems.id, id))
+      .returning();
+    return result || undefined;
+  }
+
+  async linkDocumentToChecklistItem(
+    checklistItemId: number,
+    documentId: number,
+    confidence: number,
+  ): Promise<ChecklistItem | undefined> {
+    const [result] = await db
+      .update(checklistItems)
+      .set({
+        documentId,
+        matchConfidence: confidence,
+        status: 'uploaded',
+        updatedAt: new Date(),
+      })
+      .where(eq(checklistItems.id, checklistItemId))
+      .returning();
+    return result || undefined;
+  }
+
+  async deleteChecklistItem(id: number): Promise<boolean> {
+    const result = await db
+      .delete(checklistItems)
+      .where(eq(checklistItems.id, id));
+    return (result.rowCount ?? 0) > 0;
+  }
+
+  async deleteChecklistItemsByProject(projectId: string): Promise<void> {
+    await db
+      .delete(checklistItems)
+      .where(eq(checklistItems.projectId, projectId));
+  }
+
+  // Document Integrity Reports
+  async getDocumentIntegrityReport(documentId: number): Promise<DocumentIntegrityReport | undefined> {
+    const [report] = await db
+      .select()
+      .from(documentIntegrityReports)
+      .where(eq(documentIntegrityReports.documentId, documentId));
+    return report || undefined;
+  }
+
+  async getIntegrityReportsByProject(projectId: string): Promise<DocumentIntegrityReport[]> {
+    return await db
+      .select()
+      .from(documentIntegrityReports)
+      .where(eq(documentIntegrityReports.projectId, projectId));
+  }
+
+  async upsertDocumentIntegrityReport(report: InsertDocumentIntegrityReport): Promise<DocumentIntegrityReport> {
+    const existing = await this.getDocumentIntegrityReport(report.documentId);
+    if (existing) {
+      const [updated] = await db
+        .update(documentIntegrityReports)
+        .set({ ...report, updatedAt: new Date() })
+        .where(eq(documentIntegrityReports.documentId, report.documentId))
+        .returning();
+      return updated;
+    }
+    const [result] = await db
+      .insert(documentIntegrityReports)
+      .values(report)
+      .returning();
+    return result;
+  }
+
+  async updateDocumentIntegrityReport(
+    documentId: number,
+    updates: Partial<DocumentIntegrityReport>,
+  ): Promise<DocumentIntegrityReport | undefined> {
+    const [result] = await db
+      .update(documentIntegrityReports)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(documentIntegrityReports.documentId, documentId))
+      .returning();
+    return result || undefined;
+  }
+
+  // Project Requirements
+  async getProjectRequirements(projectId: string): Promise<ProjectRequirement[]> {
+    return await db
+      .select()
+      .from(projectRequirements)
+      .where(eq(projectRequirements.projectId, projectId))
+      .orderBy(projectRequirements.category, projectRequirements.code);
+  }
+
+  async getRequirementsWithCoverage(projectId: string): Promise<Array<ProjectRequirement & {
+    coverages: RequirementCoverage[];
+  }>> {
+    const requirements = await this.getProjectRequirements(projectId);
+    const coverages = await db
+      .select()
+      .from(requirementCoverages)
+      .where(eq(requirementCoverages.projectId, projectId));
+
+    const coverageMap = new Map<number, RequirementCoverage[]>();
+    coverages.forEach(coverage => {
+      const existing = coverageMap.get(coverage.requirementId) || [];
+      existing.push(coverage);
+      coverageMap.set(coverage.requirementId, existing);
+    });
+
+    return requirements.map(req => ({
+      ...req,
+      coverages: coverageMap.get(req.id) || [],
+    }));
+  }
+
+  async createProjectRequirement(requirement: InsertProjectRequirement): Promise<ProjectRequirement> {
+    const [result] = await db
+      .insert(projectRequirements)
+      .values(requirement)
+      .returning();
+    return result;
+  }
+
+  async createProjectRequirements(requirements: InsertProjectRequirement[]): Promise<ProjectRequirement[]> {
+    if (requirements.length === 0) return [];
+    const results = await db
+      .insert(projectRequirements)
+      .values(requirements)
+      .returning();
+    return results;
+  }
+
+  async updateProjectRequirement(
+    id: number,
+    updates: Partial<ProjectRequirement>,
+  ): Promise<ProjectRequirement | undefined> {
+    const [result] = await db
+      .update(projectRequirements)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(projectRequirements.id, id))
+      .returning();
+    return result || undefined;
+  }
+
+  async deleteProjectRequirementsByProject(projectId: string): Promise<void> {
+    await db
+      .delete(projectRequirements)
+      .where(eq(projectRequirements.projectId, projectId));
+  }
+
+  // Requirement Coverages
+  async getRequirementCoverages(requirementId: number): Promise<RequirementCoverage[]> {
+    return await db
+      .select()
+      .from(requirementCoverages)
+      .where(eq(requirementCoverages.requirementId, requirementId));
+  }
+
+  async createRequirementCoverage(coverage: InsertRequirementCoverage): Promise<RequirementCoverage> {
+    const [result] = await db
+      .insert(requirementCoverages)
+      .values(coverage)
+      .returning();
+    return result;
+  }
+
+  async updateRequirementCoverage(
+    id: number,
+    updates: Partial<RequirementCoverage>,
+  ): Promise<RequirementCoverage | undefined> {
+    const [result] = await db
+      .update(requirementCoverages)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(requirementCoverages.id, id))
+      .returning();
+    return result || undefined;
+  }
+
+  // Verification Gates
+  async getVerificationGate(projectId: string, gateNumber: number): Promise<VerificationGate | undefined> {
+    const [gate] = await db
+      .select()
+      .from(verificationGates)
+      .where(and(
+        eq(verificationGates.projectId, projectId),
+        eq(verificationGates.gateNumber, gateNumber)
+      ));
+    return gate || undefined;
+  }
+
+  async getVerificationGates(projectId: string): Promise<VerificationGate[]> {
+    return await db
+      .select()
+      .from(verificationGates)
+      .where(eq(verificationGates.projectId, projectId))
+      .orderBy(verificationGates.gateNumber);
+  }
+
+  async createOrUpdateVerificationGate(gate: Omit<InsertVerificationGate, 'id'>): Promise<VerificationGate> {
+    const existing = await this.getVerificationGate(gate.projectId, gate.gateNumber);
+    if (existing) {
+      const [updated] = await db
+        .update(verificationGates)
+        .set({ ...gate, updatedAt: new Date() })
+        .where(and(
+          eq(verificationGates.projectId, gate.projectId),
+          eq(verificationGates.gateNumber, gate.gateNumber)
+        ))
+        .returning();
+      return updated;
+    }
+    const [result] = await db
+      .insert(verificationGates)
+      .values(gate)
+      .returning();
+    return result;
+  }
+
+  async acknowledgeGate(
+    projectId: string,
+    gateNumber: number,
+    userId: number,
+    withRisks: boolean,
+  ): Promise<VerificationGate | undefined> {
+    const [result] = await db
+      .update(verificationGates)
+      .set({
+        status: 'passed',
+        acknowledgedBy: userId,
+        acknowledgedAt: new Date(),
+        acknowledgedWithRisks: withRisks,
+        updatedAt: new Date(),
+      })
+      .where(and(
+        eq(verificationGates.projectId, projectId),
+        eq(verificationGates.gateNumber, gateNumber)
+      ))
+      .returning();
+    return result || undefined;
   }
 }
 

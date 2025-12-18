@@ -620,7 +620,7 @@ export default function DocumentSummary() {
       projectId={id || ''}
       projectName={project?.name || 'Project'}
       clientName={project?.clientName}
-      currentStep={0}
+      currentStep={1}
       steps={steps}
       nextLabel="Review Summaries"
       nextDisabled={!canProceed}

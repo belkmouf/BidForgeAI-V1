@@ -222,7 +222,7 @@ export default function SummaryReview() {
       projectId={id}
       projectName={project.name}
       clientName={project.clientName}
-      currentStep={1}
+      currentStep={2}
       steps={steps}
       backLabel="Back to Documents"
       onBack={() => navigate(`/projects/${id}/documents`)}

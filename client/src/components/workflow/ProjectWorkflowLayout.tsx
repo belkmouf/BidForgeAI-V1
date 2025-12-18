@@ -1,7 +1,7 @@
 import { ReactNode } from 'react';
 import { Link, useLocation } from 'wouter';
 import { Button } from '@/components/ui/button';
-import { ChevronLeft, ChevronRight, FileText, ShieldCheck, AlertTriangle, Sparkles } from 'lucide-react';
+import { ChevronLeft, ChevronRight, FileText, ShieldCheck, AlertTriangle, Sparkles, ClipboardList } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export interface WorkflowStep {
@@ -142,7 +142,12 @@ export function hasReachedStatus(current: WorkflowStatus | undefined, target: Wo
   return workflowOrder.indexOf(current) >= workflowOrder.indexOf(target);
 }
 
-export function getWorkflowSteps(projectId: string, workflowStatus: WorkflowStatus = 'uploading'): WorkflowStep[] {
+export interface WorkflowStepsOptions {
+  checklistComplete?: boolean;
+}
+
+export function getWorkflowSteps(projectId: string, workflowStatus: WorkflowStatus = 'uploading', options: WorkflowStepsOptions = {}): WorkflowStep[] {
+  const { checklistComplete = true } = options;
   const hasSummaryReview = hasReachedStatus(workflowStatus, 'summary_review');
   const hasAnalysis = hasReachedStatus(workflowStatus, 'analyzing');
   const hasConflicts = hasReachedStatus(workflowStatus, 'conflict_check');
@@ -150,12 +155,20 @@ export function getWorkflowSteps(projectId: string, workflowStatus: WorkflowStat
 
   return [
     {
+      id: 'checklist',
+      title: 'Checklist',
+      path: `/projects/${projectId}/checklist`,
+      icon: <ClipboardList className="w-4 h-4" />,
+      isCompleted: checklistComplete,
+      isAccessible: true,
+    },
+    {
       id: 'documents',
       title: 'Documents',
       path: `/projects/${projectId}/documents`,
       icon: <FileText className="w-4 h-4" />,
       isCompleted: hasSummaryReview,
-      isAccessible: true,
+      isAccessible: checklistComplete,
     },
     {
       id: 'summary',

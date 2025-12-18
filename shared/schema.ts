@@ -219,6 +219,7 @@ export const projects = pgTable("projects", {
   description: text("description"),
   status: text("status").notNull().default("Active"),
   workflowStatus: varchar("workflow_status", { length: 50 }).notNull().default("uploading"),
+  intakeStatus: varchar("intake_status", { length: 50 }).notNull().default("pending"),
   isArchived: boolean("is_archived").default(false).notNull(),
   metadata: jsonb("metadata").default(sql`'{}'::jsonb`),
   createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -1094,3 +1095,412 @@ export const insertDashboardConfigSchema = z.object({
 });
 
 export const updateDashboardConfigSchema = insertDashboardConfigSchema.partial();
+
+// ==================== DOCUMENT VERIFICATION & CHECKLIST SYSTEM ====================
+
+// Intake Status Enum
+export const intakeStatusEnum = z.enum([
+  "pending",           // Intake profile not yet created
+  "profile_created",   // Profile created, awaiting document upload
+  "documents_pending", // Documents being uploaded
+  "verification",      // Documents being verified
+  "gate1_pending",     // Awaiting Gate 1 approval
+  "gate1_passed",      // Gate 1 passed
+  "analysis",          // Analysis in progress
+  "gate2_pending",     // Awaiting Gate 2 approval (pre-submission)
+  "gate2_passed",      // Gate 2 passed, ready for submission
+  "submitted"          // Bid submitted
+]);
+export type IntakeStatus = z.infer<typeof intakeStatusEnum>;
+
+// RFP Type Enum
+export const rfpTypeEnum = z.enum([
+  "construction",
+  "it_technology",
+  "consulting",
+  "supply_equipment",
+  "maintenance",
+  "design_build",
+  "other"
+]);
+export type RFPType = z.infer<typeof rfpTypeEnum>;
+
+// Contract Value Range Enum
+export const contractValueEnum = z.enum([
+  "under_500k",
+  "500k_5m",
+  "5m_50m",
+  "over_50m"
+]);
+export type ContractValueRange = z.infer<typeof contractValueEnum>;
+
+// GCC Region Enum
+export const gccRegionEnum = z.enum([
+  "uae",
+  "saudi_arabia",
+  "qatar",
+  "kuwait",
+  "oman",
+  "bahrain",
+  "other"
+]);
+export type GCCRegion = z.infer<typeof gccRegionEnum>;
+
+// Client Type Enum
+export const clientTypeEnum = z.enum([
+  "government",
+  "semi_government",
+  "private",
+  "international"
+]);
+export type ClientType = z.infer<typeof clientTypeEnum>;
+
+// Checklist Item Status Enum
+export const checklistItemStatusEnum = z.enum([
+  "required",
+  "optional",
+  "not_applicable",
+  "uploaded",
+  "verified",
+  "failed"
+]);
+export type ChecklistItemStatus = z.infer<typeof checklistItemStatusEnum>;
+
+// Checklist Category Enum
+export const checklistCategoryEnum = z.enum([
+  "technical",
+  "commercial",
+  "qualifications",
+  "legal",
+  "project_management",
+  "drawings"
+]);
+export type ChecklistCategory = z.infer<typeof checklistCategoryEnum>;
+
+// Document Validation State Enum
+export const documentValidationStateEnum = z.enum([
+  "pending",
+  "validating",
+  "passed",
+  "warning",
+  "failed"
+]);
+export type DocumentValidationState = z.infer<typeof documentValidationStateEnum>;
+
+// Requirement Priority Enum
+export const requirementPriorityEnum = z.enum([
+  "critical",
+  "high",
+  "medium",
+  "low"
+]);
+export type RequirementPriority = z.infer<typeof requirementPriorityEnum>;
+
+// Requirement Category Enum
+export const requirementCategoryEnum = z.enum([
+  "technical",
+  "commercial",
+  "qualification",
+  "evaluation_criteria",
+  "compliance",
+  "deliverable"
+]);
+export type RequirementCategory = z.infer<typeof requirementCategoryEnum>;
+
+// Requirement Coverage Status Enum
+export const coverageStatusEnum = z.enum([
+  "not_addressed",
+  "partially_addressed",
+  "fully_addressed",
+  "exceeds"
+]);
+export type CoverageStatus = z.infer<typeof coverageStatusEnum>;
+
+// Project Intake Profiles Table
+export const projectIntakeProfiles = pgTable("project_intake_profiles", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  projectId: varchar("project_id").notNull().unique().references(() => projects.id, { onDelete: "cascade" }),
+  
+  rfpType: text("rfp_type").notNull(),
+  contractValueRange: text("contract_value_range").notNull(),
+  clientRegion: text("client_region").notNull(),
+  clientType: text("client_type").notNull(),
+  
+  submissionDeadline: timestamp("submission_deadline"),
+  projectDuration: varchar("project_duration", { length: 100 }),
+  specialRequirements: text("special_requirements"),
+  
+  isComplete: boolean("is_complete").default(false).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export type ProjectIntakeProfile = typeof projectIntakeProfiles.$inferSelect;
+export type InsertProjectIntakeProfile = typeof projectIntakeProfiles.$inferInsert;
+
+export const insertProjectIntakeProfileSchema = z.object({
+  projectId: z.string(),
+  rfpType: rfpTypeEnum,
+  contractValueRange: contractValueEnum,
+  clientRegion: gccRegionEnum,
+  clientType: clientTypeEnum,
+  submissionDeadline: z.string().datetime().optional(),
+  projectDuration: z.string().optional(),
+  specialRequirements: z.string().optional(),
+});
+
+// Checklist Items Table
+export const checklistItems = pgTable("checklist_items", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  projectId: varchar("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  
+  name: text("name").notNull(),
+  description: text("description"),
+  category: text("category").notNull(),
+  status: text("status").notNull().default("required"),
+  isRequired: boolean("is_required").default(true).notNull(),
+  
+  documentId: integer("document_id").references(() => documents.id, { onDelete: "set null" }),
+  matchConfidence: real("match_confidence"),
+  
+  sortOrder: integer("sort_order").default(0),
+  aiGenerated: boolean("ai_generated").default(true).notNull(),
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export type ChecklistItem = typeof checklistItems.$inferSelect;
+export type InsertChecklistItem = typeof checklistItems.$inferInsert;
+
+export const insertChecklistItemSchema = z.object({
+  projectId: z.string(),
+  name: z.string().min(1),
+  description: z.string().optional(),
+  category: checklistCategoryEnum,
+  status: checklistItemStatusEnum.optional(),
+  isRequired: z.boolean().optional(),
+  documentId: z.number().optional(),
+  sortOrder: z.number().optional(),
+  aiGenerated: z.boolean().optional(),
+});
+
+// Document Integrity Reports Table
+export const documentIntegrityReports = pgTable("document_integrity_reports", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  documentId: integer("document_id").notNull().unique().references(() => documents.id, { onDelete: "cascade" }),
+  projectId: varchar("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  
+  overallScore: real("overall_score").notNull(),
+  validationState: text("validation_state").notNull().default("pending"),
+  
+  integrityScore: real("integrity_score"),
+  completenessScore: real("completeness_score"),
+  metadataScore: real("metadata_score"),
+  complianceScore: real("compliance_score"),
+  
+  isPasswordProtected: boolean("is_password_protected").default(false),
+  isDuplicate: boolean("is_duplicate").default(false),
+  duplicateOfDocumentId: integer("duplicate_of_document_id").references(() => documents.id),
+  
+  issues: jsonb("issues").$type<Array<{
+    type: 'error' | 'warning' | 'info';
+    code: string;
+    message: string;
+    details?: string;
+  }>>().default(sql`'[]'::jsonb`),
+  
+  recommendations: jsonb("recommendations").$type<Array<{
+    priority: 'critical' | 'high' | 'medium' | 'low';
+    action: string;
+    reason: string;
+  }>>().default(sql`'[]'::jsonb`),
+  
+  metadata: jsonb("metadata").$type<{
+    pageCount?: number;
+    fileSize?: number;
+    fileType?: string;
+    createdDate?: string;
+    modifiedDate?: string;
+    author?: string;
+    version?: string;
+    hasDraftWatermark?: boolean;
+    hasSignatures?: boolean;
+  }>().default(sql`'{}'::jsonb`),
+  
+  verifiedAt: timestamp("verified_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export type DocumentIntegrityReport = typeof documentIntegrityReports.$inferSelect;
+export type InsertDocumentIntegrityReport = typeof documentIntegrityReports.$inferInsert;
+
+// Project Requirements Table (extracted from RFP)
+export const projectRequirements = pgTable("project_requirements", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  projectId: varchar("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  
+  code: varchar("code", { length: 20 }).notNull(),
+  title: text("title").notNull(),
+  description: text("description"),
+  category: text("category").notNull(),
+  priority: text("priority").notNull().default("medium"),
+  
+  sourceDocumentId: integer("source_document_id").references(() => documents.id, { onDelete: "set null" }),
+  sourceSection: varchar("source_section", { length: 100 }),
+  sourcePage: integer("source_page"),
+  sourceText: text("source_text"),
+  
+  isMandatory: boolean("is_mandatory").default(true).notNull(),
+  evaluationPoints: real("evaluation_points"),
+  
+  coverageStatus: text("coverage_status").notNull().default("not_addressed"),
+  coveragePercentage: real("coverage_percentage").default(0),
+  
+  extractedAt: timestamp("extracted_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export type ProjectRequirement = typeof projectRequirements.$inferSelect;
+export type InsertProjectRequirement = typeof projectRequirements.$inferInsert;
+
+export const insertProjectRequirementSchema = z.object({
+  projectId: z.string(),
+  code: z.string().min(1).max(20),
+  title: z.string().min(1),
+  description: z.string().optional(),
+  category: requirementCategoryEnum,
+  priority: requirementPriorityEnum.optional(),
+  sourceDocumentId: z.number().optional(),
+  sourceSection: z.string().optional(),
+  sourcePage: z.number().optional(),
+  sourceText: z.string().optional(),
+  isMandatory: z.boolean().optional(),
+  evaluationPoints: z.number().optional(),
+});
+
+// Requirement Coverage Links Table (maps requirements to bid content)
+export const requirementCoverages = pgTable("requirement_coverages", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  requirementId: integer("requirement_id").notNull().references(() => projectRequirements.id, { onDelete: "cascade" }),
+  projectId: varchar("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  
+  bidId: integer("bid_id").references(() => bids.id, { onDelete: "cascade" }),
+  sectionTitle: varchar("section_title", { length: 255 }),
+  contentExcerpt: text("content_excerpt"),
+  pageNumber: integer("page_number"),
+  
+  coverageStatus: text("coverage_status").notNull().default("not_addressed"),
+  coverageQuality: text("coverage_quality"),
+  confidenceScore: real("confidence_score"),
+  
+  aiVerified: boolean("ai_verified").default(false).notNull(),
+  userVerified: boolean("user_verified").default(false).notNull(),
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export type RequirementCoverage = typeof requirementCoverages.$inferSelect;
+export type InsertRequirementCoverage = typeof requirementCoverages.$inferInsert;
+
+// Verification Gates Table (tracks gate status)
+export const verificationGates = pgTable("verification_gates", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  projectId: varchar("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  
+  gateNumber: integer("gate_number").notNull(),
+  gateName: varchar("gate_name", { length: 100 }).notNull(),
+  
+  status: text("status").notNull().default("pending"),
+  overallScore: real("overall_score"),
+  
+  checkResults: jsonb("check_results").$type<Array<{
+    checkName: string;
+    passed: boolean;
+    score?: number;
+    message: string;
+    details?: string;
+  }>>().default(sql`'[]'::jsonb`),
+  
+  issuesCount: integer("issues_count").default(0),
+  warningsCount: integer("warnings_count").default(0),
+  
+  acknowledgedBy: integer("acknowledged_by").references(() => users.id),
+  acknowledgedAt: timestamp("acknowledged_at"),
+  acknowledgedWithRisks: boolean("acknowledged_with_risks").default(false),
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export type VerificationGate = typeof verificationGates.$inferSelect;
+export type InsertVerificationGate = typeof verificationGates.$inferInsert;
+
+// Relations for new tables
+export const projectIntakeProfilesRelations = relations(projectIntakeProfiles, ({ one }) => ({
+  project: one(projects, {
+    fields: [projectIntakeProfiles.projectId],
+    references: [projects.id],
+  }),
+}));
+
+export const checklistItemsRelations = relations(checklistItems, ({ one }) => ({
+  project: one(projects, {
+    fields: [checklistItems.projectId],
+    references: [projects.id],
+  }),
+  document: one(documents, {
+    fields: [checklistItems.documentId],
+    references: [documents.id],
+  }),
+}));
+
+export const documentIntegrityReportsRelations = relations(documentIntegrityReports, ({ one }) => ({
+  document: one(documents, {
+    fields: [documentIntegrityReports.documentId],
+    references: [documents.id],
+  }),
+  project: one(projects, {
+    fields: [documentIntegrityReports.projectId],
+    references: [projects.id],
+  }),
+}));
+
+export const projectRequirementsRelations = relations(projectRequirements, ({ one, many }) => ({
+  project: one(projects, {
+    fields: [projectRequirements.projectId],
+    references: [projects.id],
+  }),
+  sourceDocument: one(documents, {
+    fields: [projectRequirements.sourceDocumentId],
+    references: [documents.id],
+  }),
+  coverages: many(requirementCoverages),
+}));
+
+export const requirementCoveragesRelations = relations(requirementCoverages, ({ one }) => ({
+  requirement: one(projectRequirements, {
+    fields: [requirementCoverages.requirementId],
+    references: [projectRequirements.id],
+  }),
+  project: one(projects, {
+    fields: [requirementCoverages.projectId],
+    references: [projects.id],
+  }),
+  bid: one(bids, {
+    fields: [requirementCoverages.bidId],
+    references: [bids.id],
+  }),
+}));
+
+export const verificationGatesRelations = relations(verificationGates, ({ one }) => ({
+  project: one(projects, {
+    fields: [verificationGates.projectId],
+    references: [projects.id],
+  }),
+  acknowledgedByUser: one(users, {
+    fields: [verificationGates.acknowledgedBy],
+    references: [users.id],
+  }),
+}));

@@ -335,7 +335,7 @@ export default function ProjectAnalysis() {
       projectId={projectId}
       projectName={project.name}
       clientName={project.clientName}
-      currentStep={2}
+      currentStep={3}
       steps={steps}
       backLabel="Back to Summaries"
       onBack={() => navigate(`/projects/${projectId}/summary`)}

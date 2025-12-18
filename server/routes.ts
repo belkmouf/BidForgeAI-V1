@@ -197,6 +197,122 @@ const updateStatusSchema = z.object({
   status: z.enum(["Active", "Submitted", "Closed-Won", "Closed-Lost"]),
 });
 
+// Checklist item interface for AI generation
+interface GeneratedChecklistItem {
+  name: string;
+  description: string;
+  category: string;
+  isRequired: boolean;
+}
+
+// GCC-specific document requirements by RFP type and region
+const GCC_DOCUMENT_TEMPLATES: Record<string, GeneratedChecklistItem[]> = {
+  government_uae: [
+    { name: "RFP/ITB Document", description: "Complete Request for Proposal or Invitation to Bid document", category: "core_documents", isRequired: true },
+    { name: "Commercial Registration (Trade License)", description: "Valid UAE trade license or commercial registration", category: "company_credentials", isRequired: true },
+    { name: "TRN/VAT Registration Certificate", description: "Tax Registration Number certificate from UAE FTA", category: "company_credentials", isRequired: true },
+    { name: "Company Profile", description: "Detailed company profile including capabilities and experience", category: "company_credentials", isRequired: true },
+    { name: "Financial Statements (Audited)", description: "Latest audited financial statements (2-3 years)", category: "financials", isRequired: true },
+    { name: "Bank Solvency Letter", description: "Bank letter confirming financial solvency", category: "financials", isRequired: true },
+    { name: "Similar Project Experience", description: "Documentation of similar completed projects", category: "experience", isRequired: true },
+    { name: "Technical Proposal", description: "Detailed technical approach and methodology", category: "proposals", isRequired: true },
+    { name: "Commercial/Pricing Proposal", description: "Itemized pricing and commercial terms", category: "proposals", isRequired: true },
+    { name: "Bid Bond/Security", description: "Bank guarantee or bid bond as per RFP requirements", category: "legal", isRequired: false },
+    { name: "Power of Attorney", description: "POA for authorized signatory", category: "legal", isRequired: true },
+    { name: "ISO Certifications", description: "Relevant ISO certifications (9001, 14001, 45001)", category: "certifications", isRequired: false },
+  ],
+  government_ksa: [
+    { name: "RFP/Tender Document", description: "Complete Request for Proposal from government portal", category: "core_documents", isRequired: true },
+    { name: "Commercial Registration (CR)", description: "Valid Saudi Commercial Registration certificate", category: "company_credentials", isRequired: true },
+    { name: "GOSI Certificate", description: "General Organization for Social Insurance compliance certificate", category: "company_credentials", isRequired: true },
+    { name: "Zakat & Income Tax Certificate", description: "ZATCA certificate for tax compliance", category: "company_credentials", isRequired: true },
+    { name: "Saudization Certificate (Nitaqat)", description: "Ministry of Human Resources Nitaqat compliance", category: "company_credentials", isRequired: true },
+    { name: "Company Profile", description: "Detailed company profile with local presence details", category: "company_credentials", isRequired: true },
+    { name: "Financial Statements (Audited)", description: "Latest audited financial statements", category: "financials", isRequired: true },
+    { name: "Bank Guarantee", description: "Bank guarantee as per tender requirements", category: "financials", isRequired: false },
+    { name: "Similar Project Experience", description: "Documentation of similar completed projects in KSA", category: "experience", isRequired: true },
+    { name: "Technical Proposal", description: "Detailed technical solution and methodology", category: "proposals", isRequired: true },
+    { name: "Commercial Proposal", description: "Pricing and commercial terms in SAR", category: "proposals", isRequired: true },
+    { name: "Pre-Qualification Certificate", description: "Vendor pre-qualification for relevant category", category: "certifications", isRequired: false },
+  ],
+  government_qatar: [
+    { name: "RFP/Tender Document", description: "Complete tender document from procuring entity", category: "core_documents", isRequired: true },
+    { name: "Commercial Registration", description: "Valid Qatar Commercial Registration (CR)", category: "company_credentials", isRequired: true },
+    { name: "Tax Card", description: "Valid Qatar Tax Card", category: "company_credentials", isRequired: true },
+    { name: "QFC License (if applicable)", description: "Qatar Financial Centre license if applicable", category: "company_credentials", isRequired: false },
+    { name: "Company Profile", description: "Detailed company profile and capabilities", category: "company_credentials", isRequired: true },
+    { name: "Financial Statements", description: "Latest audited financial statements", category: "financials", isRequired: true },
+    { name: "Bank Letter of Good Standing", description: "Bank confirmation of good financial standing", category: "financials", isRequired: true },
+    { name: "Project References", description: "References from similar completed projects", category: "experience", isRequired: true },
+    { name: "Technical Proposal", description: "Technical approach and methodology", category: "proposals", isRequired: true },
+    { name: "Financial Proposal", description: "Detailed pricing in QAR", category: "proposals", isRequired: true },
+    { name: "Bid Bond", description: "Bid bond/security as per tender requirements", category: "legal", isRequired: false },
+  ],
+  private_sector: [
+    { name: "RFP Document", description: "Request for Proposal or requirements document", category: "core_documents", isRequired: true },
+    { name: "Company Profile", description: "Corporate profile and capabilities overview", category: "company_credentials", isRequired: true },
+    { name: "Trade License/Registration", description: "Valid business registration", category: "company_credentials", isRequired: true },
+    { name: "Technical Proposal", description: "Technical solution and approach", category: "proposals", isRequired: true },
+    { name: "Commercial Proposal", description: "Pricing and commercial terms", category: "proposals", isRequired: true },
+    { name: "Project References", description: "Relevant project experience and references", category: "experience", isRequired: true },
+    { name: "Team CVs", description: "Key personnel CVs and qualifications", category: "experience", isRequired: false },
+    { name: "Insurance Certificates", description: "Professional liability and other relevant insurance", category: "legal", isRequired: false },
+  ],
+};
+
+// Generate checklist based on intake profile
+async function generateChecklistForProfile(profile: {
+  rfpType: string;
+  contractValueRange: string;
+  clientRegion: string;
+  clientType: string;
+  specialRequirements?: string | null;
+}): Promise<GeneratedChecklistItem[]> {
+  // Determine template key based on client type and region
+  let templateKey = 'private_sector';
+  
+  if (profile.clientType === 'government' || profile.clientType === 'semi_government') {
+    const region = profile.clientRegion.toLowerCase();
+    if (region.includes('uae') || region.includes('dubai') || region.includes('abu_dhabi')) {
+      templateKey = 'government_uae';
+    } else if (region.includes('saudi') || region.includes('ksa')) {
+      templateKey = 'government_ksa';
+    } else if (region.includes('qatar')) {
+      templateKey = 'government_qatar';
+    } else {
+      templateKey = 'government_uae'; // Default to UAE for other GCC
+    }
+  }
+  
+  const baseChecklist = [...(GCC_DOCUMENT_TEMPLATES[templateKey] || GCC_DOCUMENT_TEMPLATES.private_sector)];
+  
+  // Add value-based requirements for large contracts
+  if (profile.contractValueRange === 'large' || profile.contractValueRange === 'enterprise') {
+    baseChecklist.push(
+      { name: "Performance Bond Details", description: "Performance guarantee requirements and terms", category: "financials", isRequired: true },
+      { name: "Subcontractor Details", description: "Details of any subcontractors or partners", category: "experience", isRequired: false },
+      { name: "Risk Management Plan", description: "Project risk assessment and mitigation strategy", category: "proposals", isRequired: true }
+    );
+  }
+  
+  // Add certifications based on RFP type
+  if (profile.rfpType === 'it_services' || profile.rfpType === 'technology') {
+    baseChecklist.push(
+      { name: "ISO 27001 Certificate", description: "Information Security Management certification", category: "certifications", isRequired: false },
+      { name: "Data Protection Compliance", description: "GDPR/local data protection compliance documentation", category: "legal", isRequired: false }
+    );
+  }
+  
+  if (profile.rfpType === 'construction' || profile.rfpType === 'infrastructure') {
+    baseChecklist.push(
+      { name: "Safety Records", description: "HSE safety records and incident statistics", category: "certifications", isRequired: true },
+      { name: "Equipment List", description: "List of available equipment and resources", category: "experience", isRequired: true }
+    );
+  }
+  
+  return baseChecklist;
+}
+
 export async function registerRoutes(
   httpServer: Server,
   app: Express
@@ -1041,6 +1157,271 @@ export async function registerRoutes(
       }
     } catch (error: any) {
       console.error('Delete document error:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // ==================== CHECKLIST & VERIFICATION SYSTEM ====================
+
+  // GET /api/projects/:id/intake-profile - Get project intake profile
+  app.get("/api/projects/:id/intake-profile", authenticateToken, async (req: AuthRequest, res) => {
+    try {
+      const projectId = req.params.id;
+      const profile = await storage.getIntakeProfile(projectId);
+      res.json(profile || null);
+    } catch (error: any) {
+      console.error('Get intake profile error:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // POST /api/projects/:id/intake-profile - Create/Update intake profile
+  app.post("/api/projects/:id/intake-profile", authenticateToken, async (req: AuthRequest, res) => {
+    try {
+      const projectId = req.params.id;
+      const companyId = req.user?.companyId ?? null;
+      
+      // Verify project exists and belongs to user's company
+      const project = await storage.getProject(projectId, companyId);
+      if (!project) {
+        return res.status(404).json({ error: "Project not found" });
+      }
+
+      const { rfpType, contractValueRange, clientRegion, clientType, submissionDeadline, projectDuration, specialRequirements } = req.body;
+
+      // Check if profile already exists
+      const existingProfile = await storage.getIntakeProfile(projectId);
+      
+      if (existingProfile) {
+        const updated = await storage.updateIntakeProfile(projectId, {
+          rfpType,
+          contractValueRange,
+          clientRegion,
+          clientType,
+          submissionDeadline: submissionDeadline ? new Date(submissionDeadline) : null,
+          projectDuration,
+          specialRequirements,
+          isComplete: true,
+        });
+        res.json(updated);
+      } else {
+        const profile = await storage.createIntakeProfile({
+          projectId,
+          rfpType,
+          contractValueRange,
+          clientRegion,
+          clientType,
+          submissionDeadline: submissionDeadline ? new Date(submissionDeadline) : null,
+          projectDuration,
+          specialRequirements,
+          isComplete: true,
+        });
+        res.json(profile);
+      }
+
+      // Update project intake status
+      await storage.updateIntakeStatus(projectId, 'profile_created', companyId);
+    } catch (error: any) {
+      console.error('Create/Update intake profile error:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // GET /api/projects/:id/checklist - Get checklist items with progress
+  app.get("/api/projects/:id/checklist", authenticateToken, async (req: AuthRequest, res) => {
+    try {
+      const projectId = req.params.id;
+      const checklist = await storage.getChecklistWithProgress(projectId);
+      res.json(checklist);
+    } catch (error: any) {
+      console.error('Get checklist error:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // POST /api/projects/:id/checklist/generate - Generate checklist using AI based on intake profile
+  app.post("/api/projects/:id/checklist/generate", authenticateToken, async (req: AuthRequest, res) => {
+    try {
+      const projectId = req.params.id;
+      const companyId = req.user?.companyId ?? null;
+      
+      // Verify project exists
+      const project = await storage.getProject(projectId, companyId);
+      if (!project) {
+        return res.status(404).json({ error: "Project not found" });
+      }
+
+      // Get intake profile
+      const profile = await storage.getIntakeProfile(projectId);
+      if (!profile) {
+        return res.status(400).json({ error: "Please complete the intake profile first" });
+      }
+
+      // Delete existing checklist items
+      await storage.deleteChecklistItemsByProject(projectId);
+
+      // Generate AI-powered checklist based on profile
+      const checklistItems = await generateChecklistForProfile(profile);
+
+      // Create checklist items
+      const createdItems = await storage.createChecklistItems(
+        checklistItems.map((item, index) => ({
+          projectId,
+          name: item.name,
+          description: item.description,
+          category: item.category,
+          isRequired: item.isRequired,
+          sortOrder: index,
+          aiGenerated: true,
+        }))
+      );
+
+      // Update project intake status
+      await storage.updateIntakeStatus(projectId, 'documents_pending', companyId);
+
+      res.json({
+        items: createdItems,
+        totalRequired: createdItems.filter(i => i.isRequired).length,
+        uploadedCount: 0,
+        verifiedCount: 0,
+        completionPercentage: 0,
+      });
+    } catch (error: any) {
+      console.error('Generate checklist error:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // PATCH /api/checklist/:id - Update a checklist item
+  app.patch("/api/checklist/:id", authenticateToken, async (req: AuthRequest, res) => {
+    try {
+      const id = parseInt(req.params.id, 10);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "Invalid checklist item ID" });
+      }
+
+      const updates = req.body;
+      const updated = await storage.updateChecklistItem(id, updates);
+      
+      if (!updated) {
+        return res.status(404).json({ error: "Checklist item not found" });
+      }
+      
+      res.json(updated);
+    } catch (error: any) {
+      console.error('Update checklist item error:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // POST /api/checklist/:id/link-document - Link a document to a checklist item
+  app.post("/api/checklist/:id/link-document", authenticateToken, async (req: AuthRequest, res) => {
+    try {
+      const checklistItemId = parseInt(req.params.id, 10);
+      if (isNaN(checklistItemId)) {
+        return res.status(400).json({ error: "Invalid checklist item ID" });
+      }
+
+      const { documentId, confidence } = req.body;
+      if (!documentId) {
+        return res.status(400).json({ error: "documentId is required" });
+      }
+
+      const updated = await storage.linkDocumentToChecklistItem(
+        checklistItemId,
+        documentId,
+        confidence ?? 1.0
+      );
+      
+      if (!updated) {
+        return res.status(404).json({ error: "Checklist item not found" });
+      }
+      
+      res.json(updated);
+    } catch (error: any) {
+      console.error('Link document to checklist error:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // GET /api/projects/:id/integrity-reports - Get all document integrity reports for a project
+  app.get("/api/projects/:id/integrity-reports", authenticateToken, async (req: AuthRequest, res) => {
+    try {
+      const projectId = req.params.id;
+      const reports = await storage.getIntegrityReportsByProject(projectId);
+      res.json(reports);
+    } catch (error: any) {
+      console.error('Get integrity reports error:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // GET /api/documents/:id/integrity-report - Get integrity report for a specific document
+  app.get("/api/documents/:id/integrity-report", authenticateToken, async (req: AuthRequest, res) => {
+    try {
+      const documentId = parseInt(req.params.id, 10);
+      if (isNaN(documentId)) {
+        return res.status(400).json({ error: "Invalid document ID" });
+      }
+      
+      const report = await storage.getDocumentIntegrityReport(documentId);
+      res.json(report || null);
+    } catch (error: any) {
+      console.error('Get integrity report error:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // GET /api/projects/:id/requirements - Get all requirements with coverage status
+  app.get("/api/projects/:id/requirements", authenticateToken, async (req: AuthRequest, res) => {
+    try {
+      const projectId = req.params.id;
+      const requirements = await storage.getRequirementsWithCoverage(projectId);
+      res.json(requirements);
+    } catch (error: any) {
+      console.error('Get requirements error:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // GET /api/projects/:id/verification-gates - Get all verification gates for a project
+  app.get("/api/projects/:id/verification-gates", authenticateToken, async (req: AuthRequest, res) => {
+    try {
+      const projectId = req.params.id;
+      const gates = await storage.getVerificationGates(projectId);
+      res.json(gates);
+    } catch (error: any) {
+      console.error('Get verification gates error:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // POST /api/projects/:id/verification-gates/:gateNumber/acknowledge - Acknowledge a verification gate
+  app.post("/api/projects/:id/verification-gates/:gateNumber/acknowledge", authenticateToken, async (req: AuthRequest, res) => {
+    try {
+      const projectId = req.params.id;
+      const gateNumber = parseInt(req.params.gateNumber, 10);
+      const userId = req.user?.userId;
+      const { acknowledgeWithRisks } = req.body;
+
+      if (!userId) {
+        return res.status(401).json({ error: "User not authenticated" });
+      }
+
+      const gate = await storage.acknowledgeGate(
+        projectId,
+        gateNumber,
+        userId,
+        acknowledgeWithRisks ?? false
+      );
+      
+      if (!gate) {
+        return res.status(404).json({ error: "Verification gate not found" });
+      }
+      
+      res.json(gate);
+    } catch (error: any) {
+      console.error('Acknowledge gate error:', error);
       res.status(500).json({ error: error.message });
     }
   });

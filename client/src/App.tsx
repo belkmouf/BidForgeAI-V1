@@ -27,6 +27,7 @@ import OnboardingWizard from "@/pages/OnboardingWizard";
 import PublicBidView from "@/pages/PublicBidView";
 import DocumentSummary from "@/pages/DocumentSummary";
 import SummaryReview from "@/pages/SummaryReview";
+import ProjectChecklist from "@/pages/ProjectChecklist";
 
 function ProtectedRoute({ component: Component, requireOnboarding = true }: { component: React.ComponentType; requireOnboarding?: boolean }) {
   const { isAuthenticated, isLoading, user } = useAuthStore();
@@ -147,6 +148,9 @@ function Router() {
       </Route>
       <Route path="/projects/:id">
         {() => <ProtectedRoute component={ProjectWorkspace} />}
+      </Route>
+      <Route path="/projects/:id/checklist">
+        {() => <ProtectedRoute component={ProjectChecklist} />}
       </Route>
       <Route path="/projects/:id/documents">
         {() => <ProtectedRoute component={DocumentSummary} />}
