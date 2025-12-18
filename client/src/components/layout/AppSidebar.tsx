@@ -196,13 +196,18 @@ export function AppSidebar() {
 
         {/* Project-specific navigation */}
         {isProjectPage && (
-          <>
+          <div 
+            className={cn(
+              "mt-4 rounded-lg",
+              isCollapsed ? "mx-1 p-1" : "mx-2 p-2"
+            )}
+            style={{ backgroundColor: 'rgba(255,255,255,0.1)' }}
+          >
             {!isCollapsed && (
-              <div className="px-3 mt-6 mb-4 text-[10px] font-semibold uppercase tracking-[0.2em] text-[#f0f1f2]">
+              <div className="px-2 mb-3 pt-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-white/90">
                 Project Steps
               </div>
             )}
-            {isCollapsed && <div className="border-t border-white/20 my-2" />}
             {projectNavItems.map((item) => {
               const isExact = 'exact' in item && item.exact;
               const isActive = isExact 
@@ -215,11 +220,11 @@ export function AppSidebar() {
                   data-testid={`link-project-${item.label.toLowerCase().replace(/\s+/g, '-')}`}
                   className={cn(
                     "flex items-center transition-all duration-300 group rounded-md",
-                    isCollapsed ? "justify-center p-3" : "gap-3 px-3 py-2.5",
-                    !isActive && "text-white/80 hover:bg-white/10 hover:text-white"
+                    isCollapsed ? "justify-center p-2.5" : "gap-3 px-2 py-2",
+                    !isActive && "text-white/90 hover:bg-white/15 hover:text-white"
                   )}
                   style={isActive ? { 
-                    backgroundColor: 'rgba(255,255,255,0.2)', 
+                    backgroundColor: 'rgba(255,255,255,0.25)', 
                     color: 'white',
                     borderLeft: isCollapsed ? 'none' : '2px solid white',
                     marginLeft: isCollapsed ? '0' : '-1px'
@@ -234,7 +239,7 @@ export function AppSidebar() {
                 </Link>
               );
             })}
-          </>
+          </div>
         )}
       </nav>
       <div className={cn("p-2", isCollapsed ? "p-2" : "p-4")}>
