@@ -548,87 +548,8 @@ export default function ProjectWorkspace() {
 
             <ScrollArea className="flex-1">
               <div className="p-4 space-y-6">
-                {/* AI Bid Generator Section */}
-                <div>
-                  <div className="flex items-center gap-2 mb-1">
-                    <Sparkles className="w-5 h-5 text-primary" />
-                    <h3 className="font-semibold">AI Bid Generator</h3>
-                  </div>
-                  <p className="text-xs text-muted-foreground mb-4">Powered by Claude</p>
-
-                  <div className="space-y-4">
-                    <div>
-                      <label className="text-xs text-muted-foreground block mb-1.5">AI Model</label>
-                      <Select value={selectedModel} onValueChange={(v) => setSelectedModel(v as AIModel)}>
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="openai">OpenAI GPT-4o</SelectItem>
-                          <SelectItem value="anthropic">Anthropic Claude</SelectItem>
-                          <SelectItem value="gemini">Google Gemini</SelectItem>
-                          <SelectItem value="deepseek">DeepSeek</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div>
-                      <label className="text-xs text-muted-foreground block mb-1.5">Tone & Style</label>
-                      <Select value={toneStyle} onValueChange={setToneStyle}>
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="technical">Highly Technical</SelectItem>
-                          <SelectItem value="professional">Professional</SelectItem>
-                          <SelectItem value="persuasive">Persuasive</SelectItem>
-                          <SelectItem value="concise">Concise</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div>
-                      <label className="text-xs text-muted-foreground block mb-1.5">Instructions Preset</label>
-                      <Select defaultValue="default">
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select instruction preset" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="default">Default</SelectItem>
-                          <SelectItem value="detailed">Detailed Response</SelectItem>
-                          <SelectItem value="brief">Brief Summary</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <Button 
-                      className="w-full gap-2 h-11"
-                      onClick={handleGenerate}
-                      disabled={isGenerating}
-                      data-testid="button-generate"
-                    >
-                      {isGenerating ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                      ) : (
-                        <Sparkles className="w-4 h-4" />
-                      )}
-                      {isGenerating ? 'Generating...' : 'Generate Draft'}
-                    </Button>
-                  </div>
-                </div>
-
-                {/* Agent Progress */}
-                {showAgentProgress && (
-                  <AgentProgressPanel 
-                    projectId={projectId}
-                    isActive={showAgentProgress}
-                    onComplete={handleAgentWorkflowComplete}
-                    onCancel={handleCancelWorkflow}
-                  />
-                )}
-
                 {/* Refinement Chat */}
-                <div className="pt-4 border-t">
+                <div>
                   <h3 className="font-semibold mb-2 flex items-center gap-2">
                     <RefreshCw className="w-4 h-4 text-primary" />
                     Refinement Chat
