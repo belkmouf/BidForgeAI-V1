@@ -24,6 +24,7 @@ import { Alert, AlertDescription } from '../components/ui/alert';
 import { ProjectWorkflowLayout, getWorkflowSteps } from '../components/workflow/ProjectWorkflowLayout';
 import { useProjectProgress } from '../hooks/useProjectProgress';
 import { DropZone, type ProcessingProgress } from '../components/upload/DropZone';
+import { DocumentIntegrityPanel } from '../components/verification/DocumentIntegrityPanel';
 
 function formatFileSize(bytes: number): string {
   if (bytes === 0) return '0 Bytes';
@@ -722,6 +723,16 @@ export default function DocumentSummary() {
             )}
           </CardContent>
         </Card>
+
+        {/* Document Integrity Panel - Gate #1 */}
+        {data.documents.length > 0 && (
+          <div className="mb-6">
+            <DocumentIntegrityPanel 
+              projectId={id || ''} 
+              compact={true}
+            />
+          </div>
+        )}
 
         {/* Document Preview Panel */}
         {data.documents.length > 0 && (
