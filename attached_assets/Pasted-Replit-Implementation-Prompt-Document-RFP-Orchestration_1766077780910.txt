@@ -1,0 +1,35 @@
+Replit Implementation Prompt: Document & RFP Orchestration Flow
+Objective: Modify the existing application flow to implement a sequential, state-driven pipeline for RFP processing. Maintain the core logic of the individual agents and their interaction with the central Orchestrator, but update the UI/UX routing and backend handshakes.
+
+1. The Workflow Sequence
+Please implement/update the following sequential stages
+
+	1.1 Document Upload Phase: A dedicated view for file ingestion.
+
+if the document is an image trigger the sketch agent. and send json generated to summarization agent else trigger summarization agent
+
+	1.2 Summarization Agent Phase: * Trigger the Summarization Agent immediately after upload.
+
+Present the output in a format manner( bullets points, tables etc..) and in an editable text area.
+
+The user must "Accept" or "Save" the summary to proceed.
+
+	1.3 RFP Analysis Phase: Once the summary is accepted, pass the data to the Analysis Agent to extract key requirements and metadata.
+
+	1.4 Conflict Check Phase: Run the analyzed requirements against historical data or internal constraints.
+
+	1.5 Response Generation: Trigger the Generation Agent to produce the initial bid draft.
+
+	1.6 Feedback & Iteration Loop: Provide a feedback interface where the user can submit corrections, triggering the Orchestrator to update the bid.
+
+2. Technical Requirements
+	2.1 State Management: Ensure the ProjectStatus in the database updates at each step (e.g., STATUS_SUMMARIZING, STATUS_ANALYZING, STATUS_COMPLETED).
+
+Orchestrator Logic: The Orchestrator should remain the "brain." Do not change how agents process data; only change when they are called and how the user interacts with their output.
+
+Persistence: Save the "Edited Summary" back to the database so the subsequent RFP Analysis phase uses the user-corrected version, not the raw agent output.
+
+3. UI/UX Instructions
+Create a "Stepper" component to show the user where they are in the process (Upload -> Summary -> Analysis -> Conflict -> Generation).
+
+Add a "Review & Edit" screen specifically for the Summarization step before allowing the transition to RFP Analysis.

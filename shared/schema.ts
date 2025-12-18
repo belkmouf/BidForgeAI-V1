@@ -3,9 +3,23 @@ import { pgTable, text, varchar, timestamp, jsonb, boolean, integer, vector, rea
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
 
-// Project Status Enum
+// Project Status Enum (Business Status)
 export const projectStatusEnum = z.enum(["Active", "Submitted", "Closed-Won", "Closed-Lost"]);
 export type ProjectStatus = z.infer<typeof projectStatusEnum>;
+
+// Workflow Status Enum (Pipeline Stage)
+export const workflowStatusEnum = z.enum([
+  "uploading",        // Document upload phase
+  "summarizing",      // Summarization agent processing
+  "summary_review",   // User reviewing/editing summary
+  "analyzing",        // RFP Analysis agent processing
+  "analysis_review",  // User reviewing analysis
+  "conflict_check",   // Conflict detection running
+  "generating",       // Bid generation in progress
+  "review",           // Final review phase
+  "completed"         // All steps completed
+]);
+export type WorkflowStatus = z.infer<typeof workflowStatusEnum>;
 
 // Risk Level Enum
 export const riskLevelEnum = z.enum(["Low", "Medium", "High", "Critical"]);
@@ -204,6 +218,7 @@ export const projects = pgTable("projects", {
   clientName: text("client_name").notNull(),
   description: text("description"),
   status: text("status").notNull().default("Active"),
+  workflowStatus: varchar("workflow_status", { length: 50 }).notNull().default("uploading"),
   isArchived: boolean("is_archived").default(false).notNull(),
   metadata: jsonb("metadata").default(sql`'{}'::jsonb`),
   createdAt: timestamp("created_at").defaultNow().notNull(),
