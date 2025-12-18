@@ -726,11 +726,10 @@ export default function DocumentSummary() {
                   {selectedDocument ? (
                     selectedDocument.summary ? (
                       <div className="space-y-4">
-                        <div className="prose prose-sm max-w-none">
-                          <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">
-                            {selectedDocument.summary.summaryContent}
-                          </p>
-                        </div>
+                        <div 
+                          className="prose prose-sm max-w-none text-sm text-foreground leading-relaxed [&_h2]:text-base [&_h2]:font-semibold [&_h2]:mt-4 [&_h2]:mb-2 [&_ul]:list-disc [&_ul]:pl-4 [&_li]:mb-1 [&_table]:w-full [&_table]:text-xs [&_th]:bg-muted [&_th]:p-2 [&_td]:p-2 [&_td]:border"
+                          dangerouslySetInnerHTML={{ __html: selectedDocument.summary.summaryContent }}
+                        />
                         {selectedDocument.keyInformation && Object.keys(selectedDocument.keyInformation).length > 0 && (
                           <div className="pt-4 border-t">
                             <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
