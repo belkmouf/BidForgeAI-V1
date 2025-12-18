@@ -17,7 +17,7 @@ import { Badge } from '../components/ui/badge';
 import { Progress } from '../components/ui/progress';
 import { Separator } from '../components/ui/separator';
 import { ScrollArea } from '../components/ui/scroll-area';
-import { Loader2, FileText, CheckCircle, AlertCircle, Clock, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, FileCheck, AlertTriangle, TrendingUp, Download, RefreshCw, Edit2, Save, X, Upload } from 'lucide-react';
+import { Loader2, FileText, CheckCircle, AlertCircle, Clock, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, FileCheck, AlertTriangle, TrendingUp, Download, RefreshCw, Edit2, Save, X, Upload, Image as ImageIcon } from 'lucide-react';
 import { Textarea } from '../components/ui/textarea';
 import { Alert, AlertDescription } from '../components/ui/alert';
 import { ProjectWorkflowLayout, getWorkflowSteps } from '../components/workflow/ProjectWorkflowLayout';
@@ -44,6 +44,16 @@ function formatDate(dateString: string): string {
   return date.toLocaleDateString();
 }
 
+function isImageFile(filename: string): boolean {
+  const imageExtensions = ['.png', '.jpg', '.jpeg', '.gif', '.tiff', '.bmp', '.webp'];
+  const ext = filename.toLowerCase().match(/\.[^.]*$/)?.[0] || '';
+  return imageExtensions.includes(ext);
+}
+
+function getImageUrl(filename: string): string {
+  return `/api/documents/image/${encodeURIComponent(filename)}`;
+}
+
 function DocumentCard({ 
   document, 
   isSelected, 
@@ -64,7 +74,11 @@ function DocumentCard({
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-3">
-            <FileText className={`w-5 h-5 ${isSelected ? 'text-primary' : 'text-blue-500'}`} />
+            {isImageFile(document.filename) ? (
+              <ImageIcon className={`w-5 h-5 ${isSelected ? 'text-primary' : 'text-emerald-500'}`} />
+            ) : (
+              <FileText className={`w-5 h-5 ${isSelected ? 'text-primary' : 'text-blue-500'}`} />
+            )}
             <div>
               <CardTitle className="text-base">{document.filename}</CardTitle>
               <div className="flex items-center gap-2 mt-1 text-sm text-gray-500">
@@ -713,8 +727,12 @@ export default function DocumentSummary() {
               <Card className="h-[500px] flex flex-col">
                 <CardHeader className="pb-3 flex-shrink-0">
                   <CardTitle className="text-lg flex items-center gap-2">
-                    <FileCheck className="w-5 h-5 text-primary" />
-                    Document Summary
+                    {selectedDocument && isImageFile(selectedDocument.filename) ? (
+                      <ImageIcon className="w-5 h-5 text-primary" />
+                    ) : (
+                      <FileCheck className="w-5 h-5 text-primary" />
+                    )}
+                    {selectedDocument && isImageFile(selectedDocument.filename) ? 'Image Preview' : 'Document Summary'}
                   </CardTitle>
                   {selectedDocument && (
                     <CardDescription className="truncate">
@@ -724,7 +742,32 @@ export default function DocumentSummary() {
                 </CardHeader>
                 <ScrollArea className="flex-1 px-6 pb-4" data-testid="summary-scroll-area">
                   {selectedDocument ? (
-                    selectedDocument.summary ? (
+                    isImageFile(selectedDocument.filename) ? (
+                      <div className="flex flex-col items-center justify-center h-full space-y-4">
+                        <div className="relative w-full h-[350px] bg-muted/50 rounded-lg overflow-hidden flex items-center justify-center">
+                          <img
+                            src={getImageUrl(selectedDocument.filename)}
+                            alt={selectedDocument.filename}
+                            className="max-w-full max-h-full object-contain"
+                            data-testid="image-preview"
+                            onError={(e) => {
+                              const target = e.target as HTMLImageElement;
+                              target.style.display = 'none';
+                              target.parentElement!.innerHTML = '<div class="text-center text-muted-foreground"><p>Image preview not available</p><p class="text-xs mt-1">The image may still be processing</p></div>';
+                            }}
+                          />
+                        </div>
+                        {selectedDocument.summary && (
+                          <div className="w-full p-3 bg-muted/30 rounded-lg">
+                            <h4 className="text-sm font-medium mb-2">AI Analysis</h4>
+                            <div 
+                              className="prose prose-sm max-w-none text-xs text-muted-foreground"
+                              dangerouslySetInnerHTML={{ __html: selectedDocument.summary.summaryContent }}
+                            />
+                          </div>
+                        )}
+                      </div>
+                    ) : selectedDocument.summary ? (
                       <div className="space-y-4">
                         <div 
                           className="prose prose-sm max-w-none text-sm text-foreground leading-relaxed [&_h2]:text-base [&_h2]:font-semibold [&_h2]:mt-4 [&_h2]:mb-2 [&_ul]:list-disc [&_ul]:pl-4 [&_li]:mb-1 [&_table]:w-full [&_table]:text-xs [&_th]:bg-muted [&_th]:p-2 [&_td]:p-2 [&_td]:border"

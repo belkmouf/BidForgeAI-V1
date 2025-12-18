@@ -741,16 +741,23 @@ export async function registerRoutes(
             const version = await storage.getNextVersionForFilename(projectId, originalFilename);
             const versionedFilename = getVersionedFilename(safeFilename, version);
             
+            // Save the actual image file to uploads/images/ for preview
+            const imagesDir = path.join(process.cwd(), 'uploads', 'images');
+            await fs.mkdir(imagesDir, { recursive: true });
+            const imagePath = path.join(imagesDir, versionedFilename);
+            await fs.writeFile(imagePath, sketch.buffer);
+            console.log(`Saved image to filesystem: ${imagePath} (${sketch.buffer.length} bytes)`);
+            
             // Only create records if analysis was successful
             if (sketchResult) {
               const sketchContent = JSON.stringify(sketchResult, null, 2);
               
-              // Save the image document reference (not for RAG, just tracking)
+              // Save the image document reference with image path for preview
               const sketchDoc = await storage.createDocument({
                 projectId,
                 filename: versionedFilename,
                 originalFilename: originalFilename,
-                content: `[Image: ${originalFilename}] - See analysis.txt for extracted data`,
+                content: `[Image: ${originalFilename}] - See analysis.txt for extracted data\n[ImagePath: /api/documents/image/${versionedFilename}]`,
                 isProcessed: true,
                 version,
               });
@@ -827,7 +834,7 @@ export async function registerRoutes(
                 projectId,
                 filename: versionedFilename,
                 originalFilename: originalFilename,
-                content: JSON.stringify({ status: 'analysis_failed', filename: versionedFilename, error: 'Vision analysis did not return valid results' }),
+                content: `[Image: ${originalFilename}] - Analysis failed\n[ImagePath: /api/documents/image/${versionedFilename}]`,
                 isProcessed: true, // Mark as processed to prevent stuck state
                 version,
               });
@@ -1034,6 +1041,48 @@ export async function registerRoutes(
       }
     } catch (error: any) {
       console.error('Delete document error:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // ==================== DOCUMENT IMAGES ====================
+
+  // GET /api/documents/image/:filename - Serve uploaded image files for preview
+  app.get("/api/documents/image/:filename", async (req, res) => {
+    try {
+      const { filename } = req.params;
+      
+      // Sanitize filename to prevent directory traversal
+      const safeFilename = path.basename(filename);
+      const imagePath = path.join(process.cwd(), 'uploads', 'images', safeFilename);
+      
+      // Check if file exists
+      try {
+        await fsPromises.access(imagePath);
+      } catch {
+        return res.status(404).json({ error: "Image not found" });
+      }
+      
+      // Get file extension and set appropriate content type
+      const ext = path.extname(safeFilename).toLowerCase();
+      const contentTypes: Record<string, string> = {
+        '.jpg': 'image/jpeg',
+        '.jpeg': 'image/jpeg',
+        '.png': 'image/png',
+        '.gif': 'image/gif',
+        '.webp': 'image/webp',
+        '.bmp': 'image/bmp',
+        '.tiff': 'image/tiff',
+      };
+      
+      const contentType = contentTypes[ext] || 'application/octet-stream';
+      res.setHeader('Content-Type', contentType);
+      res.setHeader('Cache-Control', 'public, max-age=86400'); // Cache for 24 hours
+      
+      const imageBuffer = await fsPromises.readFile(imagePath);
+      res.send(imageBuffer);
+    } catch (error: any) {
+      console.error('Error serving image:', error);
       res.status(500).json({ error: error.message });
     }
   });
