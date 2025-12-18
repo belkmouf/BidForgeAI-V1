@@ -612,3 +612,48 @@ export async function exportProjectSummary(projectId: string, format: 'pdf' | 'j
     return res.json();
   }
 }
+
+// ============ DOCUMENT SUMMARY API CALLS ============
+
+export async function getDocumentSummary(documentId: number) {
+  const res = await apiRequest(`${API_BASE}/documents/${documentId}/summary`);
+  if (!res.ok) {
+    if (res.status === 404) {
+      throw new Error('Summary not found');
+    }
+    throw new Error('Failed to fetch document summary');
+  }
+  return res.json();
+}
+
+export async function updateSummary(
+  summaryId: number,
+  updates: {
+    summaryContent?: string;
+    structuredData?: any;
+  }
+) {
+  const res = await apiRequest(`${API_BASE}/summaries/${summaryId}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(updates),
+  });
+  if (!res.ok) throw new Error('Failed to update summary');
+  return res.json();
+}
+
+export async function getProjectSummaries(projectId: string) {
+  const res = await apiRequest(`${API_BASE}/projects/${projectId}/summaries`);
+  if (!res.ok) throw new Error('Failed to fetch project summaries');
+  return res.json();
+}
+
+export async function regenerateDocumentSummary(documentId: number) {
+  const res = await apiRequest(`${API_BASE}/documents/${documentId}/regenerate-summary`, {
+    method: 'POST',
+  });
+  if (!res.ok) throw new Error('Failed to regenerate summary');
+  return res.json();
+}

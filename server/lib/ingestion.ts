@@ -8,6 +8,7 @@ import mammoth from 'mammoth';
 import { pool } from '../db';
 import { generateEmbedding } from './openai.js';
 import { RecursiveCharacterTextSplitter } from '@langchain/textsplitters';
+import { documentSummarizationService } from './document-summarization.js';
 
 // PDF parsing - use pdf-parse with PDFParse class
 async function parsePdf(buffer: Buffer): Promise<{ text: string }> {
@@ -412,6 +413,17 @@ export class IngestionService {
       throw new Error(`Document ingestion failed for ${filename}: ${error}`);
     } finally {
       client.release();
+    }
+
+    // Generate document summary asynchronously (don't block on failure)
+    try {
+      console.log(`Generating summary for document ${documentId} (${versionedFilename})...`);
+      const summaryResult = await documentSummarizationService.summarizeDocument(documentId);
+      console.log(`✅ Generated summary ${summaryResult.summaryId} with ${summaryResult.chunksCreated} summary chunks in ${summaryResult.processingTimeMs}ms`);
+    } catch (summaryError) {
+      // Log but don't fail the ingestion if summary generation fails
+      console.error(`⚠️  Summary generation failed for document ${documentId}:`, summaryError);
+      // Original chunks are still available, summary can be regenerated later
     }
 
     return {

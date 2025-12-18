@@ -16,6 +16,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { toast } from '@/hooks/use-toast';
 import { getProject, listDocuments, uploadDocument, uploadDocumentWithProgress, deleteDocument, generateBid, refineBid, getLatestBid, wrapInTemplate, generateShareLink, updateProjectStatus, startAgentWorkflow, cancelAgentWorkflow, type AIModel, type ProcessingProgress } from '@/lib/api';
 import { AgentProgressPanel } from '@/components/agents/AgentProgressPanel';
+import { DocumentSummaryEditor } from '@/components/documents/DocumentSummaryEditor';
+import { ProjectSummariesPanel } from '@/components/documents/ProjectSummariesPanel';
 import type { Project, Document } from '@shared/schema';
 
 const initialEditorContent = '<h1>Welcome to BidForge AI</h1><p>Use the Generate panel to create your first bid draft, or start typing to manually build your proposal.</p>';
@@ -37,6 +39,9 @@ export default function ProjectWorkspace() {
   const [isSharing, setIsSharing] = useState(false);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
   const [showAgentProgress, setShowAgentProgress] = useState(false);
+  const [selectedDocumentForSummary, setSelectedDocumentForSummary] = useState<number | null>(null);
+  const [selectedDocumentName, setSelectedDocumentName] = useState<string>('');
+  const [showSummaries, setShowSummaries] = useState(false);
   const isCollapsed = useSidebarStore((state) => state.isCollapsed);
 
   const handleStatusChange = async (newStatus: string) => {
@@ -467,36 +472,67 @@ export default function ProjectWorkspace() {
         <div className="flex-1 overflow-hidden">
           <ResizablePanelGroup direction="horizontal">
             
-            {/* Left: Upload Zone + Bid History */}
+            {/* Left: Upload Zone + Bid History + Summaries */}
             <ResizablePanel defaultSize={20} minSize={15} maxSize={30} className="bg-primary/20">
               <ScrollArea className="h-full">
                 <div className="p-4 flex flex-col gap-4">
-                  <div>
-                    <h2 className="font-semibold text-sm mb-4 flex items-center gap-2">
-                      Source Documents
-                    </h2>
-                    <DropZone 
-                      files={documents.filter(doc => doc).map(doc => ({
-                        name: doc.filename,
-                        size: 0,
-                        uploadedAt: new Date(doc.uploadedAt),
-                        id: doc.id.toString(),
-                        isProcessed: doc.isProcessed
-                      }))}
-                      onUploadWithProgress={handleFileUploadWithProgress}
-                      onDelete={handleDeleteDocument}
-                    />
-                  </div>
-                  <div>
-                    <BidHistory 
-                      projectId={projectId} 
-                      onSelectBid={(content, bidId) => {
-                        setEditorContent(content);
-                        if (bidId) setCurrentBidId(bidId);
-                      }}
-                      refreshTrigger={bidRefreshTrigger}
-                    />
-                  </div>
+                  <Tabs defaultValue="documents" className="w-full">
+                    <TabsList className="grid w-full grid-cols-2 mb-4">
+                      <TabsTrigger value="documents" onClick={() => setShowSummaries(false)}>
+                        Documents
+                      </TabsTrigger>
+                      <TabsTrigger value="summaries" onClick={() => setShowSummaries(true)}>
+                        Summaries
+                      </TabsTrigger>
+                    </TabsList>
+
+                    <div className="space-y-4">
+                      {!showSummaries ? (
+                        <>
+                          <div>
+                            <h2 className="font-semibold text-sm mb-4 flex items-center gap-2">
+                              Source Documents
+                            </h2>
+                            <DropZone
+                              files={documents.filter(doc => doc).map(doc => ({
+                                name: doc.filename,
+                                size: 0,
+                                uploadedAt: new Date(doc.uploadedAt),
+                                id: doc.id.toString(),
+                                isProcessed: doc.isProcessed
+                              }))}
+                              onUploadWithProgress={handleFileUploadWithProgress}
+                              onDelete={handleDeleteDocument}
+                            />
+                          </div>
+                          <div>
+                            <BidHistory
+                              projectId={projectId}
+                              onSelectBid={(content, bidId) => {
+                                setEditorContent(content);
+                                if (bidId) setCurrentBidId(bidId);
+                              }}
+                              refreshTrigger={bidRefreshTrigger}
+                            />
+                          </div>
+                        </>
+                      ) : (
+                        <div>
+                          <h2 className="font-semibold text-sm mb-4 flex items-center gap-2">
+                            Document Summaries
+                          </h2>
+                          <ProjectSummariesPanel
+                            projectId={projectId}
+                            onSelectDocument={(docId, docName) => {
+                              setSelectedDocumentForSummary(docId);
+                              setSelectedDocumentName(docName);
+                              setShowSummaries(true);
+                            }}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  </Tabs>
                 </div>
               </ScrollArea>
             </ResizablePanel>
@@ -521,7 +557,18 @@ export default function ProjectWorkspace() {
                   </Tabs>
                 </div>
                 <div className="flex-1 px-6 pb-6 overflow-hidden">
-                  {viewMode === 'edit' ? (
+                  {showSummaries && selectedDocumentForSummary ? (
+                    <DocumentSummaryEditor
+                      documentId={selectedDocumentForSummary}
+                      documentName={selectedDocumentName}
+                      onSave={() => {
+                        toast({
+                          title: "Summary Updated",
+                          description: "RAG chunks have been regenerated.",
+                        });
+                      }}
+                    />
+                  ) : viewMode === 'edit' ? (
                     <TiptapEditor content={editorContent} onChange={setEditorContent} />
                   ) : isLoadingPreview ? (
                     <div className="h-full flex items-center justify-center bg-white rounded-lg border">

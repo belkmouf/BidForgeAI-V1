@@ -2,7 +2,7 @@ import type { Express, Response, NextFunction, RequestHandler } from "express";
 import { createServer, type Server } from "http";
 import * as crypto from "crypto";
 import { storage } from "./storage";
-import { insertProjectSchema, insertDocumentSchema, users } from "@shared/schema";
+import { insertProjectSchema, insertDocumentSchema, users, documents, documentSummaries } from "@shared/schema";
 import { hashPassword, generateAccessToken } from "./lib/auth";
 import { db } from "./db";
 import { eq, sql } from "drizzle-orm";
@@ -11,6 +11,7 @@ import { generateBidWithAnthropic, refineBidWithAnthropic } from "./lib/anthropi
 import { generateBidWithGemini, refineBidWithGemini } from "./lib/gemini";
 import { generateBidWithDeepSeek, refineBidWithDeepSeek } from "./lib/deepseek";
 import { ingestionService } from "./lib/ingestion";
+import { documentSummarizationService } from "./lib/document-summarization";
 import { 
   analyzeRFP, 
   saveAnalysis, 
@@ -962,6 +963,166 @@ export async function registerRoutes(
       }
     } catch (error: any) {
       console.error('Delete document error:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // ==================== DOCUMENT SUMMARIES ====================
+
+  // GET /api/documents/:id/summary - Get summary for a specific document
+  app.get("/api/documents/:id/summary", authenticateToken, async (req: AuthRequest, res) => {
+    try {
+      const documentId = parseInt(req.params.id);
+      const companyId = req.user?.companyId ?? null;
+
+      // Verify document belongs to user's company
+      const [doc] = await db
+        .select({ projectId: documents.projectId })
+        .from(documents)
+        .where(eq(documents.id, documentId))
+        .limit(1);
+
+      if (!doc) {
+        return res.status(404).json({ error: "Document not found" });
+      }
+
+      // Verify project belongs to company
+      const project = await storage.getProject(doc.projectId, companyId);
+      if (!project) {
+        return res.status(403).json({ error: "Access denied" });
+      }
+
+      const summary = await documentSummarizationService.getSummary(documentId);
+
+      if (!summary) {
+        return res.status(404).json({ error: "Summary not found for this document" });
+      }
+
+      res.json(summary);
+    } catch (error: any) {
+      console.error('Error fetching document summary:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // PUT /api/summaries/:id - Update a document summary
+  app.put("/api/summaries/:id", authenticateToken, async (req: AuthRequest, res) => {
+    try {
+      const summaryId = parseInt(req.params.id);
+      const companyId = req.user?.companyId ?? null;
+      const { summaryContent, structuredData } = req.body;
+
+      // Get existing summary to verify ownership
+      const [existing] = await db
+        .select({
+          id: documentSummaries.id,
+          documentId: documentSummaries.documentId,
+          projectId: documentSummaries.projectId,
+        })
+        .from(documentSummaries)
+        .where(eq(documentSummaries.id, summaryId))
+        .limit(1);
+
+      if (!existing) {
+        return res.status(404).json({ error: "Summary not found" });
+      }
+
+      // Verify project belongs to company
+      const project = await storage.getProject(existing.projectId, companyId);
+      if (!project) {
+        return res.status(403).json({ error: "Access denied" });
+      }
+
+      // Update summary and regenerate chunks
+      await documentSummarizationService.updateSummary(summaryId, {
+        summaryContent,
+        structuredData,
+      });
+
+      // Fetch updated summary
+      const updated = await documentSummarizationService.getSummary(existing.documentId);
+
+      res.json({
+        success: true,
+        message: "Summary updated and chunks regenerated",
+        summary: updated,
+      });
+    } catch (error: any) {
+      console.error('Error updating summary:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // GET /api/projects/:id/summaries - Get all summaries for a project
+  app.get("/api/projects/:id/summaries", authenticateToken, async (req: AuthRequest, res) => {
+    try {
+      const projectId = req.params.id;
+      const companyId = req.user?.companyId ?? null;
+
+      // Verify project belongs to company
+      const project = await storage.getProject(projectId, companyId);
+      if (!project) {
+        return res.status(404).json({ error: "Project not found" });
+      }
+
+      // Get all summaries with document info
+      const summaries = await db
+        .select({
+          summary: documentSummaries,
+          document: {
+            id: documents.id,
+            filename: documents.filename,
+            uploadedAt: documents.uploadedAt,
+          },
+        })
+        .from(documentSummaries)
+        .innerJoin(documents, eq(documentSummaries.documentId, documents.id))
+        .where(eq(documentSummaries.projectId, projectId));
+
+      res.json(summaries);
+    } catch (error: any) {
+      console.error('Error fetching project summaries:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // POST /api/documents/:id/regenerate-summary - Manually trigger summary regeneration
+  app.post("/api/documents/:id/regenerate-summary", authenticateToken, async (req: AuthRequest, res) => {
+    try {
+      const documentId = parseInt(req.params.id);
+      const companyId = req.user?.companyId ?? null;
+
+      // Verify document access
+      const [doc] = await db
+        .select()
+        .from(documents)
+        .where(eq(documents.id, documentId))
+        .limit(1);
+
+      if (!doc) {
+        return res.status(404).json({ error: "Document not found" });
+      }
+
+      const project = await storage.getProject(doc.projectId, companyId);
+      if (!project) {
+        return res.status(403).json({ error: "Access denied" });
+      }
+
+      // Delete existing summary if present
+      await db
+        .delete(documentSummaries)
+        .where(eq(documentSummaries.documentId, documentId));
+
+      // Regenerate
+      const result = await documentSummarizationService.summarizeDocument(documentId);
+
+      res.json({
+        success: true,
+        message: "Summary regenerated successfully",
+        result,
+      });
+    } catch (error: any) {
+      console.error('Error regenerating summary:', error);
       res.status(500).json({ error: error.message });
     }
   });

@@ -233,6 +233,7 @@ export const documentChunks = pgTable("document_chunks", {
   content: text("content").notNull(),
   embedding: vector("embedding", { dimensions: 1536 }),
   chunkIndex: integer("chunk_index").notNull(),
+  sourceType: varchar("source_type", { length: 20 }).default("original"),
 });
 
 // Document Metadata Table (stores extracted information and processing details)
@@ -264,6 +265,31 @@ export const documentMetadata = pgTable("document_metadata", {
 
 export type DocumentMetadata = typeof documentMetadata.$inferSelect;
 export type InsertDocumentMetadata = typeof documentMetadata.$inferInsert;
+
+// Document Summaries Table (AI-generated comprehensive summaries of individual documents)
+export const documentSummaries = pgTable("document_summaries", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  documentId: integer("document_id").notNull().unique().references(() => documents.id, { onDelete: "cascade" }),
+  projectId: varchar("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  summaryContent: text("summary_content").notNull(),
+  structuredData: jsonb("structured_data").$type<{
+    requirements?: Array<{type: string; description: string; priority?: string}>;
+    specifications?: Record<string, any>;
+    quantities?: Array<{item: string; quantity: string; unit?: string}>;
+    materials?: Array<{name: string; specification?: string; quantity?: string}>;
+    budgetInfo?: {estimated?: string; breakdown?: Record<string, string>};
+    timeline?: {deadlines?: Array<{date: string; milestone: string}>; duration?: string};
+    constraints?: Array<string>;
+  }>().default(sql`'{}'::jsonb`),
+  isUserEdited: boolean("is_user_edited").default(false).notNull(),
+  extractionConfidence: real("extraction_confidence"),
+  processingTimeMs: integer("processing_time_ms"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export type DocumentSummary = typeof documentSummaries.$inferSelect;
+export type InsertDocumentSummary = typeof documentSummaries.$inferInsert;
 
 // Project Summaries Table (AI-generated summaries of project documents)
 export const projectSummaries = pgTable("project_summaries", {
