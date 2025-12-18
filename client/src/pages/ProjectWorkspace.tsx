@@ -1,26 +1,38 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRoute } from 'wouter';
-import { AppSidebar, useSidebarStore } from '@/components/layout/AppSidebar';
-import { DropZone } from '@/components/upload/DropZone';
 import { TiptapEditor } from '@/components/editor/TiptapEditor';
-import { GeneratePanel } from '@/components/ai/GeneratePanel';
-import { RefineChat } from '@/components/ai/RefineChat';
-import { BidHistory } from '@/components/bid/BidHistory';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { ChevronLeft, Save, Share2, Eye, Edit3, ShieldCheck, AlertTriangle, Loader2, FileText } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { ChevronLeft, Save, Share2, Eye, Loader2, FileText, Plus, Sparkles, RefreshCw, Clock, CheckCircle, Image as ImageIcon, FileSpreadsheet, Send, Lightbulb, AlertCircle, ChevronRight } from 'lucide-react';
 import { Link } from 'wouter';
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Input } from '@/components/ui/input';
 import { toast } from '@/hooks/use-toast';
 import { getProject, listDocuments, uploadDocument, uploadDocumentWithProgress, deleteDocument, generateBid, refineBid, getLatestBid, wrapInTemplate, generateShareLink, updateProjectStatus, startAgentWorkflow, cancelAgentWorkflow, type AIModel, type ProcessingProgress } from '@/lib/api';
 import { AgentProgressPanel } from '@/components/agents/AgentProgressPanel';
-import { DocumentSummaryEditor } from '@/components/documents/DocumentSummaryEditor';
-import { ProjectSummariesPanel } from '@/components/documents/ProjectSummariesPanel';
 import type { Project, Document } from '@shared/schema';
 
-const initialEditorContent = '<h1>Welcome to BidForge AI</h1><p>Use the Generate panel to create your first bid draft, or start typing to manually build your proposal.</p>';
+function getFileIcon(filename: string): React.ReactNode {
+  const ext = filename.toLowerCase().match(/\.[^.]*$/)?.[0] || '';
+  if (['.pdf'].includes(ext)) {
+    return <FileText className="w-4 h-4 text-red-400" />;
+  }
+  if (['.png', '.jpg', '.jpeg', '.gif', '.tiff', '.bmp', '.webp'].includes(ext)) {
+    return <ImageIcon className="w-4 h-4 text-blue-400" />;
+  }
+  if (['.xlsx', '.xls', '.csv'].includes(ext)) {
+    return <FileSpreadsheet className="w-4 h-4 text-green-400" />;
+  }
+  return <FileText className="w-4 h-4 text-gray-400" />;
+}
+
+function formatDate(dateInput: string | Date): string {
+  const date = typeof dateInput === 'string' ? new Date(dateInput) : dateInput;
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
 
 export default function ProjectWorkspace() {
   const [, params] = useRoute('/projects/:id');
@@ -28,43 +40,18 @@ export default function ProjectWorkspace() {
   
   const [project, setProject] = useState<Project | null>(null);
   const [documents, setDocuments] = useState<Document[]>([]);
-  const [editorContent, setEditorContent] = useState(initialEditorContent);
+  const [editorContent, setEditorContent] = useState('<h1>Project Overview</h1><p>Loading document summary...</p>');
   const [isGenerating, setIsGenerating] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [bidRefreshTrigger, setBidRefreshTrigger] = useState(0);
-  const [viewMode, setViewMode] = useState<'edit' | 'preview'>('edit');
-  const [previewHtml, setPreviewHtml] = useState<string>('');
-  const [isLoadingPreview, setIsLoadingPreview] = useState(false);
   const [currentBidId, setCurrentBidId] = useState<number | null>(null);
   const [isSharing, setIsSharing] = useState(false);
-  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
   const [showAgentProgress, setShowAgentProgress] = useState(false);
-  const [selectedDocumentForSummary, setSelectedDocumentForSummary] = useState<number | null>(null);
-  const [selectedDocumentName, setSelectedDocumentName] = useState<string>('');
-  const [showSummaries, setShowSummaries] = useState(false);
-  const isCollapsed = useSidebarStore((state) => state.isCollapsed);
-
-  const handleStatusChange = async (newStatus: string) => {
-    if (!project) return;
-    setIsUpdatingStatus(true);
-    try {
-      const updatedProject = await updateProjectStatus(projectId, newStatus);
-      setProject(updatedProject);
-      toast({
-        title: "Status Updated",
-        description: `Project status changed to ${newStatus}`,
-      });
-    } catch (error) {
-      console.error('Failed to update status:', error);
-      toast({
-        title: "Error",
-        description: "Failed to update project status",
-        variant: "destructive",
-      });
-    } finally {
-      setIsUpdatingStatus(false);
-    }
-  };
+  const [selectedDocumentId, setSelectedDocumentId] = useState<number | null>(null);
+  const [selectedModel, setSelectedModel] = useState<AIModel>('openai');
+  const [toneStyle, setToneStyle] = useState('technical');
+  const [refinementMessage, setRefinementMessage] = useState('');
+  const [summaryTab, setSummaryTab] = useState<'narrative' | 'structured'>('narrative');
 
   useEffect(() => {
     async function loadProject() {
@@ -78,7 +65,10 @@ export default function ProjectWorkspace() {
         setProject(projectData);
         setDocuments(docsData);
         
-        // Load the latest bid content if available (use rawContent for editor)
+        if (docsData.length > 0) {
+          setSelectedDocumentId(docsData[0].id);
+        }
+        
         if (latestBid) {
           setEditorContent(latestBid.rawContent || latestBid.content);
           setCurrentBidId(latestBid.id);
@@ -97,25 +87,16 @@ export default function ProjectWorkspace() {
     loadProject();
   }, [projectId]);
 
-  const [selectedModel, setSelectedModel] = useState<AIModel>('openai');
-
-  const handleGenerate = async (instructions: string, tone?: string, model?: AIModel) => {
+  const handleGenerate = async () => {
     setIsGenerating(true);
     setShowAgentProgress(true);
-    const modelToUse = model || selectedModel;
-    setSelectedModel(modelToUse);
     
     try {
-      // Start the multi-shot agent workflow with selected model
-      await startAgentWorkflow(projectId, modelToUse);
-      
+      await startAgentWorkflow(projectId, selectedModel);
       toast({
         title: "Agent Workflow Started",
-        description: "The AI orchestrator is analyzing your documents and generating the bid...",
+        description: "The AI orchestrator is analyzing your documents...",
       });
-      
-      // The AgentProgressPanel will handle showing real-time progress
-      // Completion is handled by onAgentWorkflowComplete callback
     } catch (error: any) {
       setIsGenerating(false);
       setShowAgentProgress(false);
@@ -129,28 +110,20 @@ export default function ProjectWorkspace() {
 
   const handleAgentWorkflowComplete = async () => {
     try {
-      // Fetch the latest bid after workflow completes
       const latestBid = await getLatestBid(projectId);
       if (latestBid) {
         setEditorContent(latestBid.rawContent || latestBid.content);
         setCurrentBidId(latestBid.id);
         setBidRefreshTrigger(prev => prev + 1);
       }
-      
       toast({
         title: "Bid Generated",
         description: "The AI agent workflow has completed successfully.",
       });
     } catch (error: any) {
       console.error('Failed to fetch generated bid:', error);
-      toast({
-        title: "Warning",
-        description: "Workflow completed but failed to load the generated bid. Please refresh.",
-        variant: "destructive",
-      });
     } finally {
       setIsGenerating(false);
-      // Keep progress panel visible for a moment so user can see completion
       setTimeout(() => setShowAgentProgress(false), 2000);
     }
   };
@@ -173,13 +146,16 @@ export default function ProjectWorkspace() {
     }
   };
 
-  const handleRefine = async (feedback: string) => {
+  const handleRefine = async () => {
+    if (!refinementMessage.trim()) return;
+    
     try {
-      const result = await refineBid(projectId, editorContent, feedback, selectedModel);
+      const result = await refineBid(projectId, editorContent, refinementMessage, selectedModel);
       setEditorContent(result.rawContent || result.html);
+      setRefinementMessage('');
       toast({
         title: "Bid Refined",
-        description: `Your bid has been updated using ${result.model.toUpperCase()}.`,
+        description: `Your bid has been updated.`,
       });
     } catch (error: any) {
       toast({
@@ -190,94 +166,36 @@ export default function ProjectWorkspace() {
     }
   };
 
-  const handleFileUpload = async (file: File) => {
-    try {
-      const result = await uploadDocument(projectId, file);
-      // Reload documents list after successful upload
-      const docsData = await listDocuments(projectId);
-      setDocuments(docsData);
-      toast({
-        title: "Upload Successful",
-        description: `${file.name} has been processed (${result.filesProcessed} file(s), ${result.totalChunks} chunks).`,
-      });
-    } catch (error: any) {
-      toast({
-        title: "Upload Failed",
-        description: error.message || "Failed to upload file",
-        variant: "destructive",
-      });
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files) return;
+    
+    for (const file of Array.from(files)) {
+      try {
+        await uploadDocument(projectId, file);
+        const docsData = await listDocuments(projectId);
+        setDocuments(docsData);
+        toast({
+          title: "Upload Successful",
+          description: `${file.name} has been processed.`,
+        });
+      } catch (error: any) {
+        toast({
+          title: "Upload Failed",
+          description: error.message || "Failed to upload file",
+          variant: "destructive",
+        });
+      }
     }
-  };
-
-  const handleFileUploadWithProgress = async (file: File, onProgress: (progress: ProcessingProgress) => void) => {
-    try {
-      const result = await uploadDocumentWithProgress(projectId, file, onProgress);
-      // Reload documents list after successful upload (bust cache to get fresh data)
-      const docsData = await listDocuments(projectId, true);
-      setDocuments(docsData);
-      toast({
-        title: "Upload Successful",
-        description: `${file.name} has been processed (${result.filesProcessed} file(s), ${result.totalChunks} chunks).`,
-      });
-    } catch (error: any) {
-      toast({
-        title: "Upload Failed",
-        description: error.message || "Failed to upload file",
-        variant: "destructive",
-      });
-      throw error; // Re-throw to let DropZone handle the error state
-    }
-  };
-
-  const handleDeleteDocument = async (documentId: number) => {
-    try {
-      await deleteDocument(documentId);
-      // Reload documents list after successful deletion (bust cache to get fresh data)
-      const docsData = await listDocuments(projectId, true);
-      setDocuments(docsData);
-      toast({
-        title: "Document Deleted",
-        description: "The document and its data have been removed.",
-      });
-    } catch (error: any) {
-      toast({
-        title: "Delete Failed",
-        description: error.message || "Failed to delete document",
-        variant: "destructive",
-      });
-    }
+    e.target.value = '';
   };
 
   const handleSave = () => {
     toast({
       title: "Saved",
-      description: "Project saved successfully.",
+      description: "Changes saved successfully.",
     });
   };
-
-  const handleViewModeChange = useCallback(async (mode: 'edit' | 'preview') => {
-    setViewMode(mode);
-    if (mode === 'preview' && project) {
-      setIsLoadingPreview(true);
-      try {
-        const result = await wrapInTemplate(
-          editorContent,
-          project.name,
-          project.clientName || 'Valued Client'
-        );
-        setPreviewHtml(result.html);
-      } catch (error: any) {
-        toast({
-          title: "Preview Failed",
-          description: error.message || "Failed to generate preview",
-          variant: "destructive",
-        });
-        setViewMode('edit');
-      } finally {
-        setIsLoadingPreview(false);
-      }
-    }
-  }, [editorContent, project]);
 
   const handleShare = async () => {
     if (!currentBidId) {
@@ -290,52 +208,14 @@ export default function ProjectWorkspace() {
     }
 
     setIsSharing(true);
-    
-    const copyToClipboard = async (text: string): Promise<boolean> => {
-      if (navigator.clipboard && window.isSecureContext) {
-        try {
-          await navigator.clipboard.writeText(text);
-          return true;
-        } catch {
-          // Fall through to legacy method
-        }
-      }
-      
-      const textArea = document.createElement('textarea');
-      textArea.value = text;
-      textArea.style.position = 'fixed';
-      textArea.style.left = '-999999px';
-      textArea.style.top = '-999999px';
-      document.body.appendChild(textArea);
-      textArea.focus();
-      textArea.select();
-      
-      try {
-        const success = document.execCommand('copy');
-        document.body.removeChild(textArea);
-        return success;
-      } catch {
-        document.body.removeChild(textArea);
-        return false;
-      }
-    };
-    
     try {
       const result = await generateShareLink(currentBidId);
       const fullUrl = `${window.location.origin}${result.shareUrl}`;
-      const copied = await copyToClipboard(fullUrl);
-      
-      if (copied) {
-        toast({
-          title: "Public Link Copied",
-          description: "Anyone with this link can view the bid (no login required).",
-        });
-      } else {
-        toast({
-          title: "Share Link",
-          description: fullUrl,
-        });
-      }
+      await navigator.clipboard.writeText(fullUrl);
+      toast({
+        title: "Link Copied",
+        description: "Share link copied to clipboard.",
+      });
     } catch (error: any) {
       toast({
         title: "Share Failed",
@@ -349,22 +229,16 @@ export default function ProjectWorkspace() {
 
   const handlePreviewPDF = async () => {
     if (!project) return;
-    
     try {
       const result = await wrapInTemplate(
         editorContent,
         project.name,
         project.clientName || 'Valued Client'
       );
-      
       const printWindow = window.open('', '_blank');
       if (printWindow) {
         printWindow.document.write(result.html);
         printWindow.document.close();
-        toast({
-          title: "Preview Opened",
-          description: "Use your browser's print function to save as PDF.",
-        });
       }
     } catch (error: any) {
       toast({
@@ -375,12 +249,12 @@ export default function ProjectWorkspace() {
     }
   };
 
+  const selectedDocument = documents.find(d => d.id === selectedDocumentId);
+
   if (isLoading) {
     return (
       <div className="flex h-screen items-center justify-center bg-background">
-        <div className="text-center">
-          <div className="text-lg font-semibold">Loading project...</div>
-        </div>
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
@@ -399,226 +273,384 @@ export default function ProjectWorkspace() {
   }
 
   return (
-    <div className="flex h-screen bg-background overflow-hidden">
-      <AppSidebar />
-      
-      <div className={`flex-1 flex flex-col h-full transition-all duration-300 ${isCollapsed ? 'ml-16' : 'ml-64'}`}>
-        {/* Header */}
-        <header className="h-14 border-b border-border flex items-center justify-between px-4 bg-card z-10">
-          <div className="flex items-center gap-4">
-            <Link href="/">
-              <Button variant="ghost" size="icon" className="h-8 w-8">
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
-            </Link>
-            <div>
-              <h1 className="font-semibold text-sm flex items-center gap-2">
-                {project.name}
-                <Select 
-                  value={project.status || 'Active'} 
-                  onValueChange={handleStatusChange}
-                  disabled={isUpdatingStatus}
-                >
-                  <SelectTrigger className="h-6 w-auto px-2 py-0 text-[10px] font-bold uppercase tracking-wider bg-primary/10 border-0 text-primary" data-testid="select-project-status">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Active">Active</SelectItem>
-                    <SelectItem value="Submitted">Submitted</SelectItem>
-                    <SelectItem value="Closed-Won">Closed-Won</SelectItem>
-                    <SelectItem value="Closed-Lost">Closed-Lost</SelectItem>
-                  </SelectContent>
-                </Select>
-              </h1>
-              <p className="text-xs text-muted-foreground">{project.clientName}</p>
+    <div className="flex h-screen bg-slate-900 overflow-hidden">
+      <ResizablePanelGroup direction="horizontal" className="h-full">
+        
+        {/* Left Sidebar - Dark */}
+        <ResizablePanel defaultSize={20} minSize={15} maxSize={30}>
+          <div className="h-full flex flex-col bg-slate-900 text-white">
+            {/* Header */}
+            <div className="p-4 border-b border-slate-700">
+              <div className="flex items-center gap-3 mb-2">
+                <Link href="/">
+                  <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-white hover:bg-slate-800">
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                </Link>
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <h1 className="font-semibold text-lg">{project.name}</h1>
+                    <Badge className="bg-teal-500 text-white text-[10px] uppercase">
+                      {project.status || 'Active'}
+                    </Badge>
+                  </div>
+                  <p className="text-sm text-slate-400">{project.clientName}</p>
+                </div>
+              </div>
             </div>
-          </div>
-          
-          <div className="flex items-center gap-2">
-            <Link href={`/projects/${projectId}/documents`}>
-              <Button variant="outline" size="sm" className="gap-2 h-8" data-testid="button-documents">
-                <FileText className="h-3.5 w-3.5" />
-                Documents
-              </Button>
-            </Link>
-            <Link href={`/projects/${projectId}/analysis`}>
-              <Button variant="outline" size="sm" className="gap-2 h-8" data-testid="button-analysis">
-                <ShieldCheck className="h-3.5 w-3.5" />
-                RFP Analysis
-              </Button>
-            </Link>
-            <Link href={`/projects/${projectId}/conflicts`}>
-              <Button variant="outline" size="sm" className="gap-2 h-8" data-testid="button-conflicts">
-                <AlertTriangle className="h-3.5 w-3.5" />
-                Conflicts
-              </Button>
-            </Link>
-            <Button variant="outline" size="sm" className="gap-2 h-8" onClick={handlePreviewPDF} data-testid="button-preview-pdf">
-              <Eye className="h-3.5 w-3.5" />
-              Preview PDF
-            </Button>
-            <Button variant="outline" size="sm" className="gap-2 h-8" onClick={handleShare} disabled={isSharing || !currentBidId} data-testid="button-share">
-              {isSharing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Share2 className="h-3.5 w-3.5" />}
-              {isSharing ? 'Sharing...' : 'Share'}
-            </Button>
-            <Button size="sm" className="gap-2 h-8" onClick={handleSave}>
-              <Save className="h-3.5 w-3.5" />
-              Save
-            </Button>
-          </div>
-        </header>
 
-        {/* Workspace Layout */}
-        <div className="flex-1 overflow-hidden">
-          <ResizablePanelGroup direction="horizontal">
-            
-            {/* Left: Upload Zone + Bid History + Summaries */}
-            <ResizablePanel defaultSize={20} minSize={15} maxSize={30} className="bg-primary/20">
-              <ScrollArea className="h-full">
-                <div className="p-4 flex flex-col gap-4">
-                  <Tabs defaultValue="documents" className="w-full">
-                    <TabsList className="grid w-full grid-cols-2 mb-4">
-                      <TabsTrigger value="documents" onClick={() => setShowSummaries(false)}>
-                        Documents
-                      </TabsTrigger>
-                      <TabsTrigger value="summaries" onClick={() => setShowSummaries(true)}>
-                        Summaries
-                      </TabsTrigger>
-                    </TabsList>
+            {/* Documents Section */}
+            <div className="flex-1 overflow-hidden flex flex-col">
+              <div className="p-4 pb-2">
+                <div className="flex items-center justify-between mb-3">
+                  <h2 className="font-semibold text-sm">Documents</h2>
+                  <span className="text-xs text-slate-400">{documents.length} files</span>
+                </div>
+              </div>
 
-                    <div className="space-y-4">
-                      {!showSummaries ? (
-                        <>
-                          <div>
-                            <h2 className="font-semibold text-sm mb-4 flex items-center gap-2">
-                              Source Documents
-                            </h2>
-                            <DropZone
-                              files={documents.filter(doc => doc).map(doc => ({
-                                name: doc.filename,
-                                size: 0,
-                                uploadedAt: new Date(doc.uploadedAt),
-                                id: doc.id.toString(),
-                                isProcessed: doc.isProcessed
-                              }))}
-                              onUploadWithProgress={handleFileUploadWithProgress}
-                              onDelete={handleDeleteDocument}
-                            />
+              <ScrollArea className="flex-1 px-4">
+                <div className="space-y-2 pb-4">
+                  {documents.map((doc) => (
+                    <div
+                      key={doc.id}
+                      onClick={() => setSelectedDocumentId(doc.id)}
+                      className={`p-3 rounded-lg cursor-pointer transition-colors ${
+                        selectedDocumentId === doc.id 
+                          ? 'bg-slate-700 border border-teal-500/50' 
+                          : 'bg-slate-800 hover:bg-slate-700'
+                      }`}
+                      data-testid={`document-card-${doc.id}`}
+                    >
+                      <div className="flex items-start gap-3">
+                        {getFileIcon(doc.filename)}
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate">{doc.filename}</p>
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className="text-xs text-teal-400">● 85% confident</span>
+                            <span className="text-xs text-slate-500">{formatDate(doc.uploadedAt)}</span>
                           </div>
-                          <div>
-                            <BidHistory
-                              projectId={projectId}
-                              onSelectBid={(content, bidId) => {
-                                setEditorContent(content);
-                                if (bidId) setCurrentBidId(bidId);
-                              }}
-                              refreshTrigger={bidRefreshTrigger}
-                            />
-                          </div>
-                        </>
-                      ) : (
-                        <div>
-                          <h2 className="font-semibold text-sm mb-4 flex items-center gap-2">
-                            Document Summaries
-                          </h2>
-                          <ProjectSummariesPanel
-                            projectId={projectId}
-                            onSelectDocument={(docId, docName) => {
-                              setSelectedDocumentForSummary(docId);
-                              setSelectedDocumentName(docName);
-                              setShowSummaries(true);
-                            }}
-                          />
                         </div>
-                      )}
-                    </div>
-                  </Tabs>
-                </div>
-              </ScrollArea>
-            </ResizablePanel>
-
-            <ResizableHandle />
-
-            {/* Center: Editor / Preview */}
-            <ResizablePanel defaultSize={55} minSize={30}>
-              <div className="h-full flex flex-col bg-muted/10">
-                <div className="flex items-center justify-between px-6 pt-4 pb-2">
-                  <Tabs value={viewMode} onValueChange={(v) => handleViewModeChange(v as 'edit' | 'preview')}>
-                    <TabsList className="h-8">
-                      <TabsTrigger value="edit" className="text-xs gap-1.5 px-3" data-testid="tab-edit">
-                        <Edit3 className="h-3.5 w-3.5" />
-                        Edit
-                      </TabsTrigger>
-                      <TabsTrigger value="preview" className="text-xs gap-1.5 px-3" data-testid="tab-preview">
-                        <Eye className="h-3.5 w-3.5" />
-                        Preview
-                      </TabsTrigger>
-                    </TabsList>
-                  </Tabs>
-                </div>
-                <div className="flex-1 px-6 pb-6 overflow-hidden">
-                  {showSummaries && selectedDocumentForSummary ? (
-                    <DocumentSummaryEditor
-                      documentId={selectedDocumentForSummary}
-                      documentName={selectedDocumentName}
-                      onSave={() => {
-                        toast({
-                          title: "Summary Updated",
-                          description: "RAG chunks have been regenerated.",
-                        });
-                      }}
-                    />
-                  ) : viewMode === 'edit' ? (
-                    <TiptapEditor content={editorContent} onChange={setEditorContent} />
-                  ) : isLoadingPreview ? (
-                    <div className="h-full flex items-center justify-center bg-white rounded-lg border">
-                      <div className="flex flex-col items-center gap-2 text-muted-foreground">
-                        <Loader2 className="h-8 w-8 animate-spin" />
-                        <span className="text-sm">Generating preview...</span>
+                        {doc.isProcessed && (
+                          <CheckCircle className="w-4 h-4 text-teal-500 flex-shrink-0" />
+                        )}
                       </div>
                     </div>
-                  ) : (
-                    <iframe
-                      srcDoc={previewHtml}
-                      className="w-full h-full border rounded-lg bg-white"
-                      title="Bid Preview"
-                      data-testid="iframe-bid-preview"
-                    />
-                  )}
+                  ))}
+                </div>
+              </ScrollArea>
+
+              {/* Add Document Button */}
+              <div className="p-4 pt-2">
+                <label className="w-full">
+                  <input
+                    type="file"
+                    multiple
+                    className="hidden"
+                    accept=".pdf,.docx,.doc,.xlsx,.xls,.csv,.txt,.png,.jpg,.jpeg"
+                    onChange={handleFileUpload}
+                    data-testid="file-input"
+                  />
+                  <Button variant="outline" className="w-full gap-2 bg-transparent border-slate-600 text-slate-300 hover:bg-slate-800 hover:text-white" asChild>
+                    <span>
+                      <Plus className="w-4 h-4" />
+                      Add Document
+                    </span>
+                  </Button>
+                </label>
+              </div>
+
+              {/* Project Stats */}
+              <div className="p-4 border-t border-slate-700">
+                <h3 className="text-xs font-semibold text-slate-400 uppercase mb-3">Project Stats</h3>
+                <div className="space-y-3">
+                  <div className="flex justify-between">
+                    <span className="text-sm text-slate-400">Total Value</span>
+                    <span className="text-sm font-semibold text-teal-400">$2.4M</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm text-slate-400">Completion</span>
+                    <span className="text-sm font-semibold text-teal-400">87%</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm text-slate-400">Due Date</span>
+                    <span className="text-sm">Jan 15, 2026</span>
+                  </div>
                 </div>
               </div>
-            </ResizablePanel>
+            </div>
+          </div>
+        </ResizablePanel>
 
-            <ResizableHandle />
+        <ResizableHandle className="bg-slate-700 w-px" />
 
-            {/* Right: AI Controls */}
-            <ResizablePanel defaultSize={25} minSize={20} maxSize={40} className="bg-primary/20 border-l border-border">
-              <div className="h-full flex flex-col p-4">
-                <div className="flex-1 flex flex-col min-h-0 gap-6">
-                  <GeneratePanel onGenerate={handleGenerate} isGenerating={isGenerating} />
-                  
-                  {/* Agent Progress Panel - shown during workflow */}
-                  {showAgentProgress && (
-                    <AgentProgressPanel 
-                      projectId={projectId}
-                      isActive={showAgentProgress}
-                      onComplete={handleAgentWorkflowComplete}
-                      onCancel={handleCancelWorkflow}
-                    />
-                  )}
-                  
-                  {!showAgentProgress && (
-                    <div className="flex-1 min-h-0 flex flex-col">
-                      <RefineChat onRefine={handleRefine} />
+        {/* Center Panel - Light */}
+        <ResizablePanel defaultSize={50} minSize={35}>
+          <div className="h-full flex flex-col bg-slate-50">
+            {/* Document Summary Header */}
+            <div className="p-4 bg-white border-b">
+              <div className="flex items-center justify-between mb-2">
+                <div>
+                  <h2 className="text-xl font-bold text-slate-900">Document Summary</h2>
+                  <p className="text-sm text-slate-500">{selectedDocument?.filename || 'Select a document'}</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button variant="ghost" size="icon" className="h-8 w-8">
+                    <RefreshCw className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+              <div className="flex items-center gap-4 text-sm">
+                <span className="flex items-center gap-1">
+                  <span className="text-slate-500">Confidence:</span>
+                  <span className="text-teal-600 font-semibold">88%</span>
+                </span>
+                <span className="flex items-center gap-1 text-slate-500">
+                  <Clock className="w-3.5 h-3.5" />
+                  Generated in <span className="font-semibold text-slate-700">15.6s</span>
+                </span>
+              </div>
+            </div>
+
+            {/* Tabs */}
+            <div className="bg-white border-b px-4">
+              <Tabs value={summaryTab} onValueChange={(v) => setSummaryTab(v as 'narrative' | 'structured')}>
+                <TabsList className="bg-transparent h-12 p-0 gap-4">
+                  <TabsTrigger 
+                    value="narrative" 
+                    className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-teal-500 rounded-none px-0 pb-3"
+                  >
+                    <Sparkles className="w-4 h-4 mr-2" />
+                    Narrative Summary
+                  </TabsTrigger>
+                  <TabsTrigger 
+                    value="structured"
+                    className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-teal-500 rounded-none px-0 pb-3"
+                  >
+                    <FileText className="w-4 h-4 mr-2" />
+                    Structured Data
+                  </TabsTrigger>
+                </TabsList>
+              </Tabs>
+            </div>
+
+            {/* Tab Content */}
+            <div className="flex-1 overflow-hidden p-4">
+              {summaryTab === 'narrative' ? (
+                <div className="h-full bg-white rounded-lg border shadow-sm overflow-hidden">
+                  <TiptapEditor content={editorContent} onChange={setEditorContent} />
+                </div>
+              ) : (
+                <div className="h-full bg-white rounded-lg border shadow-sm overflow-hidden p-6">
+                  <ScrollArea className="h-full">
+                    <div className="space-y-6">
+                      <div>
+                        <h3 className="font-semibold text-lg mb-3">Extracted Requirements</h3>
+                        <div className="space-y-2">
+                          <div className="flex justify-between py-2 border-b">
+                            <span className="text-slate-600">Project Type</span>
+                            <span className="font-medium">{project?.description?.includes('parking') ? 'Parking Structure' : 'Construction'}</span>
+                          </div>
+                          <div className="flex justify-between py-2 border-b">
+                            <span className="text-slate-600">Location</span>
+                            <span className="font-medium">{project?.clientName || 'Not specified'}</span>
+                          </div>
+                          <div className="flex justify-between py-2 border-b">
+                            <span className="text-slate-600">Documents Analyzed</span>
+                            <span className="font-medium">{documents.length}</span>
+                          </div>
+                        </div>
+                      </div>
+                      <div>
+                        <h3 className="font-semibold text-lg mb-3">Key Specifications</h3>
+                        <ul className="space-y-2 text-sm">
+                          <li className="flex items-center gap-2">
+                            <ChevronRight className="w-4 h-4 text-teal-500" />
+                            <span>Construction of main structure as per specifications</span>
+                          </li>
+                          <li className="flex items-center gap-2">
+                            <ChevronRight className="w-4 h-4 text-teal-500" />
+                            <span>Installation of required support systems</span>
+                          </li>
+                          <li className="flex items-center gap-2">
+                            <ChevronRight className="w-4 h-4 text-teal-500" />
+                            <span>Foundation works including base preparation</span>
+                          </li>
+                          <li className="flex items-center gap-2">
+                            <ChevronRight className="w-4 h-4 text-teal-500" />
+                            <span>Compliance with all material specifications</span>
+                          </li>
+                        </ul>
+                      </div>
                     </div>
-                  )}
+                  </ScrollArea>
+                </div>
+              )}
+            </div>
+          </div>
+        </ResizablePanel>
+
+        <ResizableHandle className="bg-slate-700 w-px" />
+
+        {/* Right Sidebar - Dark */}
+        <ResizablePanel defaultSize={30} minSize={20} maxSize={40}>
+          <div className="h-full flex flex-col bg-slate-900 text-white">
+            {/* Header */}
+            <div className="p-4 border-b border-slate-700 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Button variant="ghost" size="sm" className="gap-1 text-slate-400 hover:text-white px-2" onClick={handlePreviewPDF}>
+                  <Eye className="w-4 h-4" />
+                  Preview PDF
+                </Button>
+                <Button variant="ghost" size="sm" className="gap-1 text-slate-400 hover:text-white px-2" onClick={handleShare} disabled={isSharing}>
+                  <Share2 className="w-4 h-4" />
+                  Share
+                </Button>
+                <Button size="sm" className="gap-1 bg-teal-500 hover:bg-teal-600 text-white" onClick={handleSave}>
+                  <Save className="w-4 h-4" />
+                  Save Changes
+                </Button>
+              </div>
+            </div>
+
+            <ScrollArea className="flex-1">
+              <div className="p-4 space-y-6">
+                {/* AI Bid Generator Section */}
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <Sparkles className="w-5 h-5 text-teal-400" />
+                    <h3 className="font-semibold">AI Bid Generator</h3>
+                  </div>
+                  <p className="text-xs text-slate-400 mb-4">Powered by Claude</p>
+
+                  <div className="space-y-4">
+                    <div>
+                      <label className="text-xs text-slate-400 block mb-1.5">AI Model</label>
+                      <Select value={selectedModel} onValueChange={(v) => setSelectedModel(v as AIModel)}>
+                        <SelectTrigger className="bg-slate-800 border-slate-600 text-white">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="openai">OpenAI GPT-4o</SelectItem>
+                          <SelectItem value="anthropic">Anthropic Claude</SelectItem>
+                          <SelectItem value="gemini">Google Gemini</SelectItem>
+                          <SelectItem value="deepseek">DeepSeek</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div>
+                      <label className="text-xs text-slate-400 block mb-1.5">Tone & Style</label>
+                      <Select value={toneStyle} onValueChange={setToneStyle}>
+                        <SelectTrigger className="bg-slate-800 border-slate-600 text-white">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="technical">Highly Technical</SelectItem>
+                          <SelectItem value="professional">Professional</SelectItem>
+                          <SelectItem value="persuasive">Persuasive</SelectItem>
+                          <SelectItem value="concise">Concise</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div>
+                      <label className="text-xs text-slate-400 block mb-1.5">Instructions Preset</label>
+                      <Select defaultValue="default">
+                        <SelectTrigger className="bg-slate-800 border-slate-600 text-white">
+                          <SelectValue placeholder="Select instruction preset" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="default">Default</SelectItem>
+                          <SelectItem value="detailed">Detailed Response</SelectItem>
+                          <SelectItem value="brief">Brief Summary</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <Button 
+                      className="w-full gap-2 bg-teal-500 hover:bg-teal-600 text-white h-11"
+                      onClick={handleGenerate}
+                      disabled={isGenerating}
+                      data-testid="button-generate"
+                    >
+                      {isGenerating ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Sparkles className="w-4 h-4" />
+                      )}
+                      {isGenerating ? 'Generating...' : 'Generate Draft'}
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Agent Progress */}
+                {showAgentProgress && (
+                  <AgentProgressPanel 
+                    projectId={projectId}
+                    isActive={showAgentProgress}
+                    onComplete={handleAgentWorkflowComplete}
+                    onCancel={handleCancelWorkflow}
+                  />
+                )}
+
+                {/* Refinement Chat */}
+                <div className="pt-4 border-t border-slate-700">
+                  <h3 className="font-semibold mb-2 flex items-center gap-2">
+                    <RefreshCw className="w-4 h-4 text-teal-400" />
+                    Refinement Chat
+                  </h3>
+                  <p className="text-xs text-slate-400 mb-3">
+                    I can help you refine this bid. What would you like to change? You can ask me to "expand the safety section" or "make the tone more persuasive".
+                  </p>
+                  <div className="flex gap-2">
+                    <Input 
+                      placeholder="Refine this bid..."
+                      value={refinementMessage}
+                      onChange={(e) => setRefinementMessage(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && handleRefine()}
+                      className="bg-slate-800 border-slate-600 text-white placeholder:text-slate-500"
+                      data-testid="input-refine"
+                    />
+                    <Button 
+                      size="icon" 
+                      className="bg-teal-500 hover:bg-teal-600"
+                      onClick={handleRefine}
+                      data-testid="button-refine"
+                    >
+                      <Send className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Document Insights */}
+                <div className="pt-4 border-t border-slate-700">
+                  <h3 className="font-semibold mb-3 flex items-center gap-2">
+                    <Lightbulb className="w-4 h-4 text-teal-400" />
+                    Document Insights
+                  </h3>
+                  <div className="space-y-3">
+                    <div className="flex items-start gap-3">
+                      <div className="w-2 h-2 rounded-full bg-teal-500 mt-1.5" />
+                      <div>
+                        <p className="text-sm font-medium">Technical specs identified</p>
+                        <p className="text-xs text-slate-400">All requirements extracted</p>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <div className="w-2 h-2 rounded-full bg-amber-500 mt-1.5" />
+                      <div>
+                        <p className="text-sm font-medium">Missing cost breakdown</p>
+                        <p className="text-xs text-slate-400">Consider adding details</p>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
-            </ResizablePanel>
+            </ScrollArea>
+          </div>
+        </ResizablePanel>
 
-          </ResizablePanelGroup>
-        </div>
-      </div>
+      </ResizablePanelGroup>
     </div>
   );
 }
