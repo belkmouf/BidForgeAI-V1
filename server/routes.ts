@@ -1384,6 +1384,132 @@ export async function registerRoutes(
     }
   });
 
+  // POST /api/projects/:id/requirements/extract - Extract requirements from project documents using AI
+  app.post("/api/projects/:id/requirements/extract", authenticateToken, async (req: AuthRequest, res) => {
+    try {
+      const projectId = req.params.id;
+      const companyId = req.user?.companyId ?? null;
+      
+      const project = await storage.getProject(projectId, companyId);
+      if (!project) {
+        return res.status(404).json({ error: "Project not found" });
+      }
+      
+      const documents = await storage.getDocuments(projectId);
+      if (documents.length === 0) {
+        return res.status(400).json({ error: "No documents found to extract requirements from" });
+      }
+      
+      const documentsWithContent = documents.filter(doc => doc.content && doc.content.trim().length > 100);
+      if (documentsWithContent.length === 0) {
+        return res.status(400).json({ error: "No document content available for extraction" });
+      }
+      
+      const documentContext = documentsWithContent.map(doc => {
+        const content = doc.content?.substring(0, 15000) || '';
+        return `--- Document: ${doc.filename} (ID: ${doc.id}) ---\n${content}`;
+      }).join('\n\n');
+      
+      const extractionPrompt = `You are an expert RFP/tender analyst specializing in extracting requirements from bid documents.
+
+Analyze the following documents and extract ALL requirements, obligations, and deliverables that a bidder must address. Focus on:
+1. Mandatory requirements (must-have)
+2. Evaluation criteria and scoring requirements
+3. Technical specifications
+4. Compliance requirements
+5. Documentation requirements
+6. Delivery/timeline requirements
+7. Commercial/pricing requirements
+
+For each requirement, provide:
+- code: A unique short code (e.g., "REQ-001", "TECH-001", "COMP-001")
+- title: A brief title for the requirement
+- description: Full description of what is required
+- category: One of: technical, compliance, commercial, administrative, documentation, legal
+- priority: "critical" if explicitly mandatory, "high" if scoring-weighted, "medium" otherwise
+- isMandatory: true if explicitly stated as mandatory/required, false otherwise
+- sourceSection: The section name or header where this was found
+- sourcePage: Approximate page number if discernible
+- sourceText: The exact quote from the document (max 200 chars)
+- evaluationPoints: Numeric points if mentioned (null otherwise)
+
+Return a JSON array of requirements. Be thorough - extract ALL requirements, even implicit ones.
+
+DOCUMENTS:
+${documentContext}
+
+Return ONLY a valid JSON array like:
+[
+  {
+    "code": "REQ-001",
+    "title": "Example Requirement",
+    "description": "Full description...",
+    "category": "technical",
+    "priority": "critical",
+    "isMandatory": true,
+    "sourceSection": "Section 3.1",
+    "sourcePage": 5,
+    "sourceText": "The vendor shall provide...",
+    "evaluationPoints": 10
+  }
+]`;
+
+      const response = await generateBidWithAnthropic({
+        instructions: extractionPrompt,
+        context: '',
+        tone: 'analytical',
+      });
+      
+      let requirements: any[] = [];
+      try {
+        const jsonMatch = response.content.match(/\[[\s\S]*\]/);
+        if (jsonMatch) {
+          requirements = JSON.parse(jsonMatch[0]);
+        }
+      } catch (parseError) {
+        console.error('Failed to parse AI requirements response:', parseError);
+        return res.status(500).json({ error: "Failed to parse extracted requirements" });
+      }
+      
+      if (!Array.isArray(requirements) || requirements.length === 0) {
+        return res.status(200).json({ message: "No requirements found in documents", requirements: [] });
+      }
+      
+      await storage.deleteProjectRequirementsByProject(projectId);
+      
+      const validCategories = ['technical', 'compliance', 'commercial', 'administrative', 'documentation', 'legal'];
+      const validPriorities = ['critical', 'high', 'medium', 'low'];
+      
+      const requirementsToInsert = requirements.map((req, index) => ({
+        projectId,
+        code: req.code || `REQ-${String(index + 1).padStart(3, '0')}`,
+        title: req.title || 'Untitled Requirement',
+        description: req.description || null,
+        category: validCategories.includes(req.category) ? req.category : 'technical',
+        priority: validPriorities.includes(req.priority) ? req.priority : 'medium',
+        sourceDocumentId: documentsWithContent.find(d => 
+          req.sourceSection?.includes(d.filename) || req.sourceText?.includes(d.filename)
+        )?.id || documentsWithContent[0].id,
+        sourceSection: req.sourceSection || null,
+        sourcePage: typeof req.sourcePage === 'number' ? req.sourcePage : null,
+        sourceText: req.sourceText?.substring(0, 500) || null,
+        isMandatory: req.isMandatory ?? true,
+        evaluationPoints: typeof req.evaluationPoints === 'number' ? req.evaluationPoints : null,
+      }));
+      
+      const createdRequirements = await storage.createProjectRequirements(requirementsToInsert);
+      
+      console.log(`Extracted ${createdRequirements.length} requirements for project ${projectId}`);
+      res.json({ 
+        message: `Successfully extracted ${createdRequirements.length} requirements`,
+        requirements: createdRequirements,
+      });
+    } catch (error: any) {
+      console.error('Extract requirements error:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // GET /api/projects/:id/verification-gates - Get all verification gates for a project
   app.get("/api/projects/:id/verification-gates", authenticateToken, async (req: AuthRequest, res) => {
     try {
