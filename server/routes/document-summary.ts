@@ -8,6 +8,7 @@ import {
   documentChunks,
   projectSummaries,
   rfpAnalyses,
+  documentSummaries,
 } from '@shared/schema';
 import { eq, sql, and } from 'drizzle-orm';
 import {
@@ -33,7 +34,7 @@ router.get(
       const { id: projectId } = req.params;
       const companyId = req.user!.companyId;
 
-      // Get all documents with metadata
+      // Get all documents with metadata and summaries
       const documentsWithMetadata = await db
         .select({
           id: documents.id,
@@ -50,9 +51,17 @@ router.get(
           extractedEntities: documentMetadata.extractedEntities,
           processingTimeMs: documentMetadata.processingTimeMs,
           processingStatus: documentMetadata.processingStatus,
+          // Document Summary
+          summaryId: documentSummaries.id,
+          summaryContent: documentSummaries.summaryContent,
+          summaryStructuredData: documentSummaries.structuredData,
+          summaryIsUserEdited: documentSummaries.isUserEdited,
+          summaryCreatedAt: documentSummaries.createdAt,
+          summaryUpdatedAt: documentSummaries.updatedAt,
         })
         .from(documents)
         .leftJoin(documentMetadata, eq(documents.id, documentMetadata.documentId))
+        .leftJoin(documentSummaries, eq(documents.id, documentSummaries.documentId))
         .where(eq(documents.projectId, projectId));
 
       // Get chunk counts per document
@@ -70,11 +79,32 @@ router.get(
         chunkCounts.map((c) => [c.documentId, c.count])
       );
 
-      // Enhance documents with chunk counts
+      // Enhance documents with chunk counts and formatted summaries
       const enhancedDocuments = documentsWithMetadata.map((doc) => ({
-        ...doc,
+        id: doc.id,
+        filename: doc.filename,
+        description: doc.description,
+        content: doc.content,
+        isProcessed: doc.isProcessed,
+        uploadedAt: doc.uploadedAt,
+        pageCount: doc.pageCount,
+        fileSize: doc.fileSize,
+        fileType: doc.fileType,
+        keyInformation: doc.keyInformation,
+        extractedEntities: doc.extractedEntities,
+        processingTimeMs: doc.processingTimeMs,
+        processingStatus: doc.processingStatus,
         chunkCount: chunkCountMap[doc.id] || 0,
         status: doc.isProcessed ? 'processed' : 'processing',
+        summary: doc.summaryId ? {
+          id: doc.summaryId,
+          documentId: doc.id,
+          summaryContent: doc.summaryContent,
+          structuredData: doc.summaryStructuredData,
+          isUserEdited: doc.summaryIsUserEdited,
+          createdAt: doc.summaryCreatedAt,
+          updatedAt: doc.summaryUpdatedAt,
+        } : undefined,
       }));
 
       // Get or generate project summary

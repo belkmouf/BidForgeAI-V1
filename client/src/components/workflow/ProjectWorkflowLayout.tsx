@@ -179,43 +179,73 @@ export function ProjectWorkflowLayout({
   );
 }
 
-export function getWorkflowSteps(projectId: string, progress: {
-  documentsProcessed: boolean;
-  analysisComplete: boolean;
-  conflictsReviewed: boolean;
-}): WorkflowStep[] {
+// Workflow status progression
+const workflowOrder = [
+  'uploading',
+  'summarizing', 
+  'summary_review',
+  'analyzing',
+  'analysis_review',
+  'conflict_check',
+  'generating',
+  'review',
+  'completed'
+] as const;
+
+export type WorkflowStatus = typeof workflowOrder[number];
+
+// Check if we've reached or passed a given workflow status
+export function hasReachedStatus(current: WorkflowStatus | undefined, target: WorkflowStatus): boolean {
+  if (!current) return false;
+  return workflowOrder.indexOf(current) >= workflowOrder.indexOf(target);
+}
+
+export function getWorkflowSteps(projectId: string, workflowStatus: WorkflowStatus = 'uploading'): WorkflowStep[] {
+  const hasSummaryReview = hasReachedStatus(workflowStatus, 'summary_review');
+  const hasAnalysis = hasReachedStatus(workflowStatus, 'analyzing');
+  const hasConflicts = hasReachedStatus(workflowStatus, 'conflict_check');
+  const hasGeneration = hasReachedStatus(workflowStatus, 'generating');
+
   return [
     {
       id: 'documents',
       title: 'Documents',
       path: `/projects/${projectId}/documents`,
       icon: <FileText className="w-4 h-4" />,
-      isCompleted: progress.documentsProcessed,
+      isCompleted: hasSummaryReview,
       isAccessible: true,
+    },
+    {
+      id: 'summary',
+      title: 'Summary Review',
+      path: `/projects/${projectId}/summary`,
+      icon: <FileText className="w-4 h-4" />,
+      isCompleted: hasAnalysis,
+      isAccessible: hasSummaryReview || workflowStatus === 'summarizing',
     },
     {
       id: 'analysis',
       title: 'RFP Analysis',
       path: `/projects/${projectId}/analysis`,
       icon: <ShieldCheck className="w-4 h-4" />,
-      isCompleted: progress.analysisComplete,
-      isAccessible: progress.documentsProcessed,
+      isCompleted: hasConflicts,
+      isAccessible: hasAnalysis,
     },
     {
       id: 'conflicts',
       title: 'Conflicts',
       path: `/projects/${projectId}/conflicts`,
       icon: <AlertTriangle className="w-4 h-4" />,
-      isCompleted: progress.conflictsReviewed,
-      isAccessible: progress.analysisComplete,
+      isCompleted: hasGeneration,
+      isAccessible: hasConflicts,
     },
     {
       id: 'generation',
       title: 'Bid Generation',
       path: `/projects/${projectId}`,
       icon: <Sparkles className="w-4 h-4" />,
-      isCompleted: false,
-      isAccessible: progress.conflictsReviewed,
+      isCompleted: workflowStatus === 'completed',
+      isAccessible: hasGeneration,
     },
   ];
 }

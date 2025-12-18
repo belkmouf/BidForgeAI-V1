@@ -528,6 +528,15 @@ export interface DocumentSummaryResponse {
     processingStatus?: string;
     chunkCount: number;
     status: string;
+    summary?: {
+      id: number;
+      documentId: number;
+      summaryContent: string;
+      structuredData?: any;
+      isUserEdited: boolean;
+      createdAt: string;
+      updatedAt: string;
+    };
   }>;
   projectSummary: {
     id: number;
@@ -663,5 +672,25 @@ export async function generateAllProjectSummaries(projectId: string) {
     method: 'POST',
   });
   if (!res.ok) throw new Error('Failed to generate summaries');
+  return res.json();
+}
+
+export async function acceptSummaries(projectId: string) {
+  const res = await apiRequest(`${API_BASE}/projects/${projectId}/accept-summaries`, {
+    method: 'POST',
+  });
+  if (!res.ok) throw new Error('Failed to accept summaries');
+  return res.json();
+}
+
+export async function updateWorkflowStatus(projectId: string, workflowStatus: string) {
+  const res = await apiRequest(`${API_BASE}/projects/${projectId}/workflow-status`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ workflowStatus }),
+  });
+  if (!res.ok) throw new Error('Failed to update workflow status');
   return res.json();
 }

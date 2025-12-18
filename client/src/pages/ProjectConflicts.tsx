@@ -39,11 +39,8 @@ export default function ProjectConflicts() {
     loadProject();
   }, [projectId]);
 
-  const steps = getWorkflowSteps(projectId, {
-    documentsProcessed: progress.documentsProcessed,
-    analysisComplete: progress.analysisComplete,
-    conflictsReviewed: conflictsReviewed || progress.conflictsReviewed,
-  });
+  const workflowStatus = (project?.workflowStatus || 'conflict_check') as 'uploading' | 'summarizing' | 'summary_review' | 'analyzing' | 'analysis_review' | 'conflict_check' | 'generating' | 'review' | 'completed';
+  const steps = getWorkflowSteps(projectId, workflowStatus);
 
   if (isLoading) {
     return (
@@ -74,7 +71,7 @@ export default function ProjectConflicts() {
       projectId={projectId}
       projectName={project.name}
       clientName={project.clientName}
-      currentStep={2}
+      currentStep={3}
       steps={steps}
       backLabel="Back to Analysis"
       onBack={() => navigate(`/projects/${projectId}/analysis`)}

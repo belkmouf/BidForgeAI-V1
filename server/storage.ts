@@ -535,6 +535,7 @@ export class DatabaseStorage implements IStorage {
         dc.embedding,
         dc.chunk_index,
         dc.company_id,
+        dc.source_type,
         dc.embedding <=> ${embeddingStr}::vector AS distance
       FROM document_chunks dc
       JOIN documents d ON dc.document_id = d.id
@@ -556,6 +557,7 @@ export class DatabaseStorage implements IStorage {
       embedding: row.embedding,
       chunkIndex: row.chunk_index,
       companyId: row.company_id,
+      sourceType: row.source_type,
       distance: parseFloat(row.distance),
     }));
   }
@@ -588,6 +590,7 @@ export class DatabaseStorage implements IStorage {
           dc.content,
           dc.chunk_index,
           dc.company_id,
+          dc.source_type,
           0 as rank
         FROM document_chunks dc
         JOIN documents d ON dc.document_id = d.id
@@ -609,6 +612,7 @@ export class DatabaseStorage implements IStorage {
         embedding: null,
         chunkIndex: row.chunk_index,
         companyId: row.company_id,
+        sourceType: row.source_type,
         rank: 0,
       }));
     }
@@ -624,6 +628,7 @@ export class DatabaseStorage implements IStorage {
         dc.content,
         dc.chunk_index,
         dc.company_id,
+        dc.source_type,
         (
           SELECT COUNT(*) 
           FROM unnest(string_to_array(lower(dc.content), ' ')) word
@@ -650,6 +655,7 @@ export class DatabaseStorage implements IStorage {
       embedding: null,
       chunkIndex: row.chunk_index,
       companyId: row.company_id,
+      sourceType: row.source_type,
       rank: parseInt(row.rank) || 0,
     }));
   }
@@ -686,6 +692,7 @@ export class DatabaseStorage implements IStorage {
           dc.content,
           dc.chunk_index,
           dc.company_id,
+          dc.source_type,
           GREATEST(0, LEAST(1, 1 - (dc.embedding <=> ${embeddingStr}::vector))) AS vector_score
         FROM document_chunks dc
         JOIN documents d ON dc.document_id = d.id
@@ -713,6 +720,7 @@ export class DatabaseStorage implements IStorage {
         vs.content,
         vs.chunk_index,
         vs.company_id,
+        vs.source_type,
         vs.vector_score,
         COALESCE(ts.text_score, 0) AS text_score,
         GREATEST(0, vs.vector_score * ${vectorWeight} + COALESCE(ts.text_score, 0) * ${textWeight}) AS combined_score
@@ -729,6 +737,7 @@ export class DatabaseStorage implements IStorage {
       embedding: null,
       chunkIndex: row.chunk_index,
       companyId: row.company_id,
+      sourceType: row.source_type,
       score: parseFloat(row.combined_score) || 0,
       vectorScore: parseFloat(row.vector_score) || 0,
       textScore: parseFloat(row.text_score) || 0,

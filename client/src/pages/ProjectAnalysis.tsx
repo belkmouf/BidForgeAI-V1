@@ -325,11 +325,8 @@ export default function ProjectAnalysis() {
 
   const activeAlerts = alerts.filter(a => !a.isResolved);
 
-  const steps = getWorkflowSteps(projectId, {
-    documentsProcessed: progress.documentsProcessed,
-    analysisComplete: !!analysis,
-    conflictsReviewed: progress.conflictsReviewed,
-  });
+  const workflowStatus = (project?.workflowStatus || 'analyzing') as 'uploading' | 'summarizing' | 'summary_review' | 'analyzing' | 'analysis_review' | 'conflict_check' | 'generating' | 'review' | 'completed';
+  const steps = getWorkflowSteps(projectId, workflowStatus);
 
   const canProceed = !!analysis && !isAnalyzing;
 
@@ -338,10 +335,10 @@ export default function ProjectAnalysis() {
       projectId={projectId}
       projectName={project.name}
       clientName={project.clientName}
-      currentStep={1}
+      currentStep={2}
       steps={steps}
-      backLabel="Back to Documents"
-      onBack={() => navigate(`/projects/${projectId}/documents`)}
+      backLabel="Back to Summaries"
+      onBack={() => navigate(`/projects/${projectId}/summary`)}
       nextLabel="Review Conflicts"
       nextDisabled={!canProceed}
       onNext={() => navigate(`/projects/${projectId}/conflicts`)}

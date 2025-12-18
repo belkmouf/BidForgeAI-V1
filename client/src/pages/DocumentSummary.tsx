@@ -483,11 +483,8 @@ export default function DocumentSummary() {
     refetch();
   };
 
-  const steps = getWorkflowSteps(id || '', {
-    documentsProcessed: progress.documentsProcessed,
-    analysisComplete: progress.analysisComplete,
-    conflictsReviewed: progress.conflictsReviewed,
-  });
+  const workflowStatus = (project?.workflowStatus || 'uploading') as 'uploading' | 'summarizing' | 'summary_review' | 'analyzing' | 'analysis_review' | 'conflict_check' | 'generating' | 'review' | 'completed';
+  const steps = getWorkflowSteps(id || '', workflowStatus);
 
   const canProceed = data?.stats?.allProcessed && data?.stats?.documentCount > 0;
 
@@ -526,9 +523,9 @@ export default function DocumentSummary() {
       clientName={project?.clientName}
       currentStep={0}
       steps={steps}
-      nextLabel="Run RFP Analysis"
+      nextLabel="Review Summaries"
       nextDisabled={!canProceed}
-      onNext={() => navigate(`/projects/${id}/analysis`)}
+      onNext={() => navigate(`/projects/${id}/summary`)}
     >
       <div className="max-w-6xl mx-auto">
         <div className="mb-6">
