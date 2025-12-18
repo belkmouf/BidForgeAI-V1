@@ -41,8 +41,8 @@ export function GeneratePanel({ onGenerate, isGenerating }: GeneratePanelProps) 
 
   const handleGenerate = () => {
     const selectedInstruction = instructions.find(i => String(i.id) === selectedInstructionId);
-    if (!selectedInstruction) return;
-    onGenerate(selectedInstruction.instructions, tone, model);
+    const defaultInstructions = "Generate a professional, comprehensive bid proposal based on the RFP documents. Include executive summary, scope of work, methodology, timeline, and pricing.";
+    onGenerate(selectedInstruction?.instructions || defaultInstructions, tone, model);
   };
 
   const selectedInstruction = instructions.find(i => String(i.id) === selectedInstructionId);
@@ -128,7 +128,7 @@ export function GeneratePanel({ onGenerate, isGenerating }: GeneratePanelProps) 
             className="w-full gap-2 font-medium border-2 border-primary/50" 
             size="lg" 
             onClick={handleGenerate}
-            disabled={isGenerating || !selectedInstructionId || isLoading}
+            disabled={isGenerating}
             data-testid="button-generate-bid"
           >
             {isGenerating ? (
