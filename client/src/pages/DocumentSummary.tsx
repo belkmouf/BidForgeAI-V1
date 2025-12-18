@@ -719,14 +719,9 @@ export default function DocumentSummary() {
               <ScrollArea className="h-[400px]" data-testid="summary-scroll-area">
                 {selectedDocument ? (
                   isImageFile(selectedDocument.filename) ? (
-                    <div className="flex flex-col items-center space-y-4">
-                      <div className="relative w-full h-[300px] bg-muted/50 rounded-lg overflow-hidden flex items-center justify-center">
-                        {failedImages.has(selectedDocument.id) ? (
-                          <div className="text-center text-muted-foreground">
-                            <p>Image preview not available</p>
-                            <p className="text-xs mt-1">The image may still be processing</p>
-                          </div>
-                        ) : (
+                    <div className="flex flex-col space-y-4">
+                      {!failedImages.has(selectedDocument.id) && (
+                        <div className="relative w-full h-[250px] bg-muted/50 rounded-lg overflow-hidden flex items-center justify-center">
                           <img
                             src={getImageUrl(selectedDocument.filename)}
                             alt={selectedDocument.filename}
@@ -736,17 +731,26 @@ export default function DocumentSummary() {
                               setFailedImages(prev => new Set(prev).add(selectedDocument.id));
                             }}
                           />
-                        )}
-                      </div>
-                      {selectedDocument.summary && (
-                        <div className="w-full p-3 bg-muted/30 rounded-lg">
-                          <h4 className="text-sm font-medium mb-2">AI Analysis</h4>
+                        </div>
+                      )}
+                      {selectedDocument.summary ? (
+                        <div className="w-full p-4 bg-muted/30 rounded-lg">
+                          <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
+                            <AlertCircle className="w-4 h-4 text-blue-500" />
+                            AI Analysis
+                          </h4>
                           <div 
-                            className="prose prose-sm max-w-none text-xs text-muted-foreground"
+                            className="prose prose-sm max-w-none text-sm text-foreground leading-relaxed [&_h2]:text-base [&_h2]:font-semibold [&_h2]:mt-4 [&_h2]:mb-2 [&_ul]:list-disc [&_ul]:pl-4 [&_li]:mb-1"
                             dangerouslySetInnerHTML={{ __html: selectedDocument.summary.summaryContent }}
                           />
                         </div>
-                      )}
+                      ) : failedImages.has(selectedDocument.id) ? (
+                        <div className="text-center text-muted-foreground py-8">
+                          <ImageIcon className="w-12 h-12 mx-auto mb-3 opacity-40" />
+                          <p>Image preview not available</p>
+                          <p className="text-xs mt-1">Re-upload this image to enable preview</p>
+                        </div>
+                      ) : null}
                     </div>
                   ) : selectedDocument.summary ? (
                     <div className="space-y-4">
