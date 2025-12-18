@@ -1,0 +1,367 @@
+{
+  "sketch_id": "sketch_1765988751859_Car parking draiwing31",
+  "context_layer": {
+    "document_type": "Structural Detail Drawing",
+    "description": "Drawing shows details for the construction of a double bay shaded parking structure. It includes plan, side view, sections, and enlarged details of connections and foundation.",
+    "inferred_capacity": {
+      "value": 2,
+      "unit": "vehicles",
+      "reasoning": "The drawing is labeled 'DOUBLE BAY SHADED PARKING' and shows two parking spaces under the shade structure."
+    },
+    "compliance_note": "All materials finishes shall be as per specifications & approved by the clients/consultants. All services shaft shall be closed at terrace floor levels as directed to comply with fire/safety regulations.",
+    "purpose": "Provide shade for parked vehicles",
+    "key_features": [
+      "Double bay design",
+      "Steel frame structure",
+      "Fabric shade canopy",
+      "Concrete foundation"
+    ]
+  },
+  "project_metadata": {
+    "project_title": "PROPOSED DIRECTORATE BUILDING AT AL MUDHAIBI",
+    "project_number": "174/2023",
+    "revision": "00",
+    "status": "ISSUED FOR APPROVAL",
+    "date": "NOV.-2023",
+    "scale": "1:100",
+    "personnel": {
+      "drawn_by": "FT",
+      "checked_by": "ONE",
+      "approved_by": "AI",
+      "client": "MINISTRY OF HOUSING & URBAN PLANNING",
+      "consultant": "AL MANARAH Engineering Consultancy",
+      "contractor": null
+    },
+    "drawing_number": "174-2023/SD-2015",
+    "sheet_of": null
+  },
+  "technical_data": {
+    "dimensions": [
+      {
+        "label": "Overall Length of Shade (Double Bay)",
+        "value": 5000,
+        "unit": "mm",
+        "views": [
+          "Plan View"
+        ],
+        "derived_from": null,
+        "location": "Plan of Shade",
+        "confidence": 0.95
+      },
+      {
+        "label": "Bay Width",
+        "value": 2500,
+        "unit": "mm",
+        "views": [
+          "Plan View"
+        ],
+        "derived_from": null,
+        "location": "Plan of Shade",
+        "confidence": 0.95
+      },
+      {
+        "label": "Distance between supports",
+        "value": 5300,
+        "unit": "mm",
+        "views": [
+          "Side View"
+        ],
+        "derived_from": null,
+        "location": "Side View of Shade",
+        "confidence": 0.95
+      },
+      {
+        "label": "Height of support",
+        "value": 3000,
+        "unit": "mm",
+        "views": [
+          "Side View"
+        ],
+        "derived_from": null,
+        "location": "Side View of Shade",
+        "confidence": 0.95
+      },
+      {
+        "label": "Base Plate Dimension",
+        "value": 350,
+        "unit": "mm",
+        "views": [
+          "Detail of Base Plate"
+        ],
+        "derived_from": null,
+        "location": "Detail of Base Plate",
+        "confidence": 0.95
+      },
+      {
+        "label": "Base Plate Dimension",
+        "value": 350,
+        "unit": "mm",
+        "views": [
+          "Detail of Base Plate"
+        ],
+        "derived_from": null,
+        "location": "Detail of Base Plate",
+        "confidence": 0.95
+      },
+      {
+        "label": "Foundation Depth",
+        "value": 1800,
+        "unit": "mm",
+        "views": [
+          "Detail of Foundation"
+        ],
+        "derived_from": null,
+        "location": "Detail of Foundation",
+        "confidence": 0.95
+      },
+      {
+        "label": "Distance between Rebar",
+        "value": 150,
+        "unit": "mm",
+        "views": [
+          "Section B-B",
+          "Detail of Foundation"
+        ],
+        "derived_from": null,
+        "location": "Section B-B, Detail of Foundation",
+        "confidence": 0.95
+      },
+      {
+        "label": "Rebar Diameter",
+        "value": 16,
+        "unit": "mm",
+        "views": [
+          "Section B-B",
+          "Detail of Foundation"
+        ],
+        "derived_from": null,
+        "location": "Section B-B, Detail of Foundation",
+        "confidence": 0.95
+      },
+      {
+        "label": "Distance between supports",
+        "value": 1325,
+        "unit": "mm",
+        "views": [
+          "Side View"
+        ],
+        "derived_from": null,
+        "location": "Side View of Shade",
+        "confidence": 0.95
+      }
+    ],
+    "materials": [
+      {
+        "component": "Shade Fabric",
+        "spec": "PVC 900 GSM (WEATHER PROOF)",
+        "location": "Roof/Canopy",
+        "grade": null,
+        "standard": null,
+        "quantity": 0,
+        "unit": "m²",
+        "finish": null,
+        "color": null
+      },
+      {
+        "component": "Structural Columns",
+        "spec": "CHS Ø168.3 mm, T= 5.0mm",
+        "location": "Vertical supports",
+        "grade": null,
+        "standard": null,
+        "quantity": 0,
+        "unit": "m",
+        "finish": null,
+        "color": null
+      },
+      {
+        "component": "Base Plate",
+        "spec": "Base Plate 350mmX350mmX20mm THK",
+        "location": "Column base",
+        "grade": null,
+        "standard": null,
+        "quantity": 0,
+        "unit": "pcs",
+        "finish": null,
+        "color": null
+      },
+      {
+        "component": "Anchor Bolts",
+        "spec": "M 24 ANCHOR BOLTS GRADE 8.8",
+        "location": "Base plate connection",
+        "grade": "8.8",
+        "standard": null,
+        "quantity": 4,
+        "unit": "pcs",
+        "finish": null,
+        "color": null
+      },
+      {
+        "component": "Concrete",
+        "spec": "P.C.C.",
+        "location": "Foundation",
+        "grade": null,
+        "standard": null,
+        "quantity": 0,
+        "unit": "m³",
+        "finish": null,
+        "color": null
+      },
+      {
+        "component": "Rebar",
+        "spec": "Y 16",
+        "location": "Foundation",
+        "grade": null,
+        "standard": null,
+        "quantity": 0,
+        "unit": "kg",
+        "finish": null,
+        "color": null
+      },
+      {
+        "component": "Rebar",
+        "spec": "Y 10",
+        "location": "Foundation",
+        "grade": null,
+        "standard": null,
+        "quantity": 0,
+        "unit": "kg",
+        "finish": null,
+        "color": null
+      },
+      {
+        "component": "Polythene Sheets",
+        "spec": "1000g POLYTHENE SHEETS",
+        "location": "Under Foundation",
+        "grade": null,
+        "standard": null,
+        "quantity": 0,
+        "unit": "m²",
+        "finish": null,
+        "color": null
+      },
+      {
+        "component": "Paint",
+        "spec": "3 COATS OF SYNTHAPROOF",
+        "location": "Foundation",
+        "grade": null,
+        "standard": null,
+        "quantity": 0,
+        "unit": "m²",
+        "finish": null,
+        "color": null
+      }
+    ],
+    "components": [
+      {
+        "type": "Column",
+        "description": "Vertical support for the shade structure",
+        "size": "CHS Ø168.3 mm, T= 5.0mm",
+        "count": 1,
+        "location": "Center of parking bay",
+        "material": "Steel",
+        "connection_type": "Bolted to base plate"
+      },
+      {
+        "type": "Shade Structure",
+        "description": "Fabric canopy providing shade",
+        "size": null,
+        "count": 1,
+        "location": "Above parking bays",
+        "material": "PVC 900 GSM (WEATHER PROOF)",
+        "connection_type": "Attached to steel frame"
+      },
+      {
+        "type": "Foundation",
+        "description": "Concrete foundation for column support",
+        "size": null,
+        "count": 1,
+        "location": "Below ground",
+        "material": "Concrete",
+        "connection_type": "Cast-in-place"
+      }
+    ],
+    "quantities": {
+      "concrete_volume_m3": 0,
+      "steel_weight_kg": 0,
+      "fabric_area_m2": 0,
+      "paint_area_m2": 0,
+      "foundation_count": 0
+    }
+  },
+  "specifications": [
+    "ALL DIMENSIONS ARE IN MM UNLESS OTHERWISE STATED.",
+    "DO NOT SCALE THE DRAWING, FOLLOW THE WRITTEN DIMENSIONS ONLY",
+    "ALL LEVELS & DIMENSIONS MENTIONED ARE FINISHED UNLESS STATED OTHERWISE",
+    "ALL MATERIALS FINISHES SHALL BE AS PER SPECIFICATIONS & APPROVED BY THE CLIENTS/CONSULTANTS",
+    "ALL LEVELS & DIMENSIONS SPICIFIED IN T RAWINGS SHALL BE VERIFIED AT SITE & DISCREPANCIES AMBIGUITIES IF ANY SHALL BE BROUGHT TO NOTICE OF THE CONSULTANTS BEFORE COMMENCEMENT OF WORK FOR SITE",
+    "ALL SERVICES SHAFT SHALL BE CLOSED AT TERRACE FLOOR LEVELS AS DIRECTED TO THE COMPLY WITH FIRE/SAFETY REGULATIONS.",
+    "ALL EXTERNAL WORKS DRAWINGS SHALL BE READ WITH RELEVANT SITE DEVELOPMENT/INFRASTRUCTURE LANDSCAPE DRAWINGS.",
+    "ALL DIMENSIONS ARE IN MM UNLESS OTHERWISE STATED",
+    "DO NOT SCALE PLAN, FOLLOW THE WRITTEN DIMENSIONS ONLY.",
+    "SAFE BEARING CAPACITY OF SOIL ASSUMED TO BE 100KN/M2.",
+    "DEPTH OF FOUNDATION SHALL BE 1.80M. FROM NATURAL G. LVL/FINL ROAD LVL",
+    "CUBE STRENGTH OF CONCRETE FC 35 N/",
+    "YIELD STRENGTH OF STEEL 460",
+    "CONCRETE COVER",
+    "POUNDATION-50",
+    "COLUMN",
+    "MINIMUM CEMENT CONTENT-380 kg",
+    "WATER CEMENT RATIO-045",
+    "CONCRETE IN CONTACT WITH SOIL TO BE COATED WITH 3 COATS OF BITUMINOUS PAINT",
+    "USE OF SULPHATE RESISTING CEMENT",
+    "CONTRACTOR NEED TO SUBMIT SHOP DRAWINGS BEFORE STARTING THE WORK.",
+    "SHADED CARPARKING SHOULD BE DONE BY SPECIALISED CONTRACTRACTOR WITH DESIGN & BUILT IF ANY UPGRADE IS REQUIRED AS PER SPECIALISED CONTRACTOR TO BE DONE WITH OUT ANY ADDITIONAL COST.",
+    "DESION CRETERIA WIND SPEED 50M/SEC."
+  ],
+  "standards": [],
+  "regional_codes": [],
+  "annotations": [
+    "DETAIL - C REFER SHEET NO-AR-02 A",
+    "DETAIL-2 REFER SHEET NO-AR-02 A",
+    "SIDE VIEW OF SHADE (DOUBLE BAY)",
+    "PLAN OF SHADE (DOUBLE BAY)",
+    "DETAIL OF FOUNDATION (FOR DOUBLE PARKING BAY)",
+    "DETAIL OF BASE PLATE",
+    "SECTION - B-B",
+    "DETAIL-1",
+    "DETAIL-4",
+    "DETAIL-3",
+    "DETAIL -A",
+    "SECTIONA-A",
+    "ENLARGED DETAIL - 4",
+    "SECTION - D-D",
+    "ENLARGED DETAIL - 2",
+    "SECTION-E-E",
+    "DRAWING REFERENCES:",
+    "NOTES:",
+    "General Notes:",
+    "Anchor Bolts Schedule"
+  ],
+  "views_included": [
+    "Side View",
+    "Plan View",
+    "Section B-B",
+    "Detail of Foundation",
+    "Detail of Base Plate",
+    "Detail-1",
+    "Detail-2",
+    "Detail-3",
+    "Detail-4",
+    "Section A-A",
+    "Section D-D",
+    "Section E-E",
+    "Enlarged Detail - 2",
+    "Enlarged Detail - 4"
+  ],
+  "revisions": [
+    {
+      "revision": "00",
+      "date": "27-11-23",
+      "description": "ISSUED FOR APPROVAL"
+    }
+  ],
+  "confidence_score": 0.88,
+  "processing_time": 28.9281907081604,
+  "notes": "The drawing provides sufficient details for estimating material quantities and construction costs. Contractor need to submit shop drawings before starting the work.",
+  "warnings": []
+}

@@ -31,11 +31,11 @@ class SketchAgent:
 
         Args:
             provider: Vision provider (openai, anthropic, gemini, deepseek, qwen)
-                     If None, uses VISION_PROVIDER env var (defaults to 'gemini')
+                     If None, uses VISION_PROVIDER env var (defaults to 'openai' for better quality)
             model_name: Optional model override. If None, uses VISION_MODEL env var
         """
         # Determine provider
-        self.provider = provider or os.getenv("VISION_PROVIDER", "gemini")
+        self.provider = provider or os.getenv("VISION_PROVIDER", "openai")
 
         # Determine model
         self.model_name = model_name or os.getenv("VISION_MODEL")
@@ -94,7 +94,7 @@ class SketchAgent:
             response = await self.vision_model.analyze_image(
                 image=image,
                 prompt=analysis_prompt,
-                max_tokens=4000,
+                max_tokens=8000,
                 temperature=0.1
             )
         except Exception as e:
