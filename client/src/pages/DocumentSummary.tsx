@@ -1,6 +1,6 @@
 import { useParams, useLocation, Link } from 'wouter';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   getDocumentSummary,
   generateProjectSummary,
@@ -44,15 +44,27 @@ function formatDate(dateString: string): string {
   return date.toLocaleDateString();
 }
 
-function DocumentCard({ document }: { document: DocumentSummaryResponse['documents'][0] }) {
+function DocumentCard({ 
+  document, 
+  isSelected, 
+  onClick 
+}: { 
+  document: DocumentSummaryResponse['documents'][0];
+  isSelected?: boolean;
+  onClick?: () => void;
+}) {
   const [expanded, setExpanded] = useState(false);
 
   return (
-    <Card className="mb-4">
+    <Card 
+      className={`mb-4 cursor-pointer transition-all ${isSelected ? 'ring-2 ring-primary border-primary' : 'hover:border-primary/50'}`}
+      onClick={onClick}
+      data-testid={`card-document-${document.id}`}
+    >
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-3">
-            <FileText className="w-5 h-5 text-blue-500" />
+            <FileText className={`w-5 h-5 ${isSelected ? 'text-primary' : 'text-blue-500'}`} />
             <div>
               <CardTitle className="text-base">{document.filename}</CardTitle>
               <div className="flex items-center gap-2 mt-1 text-sm text-gray-500">
@@ -422,6 +434,7 @@ export default function DocumentSummary() {
   const [, navigate] = useLocation();
   const queryClient = useQueryClient();
   const progress = useProjectProgress(id);
+  const [selectedDocumentId, setSelectedDocumentId] = useState<number | null>(null);
 
   const { data: project } = useQuery({
     queryKey: ['project', id],
@@ -487,6 +500,14 @@ export default function DocumentSummary() {
   const steps = getWorkflowSteps(id || '', workflowStatus);
 
   const canProceed = data?.stats?.allProcessed && data?.stats?.documentCount > 0;
+
+  useEffect(() => {
+    if (data?.documents && data.documents.length > 0 && selectedDocumentId === null) {
+      setSelectedDocumentId(data.documents[0].id);
+    }
+  }, [data?.documents, selectedDocumentId]);
+
+  const selectedDocument = data?.documents?.find(d => d.id === selectedDocumentId);
 
   if (isLoading) {
     return (
@@ -650,7 +671,7 @@ export default function DocumentSummary() {
         </Card>
       </div>
 
-      {/* Documents List */}
+      {/* Documents List with Summary Panel */}
       <div className="mb-6">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-2xl font-bold flex items-center">
@@ -674,10 +695,98 @@ export default function DocumentSummary() {
             </CardContent>
           </Card>
         ) : (
-          <div>
-            {data.documents.map((doc) => (
-              <DocumentCard key={doc.id} document={doc} />
-            ))}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Documents List - Left Side */}
+            <div>
+              {data.documents.map((doc) => (
+                <DocumentCard 
+                  key={doc.id} 
+                  document={doc} 
+                  isSelected={selectedDocumentId === doc.id}
+                  onClick={() => setSelectedDocumentId(doc.id)}
+                />
+              ))}
+            </div>
+
+            {/* Summary Panel - Right Side */}
+            <div className="lg:sticky lg:top-4 lg:self-start">
+              <Card className="h-[500px] flex flex-col">
+                <CardHeader className="pb-3 flex-shrink-0">
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <FileCheck className="w-5 h-5 text-primary" />
+                    Document Summary
+                  </CardTitle>
+                  {selectedDocument && (
+                    <CardDescription className="truncate">
+                      {selectedDocument.filename}
+                    </CardDescription>
+                  )}
+                </CardHeader>
+                <ScrollArea className="flex-1 px-6 pb-4" data-testid="summary-scroll-area">
+                  {selectedDocument ? (
+                    selectedDocument.summary ? (
+                      <div className="space-y-4">
+                        <div className="prose prose-sm max-w-none">
+                          <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">
+                            {selectedDocument.summary.summaryContent}
+                          </p>
+                        </div>
+                        {selectedDocument.keyInformation && Object.keys(selectedDocument.keyInformation).length > 0 && (
+                          <div className="pt-4 border-t">
+                            <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
+                              <AlertCircle className="w-4 h-4 text-blue-500" />
+                              Key Information
+                            </h4>
+                            <div className="space-y-2 text-sm">
+                              {selectedDocument.keyInformation.projectType && (
+                                <div className="flex gap-2">
+                                  <span className="font-medium text-muted-foreground">Type:</span>
+                                  <span>{selectedDocument.keyInformation.projectType}</span>
+                                </div>
+                              )}
+                              {selectedDocument.keyInformation.location && (
+                                <div className="flex gap-2">
+                                  <span className="font-medium text-muted-foreground">Location:</span>
+                                  <span>{selectedDocument.keyInformation.location}</span>
+                                </div>
+                              )}
+                              {selectedDocument.keyInformation.deadline && (
+                                <div className="flex gap-2">
+                                  <span className="font-medium text-muted-foreground">Deadline:</span>
+                                  <span>{selectedDocument.keyInformation.deadline}</span>
+                                </div>
+                              )}
+                              {selectedDocument.keyInformation.budget && (
+                                <div className="flex gap-2">
+                                  <span className="font-medium text-muted-foreground">Budget:</span>
+                                  <span>{selectedDocument.keyInformation.budget}</span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center justify-center h-full py-12 text-center">
+                        <Clock className="w-12 h-12 text-muted-foreground/50 mb-4" />
+                        <h3 className="font-medium text-muted-foreground mb-2">Summary Pending</h3>
+                        <p className="text-sm text-muted-foreground/70">
+                          Summary will appear here once the document is processed.
+                        </p>
+                      </div>
+                    )
+                  ) : (
+                    <div className="flex flex-col items-center justify-center h-full py-12 text-center">
+                      <FileText className="w-12 h-12 text-muted-foreground/50 mb-4" />
+                      <h3 className="font-medium text-muted-foreground mb-2">No Document Selected</h3>
+                      <p className="text-sm text-muted-foreground/70">
+                        Click on a document to view its summary.
+                      </p>
+                    </div>
+                  )}
+                </ScrollArea>
+              </Card>
+            </div>
           </div>
         )}
       </div>
