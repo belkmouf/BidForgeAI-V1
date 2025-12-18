@@ -657,3 +657,11 @@ export async function regenerateDocumentSummary(documentId: number) {
   if (!res.ok) throw new Error('Failed to regenerate summary');
   return res.json();
 }
+
+export async function generateAllProjectSummaries(projectId: string) {
+  const res = await apiRequest(`${API_BASE}/projects/${projectId}/generate-all-summaries`, {
+    method: 'POST',
+  });
+  if (!res.ok) throw new Error('Failed to generate summaries');
+  return res.json();
+}

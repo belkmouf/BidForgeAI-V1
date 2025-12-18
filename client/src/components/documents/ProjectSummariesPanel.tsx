@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { FileText, Edit3, ChevronRight, Loader2 } from 'lucide-react';
-import { getProjectSummaries } from '@/lib/api';
+import { FileText, Edit3, ChevronRight, Loader2, Sparkles } from 'lucide-react';
+import { getProjectSummaries, generateAllProjectSummaries } from '@/lib/api';
+import { toast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 
 interface ProjectSummariesPanelProps {
@@ -17,6 +19,7 @@ export function ProjectSummariesPanel({
 }: ProjectSummariesPanelProps) {
   const [summaries, setSummaries] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isGenerating, setIsGenerating] = useState(false);
 
   useEffect(() => {
     loadSummaries();
@@ -31,6 +34,26 @@ export function ProjectSummariesPanel({
       console.error('Failed to load summaries:', error);
     } finally {
       setIsLoading(false);
+    }
+  }
+
+  async function handleGenerateSummaries() {
+    setIsGenerating(true);
+    try {
+      const result = await generateAllProjectSummaries(projectId);
+      toast({
+        title: "Summaries Generated",
+        description: result.message,
+      });
+      loadSummaries();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to generate summaries",
+        variant: "destructive",
+      });
+    } finally {
+      setIsGenerating(false);
     }
   }
 
@@ -50,6 +73,24 @@ export function ProjectSummariesPanel({
           <FileText className="h-12 w-12 mx-auto mb-2 opacity-50" />
           <p>No document summaries available yet.</p>
           <p className="text-sm mt-1">Summaries are automatically generated when documents are uploaded.</p>
+          <Button 
+            onClick={handleGenerateSummaries} 
+            disabled={isGenerating}
+            className="mt-4"
+            size="sm"
+          >
+            {isGenerating ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Generating...
+              </>
+            ) : (
+              <>
+                <Sparkles className="h-4 w-4 mr-2" />
+                Generate Summaries
+              </>
+            )}
+          </Button>
         </CardContent>
       </Card>
     );

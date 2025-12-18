@@ -5,7 +5,7 @@ import { storage } from "./storage";
 import { insertProjectSchema, insertDocumentSchema, users, documents, documentSummaries } from "@shared/schema";
 import { hashPassword, generateAccessToken } from "./lib/auth";
 import { db } from "./db";
-import { eq, sql } from "drizzle-orm";
+import { eq, sql, and, isNull } from "drizzle-orm";
 import { generateBidContent, refineBidContent, generateEmbedding } from "./lib/openai";
 import { generateBidWithAnthropic, refineBidWithAnthropic } from "./lib/anthropic";
 import { generateBidWithGemini, refineBidWithGemini } from "./lib/gemini";
@@ -1083,6 +1083,64 @@ export async function registerRoutes(
       res.json(summaries);
     } catch (error: any) {
       console.error('Error fetching project summaries:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // POST /api/projects/:id/generate-all-summaries - Generate summaries for all documents without summaries
+  app.post("/api/projects/:id/generate-all-summaries", authenticateToken, async (req: AuthRequest, res) => {
+    try {
+      const projectId = req.params.id;
+      const companyId = req.user?.companyId ?? null;
+
+      // Verify project belongs to company
+      const project = await storage.getProject(projectId, companyId);
+      if (!project) {
+        return res.status(404).json({ error: "Project not found" });
+      }
+
+      // Get all documents without summaries
+      const docsWithoutSummaries = await db
+        .select({
+          id: documents.id,
+          filename: documents.filename,
+        })
+        .from(documents)
+        .leftJoin(documentSummaries, eq(documents.id, documentSummaries.documentId))
+        .where(and(
+          eq(documents.projectId, projectId),
+          isNull(documentSummaries.id)
+        ));
+
+      if (docsWithoutSummaries.length === 0) {
+        return res.json({ 
+          success: true, 
+          message: "All documents already have summaries",
+          generated: 0 
+        });
+      }
+
+      // Generate summaries for each document
+      const results = [];
+      for (const doc of docsWithoutSummaries) {
+        try {
+          const result = await documentSummarizationService.summarizeDocument(doc.id);
+          results.push({ documentId: doc.id, filename: doc.filename, success: true, ...result });
+        } catch (error: any) {
+          console.error(`Failed to generate summary for document ${doc.id}:`, error);
+          results.push({ documentId: doc.id, filename: doc.filename, success: false, error: error.message });
+        }
+      }
+
+      const successful = results.filter(r => r.success).length;
+      res.json({
+        success: true,
+        message: `Generated ${successful} of ${docsWithoutSummaries.length} summaries`,
+        generated: successful,
+        results,
+      });
+    } catch (error: any) {
+      console.error('Error generating project summaries:', error);
       res.status(500).json({ error: error.message });
     }
   });
