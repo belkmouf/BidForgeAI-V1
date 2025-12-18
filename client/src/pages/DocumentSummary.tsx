@@ -16,6 +16,7 @@ import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
 import { Progress } from '../components/ui/progress';
 import { Separator } from '../components/ui/separator';
+import { ScrollArea } from '../components/ui/scroll-area';
 import { Loader2, FileText, CheckCircle, AlertCircle, Clock, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, FileCheck, AlertTriangle, TrendingUp, Download, RefreshCw, Edit2, Save, X, Upload } from 'lucide-react';
 import { Textarea } from '../components/ui/textarea';
 import { Alert, AlertDescription } from '../components/ui/alert';
@@ -269,104 +270,106 @@ function ProjectSummaryCard({ summary, projectId }: { summary: DocumentSummaryRe
         )}
       </CardHeader>
 
-      <CardContent className="space-y-4">
-        <div>
-          <h3 className="font-semibold mb-2">Project Overview</h3>
-          {editing ? (
-            <Textarea
-              value={editedOverview}
-              onChange={(e) => setEditedOverview(e.target.value)}
-              rows={4}
-              className="w-full"
-            />
-          ) : (
-            <p className="text-gray-700">{summary.overview || 'No overview available'}</p>
-          )}
-        </div>
-
-        {summary.scopeOfWork && summary.scopeOfWork.length > 0 && (
+      <ScrollArea className="max-h-[500px]">
+        <CardContent className="space-y-4">
           <div>
-            <h3 className="font-semibold mb-2">Scope of Work</h3>
-            <ul className="list-disc list-inside space-y-1">
-              {summary.scopeOfWork.map((item, idx) => (
-                <li key={idx} className="text-gray-700">{item}</li>
-              ))}
-            </ul>
+            <h3 className="font-semibold mb-2">Project Overview</h3>
+            {editing ? (
+              <Textarea
+                value={editedOverview}
+                onChange={(e) => setEditedOverview(e.target.value)}
+                rows={4}
+                className="w-full"
+              />
+            ) : (
+              <p className="text-gray-700">{summary.overview || 'No overview available'}</p>
+            )}
           </div>
-        )}
 
-        {summary.keyRequirements && (
-          <div>
-            <h3 className="font-semibold mb-2">Key Requirements</h3>
-            <div className="grid grid-cols-2 gap-3">
-              {summary.keyRequirements.budget && (
-                <div className="bg-gray-50 p-3 rounded">
-                  <div className="text-sm font-medium text-gray-600">Budget</div>
-                  <div className="text-base">{summary.keyRequirements.budget}</div>
-                </div>
-              )}
-              {summary.keyRequirements.timeline && (
-                <div className="bg-gray-50 p-3 rounded">
-                  <div className="text-sm font-medium text-gray-600">Timeline</div>
-                  <div className="text-base">{summary.keyRequirements.timeline}</div>
+          {summary.scopeOfWork && summary.scopeOfWork.length > 0 && (
+            <div>
+              <h3 className="font-semibold mb-2">Scope of Work</h3>
+              <ul className="list-disc list-inside space-y-1">
+                {summary.scopeOfWork.map((item, idx) => (
+                  <li key={idx} className="text-gray-700">{item}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {summary.keyRequirements && (
+            <div>
+              <h3 className="font-semibold mb-2">Key Requirements</h3>
+              <div className="grid grid-cols-2 gap-3">
+                {summary.keyRequirements.budget && (
+                  <div className="bg-gray-50 p-3 rounded">
+                    <div className="text-sm font-medium text-gray-600">Budget</div>
+                    <div className="text-base">{summary.keyRequirements.budget}</div>
+                  </div>
+                )}
+                {summary.keyRequirements.timeline && (
+                  <div className="bg-gray-50 p-3 rounded">
+                    <div className="text-sm font-medium text-gray-600">Timeline</div>
+                    <div className="text-base">{summary.keyRequirements.timeline}</div>
+                  </div>
+                )}
+              </div>
+              {summary.keyRequirements.certifications && summary.keyRequirements.certifications.length > 0 && (
+                <div className="mt-2">
+                  <div className="text-sm font-medium text-gray-600 mb-1">Certifications</div>
+                  <div className="flex flex-wrap gap-2">
+                    {summary.keyRequirements.certifications.map((cert, idx) => (
+                      <Badge key={idx} variant="outline">{cert}</Badge>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>
-            {summary.keyRequirements.certifications && summary.keyRequirements.certifications.length > 0 && (
-              <div className="mt-2">
-                <div className="text-sm font-medium text-gray-600 mb-1">Certifications</div>
-                <div className="flex flex-wrap gap-2">
-                  {summary.keyRequirements.certifications.map((cert, idx) => (
-                    <Badge key={idx} variant="outline">{cert}</Badge>
+          )}
+
+          {summary.riskFactors && summary.riskFactors.length > 0 && (
+            <Alert variant="destructive">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertDescription>
+                <h4 className="font-semibold mb-1">Risk Factors Identified</h4>
+                <ul className="list-disc list-inside space-y-1">
+                  {summary.riskFactors.map((risk, idx) => (
+                    <li key={idx}>{risk}</li>
                   ))}
-                </div>
-              </div>
-            )}
-          </div>
-        )}
+                </ul>
+              </AlertDescription>
+            </Alert>
+          )}
 
-        {summary.riskFactors && summary.riskFactors.length > 0 && (
-          <Alert variant="destructive">
-            <AlertTriangle className="h-4 w-4" />
-            <AlertDescription>
-              <h4 className="font-semibold mb-1">Risk Factors Identified</h4>
-              <ul className="list-disc list-inside space-y-1">
-                {summary.riskFactors.map((risk, idx) => (
-                  <li key={idx}>{risk}</li>
-                ))}
-              </ul>
-            </AlertDescription>
-          </Alert>
-        )}
+          {summary.opportunities && summary.opportunities.length > 0 && (
+            <Alert>
+              <TrendingUp className="h-4 w-4" />
+              <AlertDescription>
+                <h4 className="font-semibold mb-1">Opportunities</h4>
+                <ul className="list-disc list-inside space-y-1">
+                  {summary.opportunities.map((opp, idx) => (
+                    <li key={idx}>{opp}</li>
+                  ))}
+                </ul>
+              </AlertDescription>
+            </Alert>
+          )}
 
-        {summary.opportunities && summary.opportunities.length > 0 && (
-          <Alert>
-            <TrendingUp className="h-4 w-4" />
-            <AlertDescription>
-              <h4 className="font-semibold mb-1">Opportunities</h4>
-              <ul className="list-disc list-inside space-y-1">
-                {summary.opportunities.map((opp, idx) => (
-                  <li key={idx}>{opp}</li>
-                ))}
-              </ul>
-            </AlertDescription>
-          </Alert>
-        )}
-
-        {summary.missingInformation && summary.missingInformation.length > 0 && (
-          <Alert variant="default">
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>
-              <h4 className="font-semibold mb-1">Missing Information</h4>
-              <ul className="list-disc list-inside space-y-1">
-                {summary.missingInformation.map((item, idx) => (
-                  <li key={idx}>{item}</li>
-                ))}
-              </ul>
-            </AlertDescription>
-          </Alert>
-        )}
-      </CardContent>
+          {summary.missingInformation && summary.missingInformation.length > 0 && (
+            <Alert variant="default">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                <h4 className="font-semibold mb-1">Missing Information</h4>
+                <ul className="list-disc list-inside space-y-1">
+                  {summary.missingInformation.map((item, idx) => (
+                    <li key={idx}>{item}</li>
+                  ))}
+                </ul>
+              </AlertDescription>
+            </Alert>
+          )}
+        </CardContent>
+      </ScrollArea>
 
       <CardFooter>
         <Button
