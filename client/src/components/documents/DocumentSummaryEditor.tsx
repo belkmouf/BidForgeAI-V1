@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import {
   Save,
   FileText,
@@ -226,7 +227,7 @@ export function DocumentSummaryEditor({
               </Alert>
             )}
 
-            <div className="border rounded-lg">
+            <div className="border rounded-lg h-[500px] overflow-hidden">
               <TiptapEditor
                 content={content}
                 onChange={handleContentChange}
@@ -235,6 +236,7 @@ export function DocumentSummaryEditor({
           </TabsContent>
 
           <TabsContent value="structured" className="mt-4">
+            <ScrollArea className="h-[500px] pr-4">
             <div className="space-y-6">
               {/* Requirements */}
               {summary.structuredData?.requirements && summary.structuredData.requirements.length > 0 && (
@@ -364,6 +366,7 @@ export function DocumentSummaryEditor({
                 </div>
               )}
             </div>
+            </ScrollArea>
           </TabsContent>
         </Tabs>
       </CardContent>

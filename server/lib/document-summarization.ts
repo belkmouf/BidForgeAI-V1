@@ -111,17 +111,26 @@ Extract and structure the following information:
 6. **Timeline**: Deadlines, milestones, project duration, submission dates
 7. **Constraints**: Special conditions, restrictions, limitations
 
-Create a comprehensive narrative summary (3-5 paragraphs) covering:
-- Project overview and scope
-- Key requirements and specifications
-- Critical deadlines and constraints
-- Budget and cost considerations
-- Materials and quantities
-- Any special conditions or risks
+Create a comprehensive HTML-formatted summary with clear structure:
+- Use <h2> for main section headers
+- Use <h3> for subsection headers
+- Use <ul> with <li> for bullet point lists
+- Use <table> with <thead>, <tbody>, <tr>, <th>, <td> for tabular data (quantities, materials, timeline)
+- Use <p> for paragraphs
+- Use <strong> for emphasis on key values
+
+The summary MUST include these sections with proper HTML:
+1. <h2>Project Overview</h2> - Brief introduction paragraph
+2. <h2>Scope of Work</h2> - Bulleted list of key deliverables
+3. <h2>Key Requirements</h2> - Technical, legal, administrative requirements as bullets
+4. <h2>Materials & Quantities</h2> - Table format if quantities exist, otherwise bullets
+5. <h2>Timeline & Deadlines</h2> - Key dates and milestones
+6. <h2>Budget & Cost</h2> - Cost information if available
+7. <h2>Constraints & Risks</h2> - Any limitations or special conditions
 
 Return JSON with this structure:
 {
-  "summaryContent": "Comprehensive narrative summary...",
+  "summaryContent": "<h2>Project Overview</h2><p>...</p><h2>Scope of Work</h2><ul><li>...</li></ul>...",
   "structuredData": {
     "requirements": [{"type": "technical|legal|admin", "description": "...", "priority": "high|medium|low"}],
     "specifications": {"category": "details", ...},
@@ -135,6 +144,7 @@ Return JSON with this structure:
 }
 
 IMPORTANT:
+- The summaryContent MUST be valid HTML with proper tags
 - Only extract information explicitly stated in the document
 - Use professional construction industry terminology
 - Be comprehensive but accurate
