@@ -593,28 +593,90 @@ export default function DocumentSummary() {
 
         {/* Project Files Section - Clean Design */}
         <Card className="mb-6">
-          <CardHeader className="pb-4">
+          <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Upload className="w-5 h-5 text-muted-foreground" />
                 <CardTitle className="text-lg">Project Files</CardTitle>
-                <Badge variant="secondary" className="ml-1">{data.documents.length}</Badge>
+                <span className="text-sm text-muted-foreground ml-1">{data.documents.length}</span>
               </div>
+              <label className="cursor-pointer">
+                <input
+                  type="file"
+                  multiple
+                  className="hidden"
+                  accept=".pdf,.docx,.doc,.xlsx,.xls,.csv,.txt,.png,.jpg,.jpeg,.gif,.tiff,.bmp,.webp"
+                  onChange={(e) => {
+                    const files = e.target.files;
+                    if (files) {
+                      Array.from(files).forEach(file => {
+                        handleFileUpload(file, () => {});
+                      });
+                    }
+                    e.target.value = '';
+                  }}
+                  data-testid="file-input"
+                />
+                <Button size="sm" className="gap-2" asChild>
+                  <span>
+                    <Upload className="w-4 h-4" />
+                    Upload
+                  </span>
+                </Button>
+              </label>
             </div>
           </CardHeader>
           <CardContent className="pt-0">
-            {/* Upload Zone */}
-            <DropZone
-              files={data.documents.map(doc => ({
-                id: doc.id.toString(),
-                name: doc.filename,
-                size: doc.fileSize || 0,
-                uploadedAt: new Date(doc.uploadedAt),
-                isProcessed: doc.isProcessed,
-              }))}
-              onUploadWithProgress={handleFileUpload}
-              onDelete={handleDeleteDocument}
-            />
+            {data.documents.length === 0 ? (
+              <div className="py-8 text-center text-muted-foreground border-2 border-dashed rounded-lg">
+                <FileText className="w-10 h-10 mx-auto mb-2 opacity-40" />
+                <p>No files uploaded yet</p>
+                <p className="text-sm mt-1">Click Upload to add your RFP documents</p>
+              </div>
+            ) : (
+              <div className="divide-y">
+                {data.documents.map((doc) => (
+                  <div 
+                    key={doc.id} 
+                    className="flex items-center justify-between py-3"
+                    data-testid={`file-row-${doc.id}`}
+                  >
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                      {getFileIcon(doc.filename)}
+                      <span className="truncate text-sm">{doc.filename}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {doc.isProcessed ? (
+                        <span className="flex items-center gap-1 text-sm text-green-600">
+                          <CheckCircle className="w-4 h-4" />
+                          Done
+                        </span>
+                      ) : (
+                        <span className="flex items-center gap-1 text-sm text-yellow-600">
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          Processing
+                        </span>
+                      )}
+                      <button 
+                        className="p-1.5 hover:bg-muted rounded-md text-muted-foreground hover:text-foreground transition-colors"
+                        title="Download"
+                        data-testid={`download-${doc.id}`}
+                      >
+                        <Download className="w-4 h-4" />
+                      </button>
+                      <button 
+                        className="p-1.5 hover:bg-red-50 rounded-md text-muted-foreground hover:text-red-600 transition-colors"
+                        onClick={() => handleDeleteDocument(doc.id)}
+                        title="Delete"
+                        data-testid={`delete-${doc.id}`}
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
 
