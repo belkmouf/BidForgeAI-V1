@@ -4,7 +4,7 @@ import { TiptapEditor } from '@/components/editor/TiptapEditor';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
-import { ChevronLeft, Save, Share2, Eye, Loader2, FileText, Plus, Sparkles, RefreshCw, Clock, CheckCircle, Image as ImageIcon, FileSpreadsheet, Send, Lightbulb, AlertCircle, ChevronRight } from 'lucide-react';
+import { ChevronLeft, Save, Share2, Eye, Loader2, FileText, Plus, Sparkles, RefreshCw, Clock, CheckCircle, Image as ImageIcon, FileSpreadsheet, Send, Lightbulb, AlertCircle, ChevronRight, Trash2 } from 'lucide-react';
 import { Link } from 'wouter';
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
@@ -190,6 +190,28 @@ export default function ProjectWorkspace() {
     e.target.value = '';
   };
 
+  const handleDeleteDocument = async (documentId: number, e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      await deleteDocument(documentId);
+      const docsData = await listDocuments(projectId);
+      setDocuments(docsData);
+      if (selectedDocumentId === documentId) {
+        setSelectedDocumentId(docsData.length > 0 ? docsData[0].id : null);
+      }
+      toast({
+        title: "Document Deleted",
+        description: "The document has been removed.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Delete Failed",
+        description: error.message || "Failed to delete document",
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleSave = () => {
     toast({
       title: "Saved",
@@ -330,9 +352,20 @@ export default function ProjectWorkspace() {
                             <span className="text-xs text-muted-foreground">{formatDate(doc.uploadedAt)}</span>
                           </div>
                         </div>
-                        {doc.isProcessed && (
-                          <CheckCircle className="w-4 h-4 text-primary flex-shrink-0" />
-                        )}
+                        <div className="flex items-center gap-1 flex-shrink-0">
+                          {doc.isProcessed && (
+                            <CheckCircle className="w-4 h-4 text-primary" />
+                          )}
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6 text-muted-foreground hover:text-destructive"
+                            onClick={(e) => handleDeleteDocument(doc.id, e)}
+                            data-testid={`button-delete-doc-${doc.id}`}
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   ))}
