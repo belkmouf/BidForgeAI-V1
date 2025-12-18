@@ -144,10 +144,16 @@ export function hasReachedStatus(current: WorkflowStatus | undefined, target: Wo
 
 export interface WorkflowStepsOptions {
   checklistComplete?: boolean;
+  gate1Passed?: boolean;
+  gate2Passed?: boolean;
 }
 
 export function getWorkflowSteps(projectId: string, workflowStatus: WorkflowStatus = 'uploading', options: WorkflowStepsOptions = {}): WorkflowStep[] {
-  const { checklistComplete = true } = options;
+  const { 
+    checklistComplete = true,
+    gate1Passed = true,
+    gate2Passed = true,
+  } = options;
   const hasSummaryReview = hasReachedStatus(workflowStatus, 'summary_review');
   const hasAnalysis = hasReachedStatus(workflowStatus, 'analyzing');
   const hasConflicts = hasReachedStatus(workflowStatus, 'conflict_check');
@@ -176,7 +182,7 @@ export function getWorkflowSteps(projectId: string, workflowStatus: WorkflowStat
       path: `/projects/${projectId}/summary`,
       icon: <FileText className="w-4 h-4" />,
       isCompleted: hasAnalysis,
-      isAccessible: hasSummaryReview || workflowStatus === 'summarizing',
+      isAccessible: gate1Passed && (hasSummaryReview || workflowStatus === 'summarizing'),
     },
     {
       id: 'analysis',
@@ -184,7 +190,7 @@ export function getWorkflowSteps(projectId: string, workflowStatus: WorkflowStat
       path: `/projects/${projectId}/analysis`,
       icon: <ShieldCheck className="w-4 h-4" />,
       isCompleted: hasConflicts,
-      isAccessible: hasAnalysis,
+      isAccessible: gate1Passed && hasAnalysis,
     },
     {
       id: 'conflicts',
@@ -192,7 +198,7 @@ export function getWorkflowSteps(projectId: string, workflowStatus: WorkflowStat
       path: `/projects/${projectId}/conflicts`,
       icon: <AlertTriangle className="w-4 h-4" />,
       isCompleted: hasGeneration,
-      isAccessible: hasConflicts,
+      isAccessible: gate1Passed && hasConflicts,
     },
     {
       id: 'generation',
@@ -200,7 +206,7 @@ export function getWorkflowSteps(projectId: string, workflowStatus: WorkflowStat
       path: `/projects/${projectId}`,
       icon: <Sparkles className="w-4 h-4" />,
       isCompleted: workflowStatus === 'completed',
-      isAccessible: hasGeneration,
+      isAccessible: gate1Passed && hasGeneration,
     },
   ];
 }

@@ -1522,6 +1522,56 @@ Return ONLY a valid JSON array like:
     }
   });
 
+  // POST /api/projects/:id/verification-gates - Create or update a verification gate
+  const verificationGateSchema = z.object({
+    gateNumber: z.number().int().min(1).max(10),
+    gateName: z.string().min(1).max(100),
+    status: z.enum(['pending', 'passed', 'blocked', 'warning']),
+    overallScore: z.number().min(0).max(100).optional().nullable(),
+    checkResults: z.array(z.object({
+      checkName: z.string(),
+      passed: z.boolean(),
+      score: z.number().optional(),
+      message: z.string(),
+      details: z.string().optional(),
+      isMandatory: z.boolean().optional(),
+    })).optional().default([]),
+    issuesCount: z.number().int().min(0).optional().default(0),
+    warningsCount: z.number().int().min(0).optional().default(0),
+  });
+  
+  app.post("/api/projects/:id/verification-gates", authenticateToken, async (req: AuthRequest, res) => {
+    try {
+      const projectId = req.params.id;
+      
+      const parsed = verificationGateSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ 
+          error: "Invalid gate data", 
+          details: parsed.error.errors 
+        });
+      }
+      
+      const { gateNumber, gateName, status, overallScore, checkResults, issuesCount, warningsCount } = parsed.data;
+      
+      const gate = await storage.createOrUpdateVerificationGate({
+        projectId,
+        gateNumber,
+        gateName,
+        status,
+        overallScore: overallScore ?? null,
+        checkResults,
+        issuesCount,
+        warningsCount,
+      });
+      
+      res.json(gate);
+    } catch (error: any) {
+      console.error('Create/update verification gate error:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // POST /api/projects/:id/verification-gates/:gateNumber/acknowledge - Acknowledge a verification gate
   app.post("/api/projects/:id/verification-gates/:gateNumber/acknowledge", authenticateToken, async (req: AuthRequest, res) => {
     try {
