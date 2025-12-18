@@ -242,7 +242,7 @@ export async function deleteDocument(documentId: number) {
 }
 
 // AI Model type (order: Anthropic first, then Gemini, DeepSeek, OpenAI last)
-export type AIModel = 'anthropic' | 'gemini' | 'deepseek' | 'openai';
+export type AIModel = 'anthropic' | 'gemini' | 'deepseek' | 'openai' | 'grok';
 
 // Agent Workflow API
 export interface AgentWorkflowResponse {

@@ -5,6 +5,7 @@ import { generateBidContent } from './openai.js';
 import { generateBidWithAnthropic } from './anthropic.js';
 import { generateBidWithGemini } from './gemini.js';
 import { generateBidWithDeepSeek } from './deepseek.js';
+import { generateBidWithGrok } from './grok.js';
 import { analyzeRFP } from './analysis.js';
 import { cache } from './cache.js';
 import { ingestionService } from './ingestion.js';
@@ -29,7 +30,7 @@ export interface BidGenerationData {
   projectId: string;
   instructions: string;
   tone?: string;
-  model: 'openai' | 'anthropic' | 'gemini' | 'deepseek';
+  model: 'openai' | 'anthropic' | 'gemini' | 'deepseek' | 'grok';
   userId: number;
   companyId: number;
 }
@@ -96,6 +97,9 @@ export async function processBidGeneration(job: Job, data: BidGenerationData): P
         break;
       case 'deepseek':
         bidResult = await generateBidWithDeepSeek({ instructions, context: combinedContext, tone });
+        break;
+      case 'grok':
+        bidResult = await generateBidWithGrok({ instructions, context: combinedContext, tone });
         break;
       default:
         bidResult = await generateBidContent({ instructions, context: combinedContext, tone });

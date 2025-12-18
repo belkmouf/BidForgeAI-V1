@@ -67,6 +67,7 @@ export function GeneratePanel({ onGenerate, isGenerating }: GeneratePanelProps) 
                 <SelectItem value="gemini">Google Gemini</SelectItem>
                 <SelectItem value="deepseek">DeepSeek</SelectItem>
                 <SelectItem value="openai">OpenAI GPT-4o</SelectItem>
+                <SelectItem value="grok">xAI Grok 3</SelectItem>
               </SelectContent>
             </Select>
           </div>

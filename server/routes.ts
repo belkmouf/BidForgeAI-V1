@@ -10,6 +10,7 @@ import { generateBidContent, refineBidContent, generateEmbedding } from "./lib/o
 import { generateBidWithAnthropic, refineBidWithAnthropic } from "./lib/anthropic";
 import { generateBidWithGemini, refineBidWithGemini } from "./lib/gemini";
 import { generateBidWithDeepSeek, refineBidWithDeepSeek } from "./lib/deepseek";
+import { generateBidWithGrok, refineBidWithGrok } from "./lib/grok";
 import { ingestionService } from "./lib/ingestion";
 import { documentSummarizationService } from "./lib/document-summarization";
 import { 
@@ -73,7 +74,7 @@ const upload = multer({
 });
 
 // Request schemas
-const modelEnum = z.enum(['anthropic', 'gemini', 'deepseek', 'openai']);
+const modelEnum = z.enum(['anthropic', 'gemini', 'deepseek', 'openai', 'grok']);
 
 const generateBidSchema = z.object({
   instructions: z.string().min(1),
@@ -189,7 +190,7 @@ async function processKnowledgeBaseDocument(
 const refineBidSchema = z.object({
   currentHtml: z.string().min(1),
   feedback: z.string().min(1),
-  model: z.enum(['anthropic', 'gemini', 'deepseek', 'openai']).optional().default('anthropic'),
+  model: z.enum(['anthropic', 'gemini', 'deepseek', 'openai', 'grok']).optional().default('anthropic'),
 });
 
 const updateStatusSchema = z.object({
@@ -1147,6 +1148,8 @@ export async function registerRoutes(
         return generateBidWithGemini(params);
       case 'deepseek':
         return generateBidWithDeepSeek(params);
+      case 'grok':
+        return generateBidWithGrok(params);
       case 'openai':
       default:
         return generateBidContent(params);
@@ -1647,6 +1650,9 @@ or contact details from other sources.
           break;
         case 'deepseek':
           result = await refineBidWithDeepSeek({ currentHtml, feedback: sanitizedFeedback });
+          break;
+        case 'grok':
+          result = await refineBidWithGrok({ currentHtml, feedback: sanitizedFeedback });
           break;
         case 'openai':
         default:

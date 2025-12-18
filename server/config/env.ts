@@ -98,12 +98,13 @@ export const env = validatedEnv;
 /**
  * Check if a specific AI provider is configured
  */
-export function isAIProviderConfigured(provider: 'openai' | 'anthropic' | 'gemini' | 'deepseek'): boolean {
+export function isAIProviderConfigured(provider: 'openai' | 'anthropic' | 'gemini' | 'deepseek' | 'grok'): boolean {
   switch (provider) {
     case 'openai': return !!env.OPENAI_API_KEY;
     case 'anthropic': return !!env.ANTHROPIC_API_KEY;
     case 'gemini': return !!env.GOOGLE_API_KEY;
     case 'deepseek': return !!env.DEEPSEEK_API_KEY;
+    case 'grok': return !!process.env.XAI_API_KEY;
     default: return false;
   }
 }
@@ -117,6 +118,7 @@ export function getConfiguredAIProviders(): string[] {
   if (env.ANTHROPIC_API_KEY) providers.push('anthropic');
   if (env.GOOGLE_API_KEY) providers.push('gemini');
   if (env.DEEPSEEK_API_KEY) providers.push('deepseek');
+  if (process.env.XAI_API_KEY) providers.push('grok');
   return providers;
 }
 

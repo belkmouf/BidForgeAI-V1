@@ -64,6 +64,8 @@ export function BidHistory({ projectId, onSelectBid, refreshTrigger }: BidHistor
         return 'DeepSeek';
       case 'openai':
         return 'GPT-4o';
+      case 'grok':
+        return 'Grok 3';
       case 'multishot-agent':
         return 'Claude Sonnet';
       default:
@@ -82,6 +84,8 @@ export function BidHistory({ projectId, onSelectBid, refreshTrigger }: BidHistor
         return 'bg-purple-100 text-purple-800 border-purple-200';
       case 'openai':
         return 'bg-green-100 text-green-800 border-green-200';
+      case 'grok':
+        return 'bg-red-100 text-red-800 border-red-200';
       default:
         return 'bg-gray-100 text-gray-800 border-gray-200';
     }
