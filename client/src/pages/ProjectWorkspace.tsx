@@ -4,7 +4,7 @@ import { TiptapEditor } from '@/components/editor/TiptapEditor';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
-import { ChevronLeft, Save, Share2, Eye, Loader2, FileText, Plus, Sparkles, RefreshCw, Clock, CheckCircle, Image as ImageIcon, FileSpreadsheet, Send, Lightbulb, AlertCircle, ChevronRight, Trash2 } from 'lucide-react';
+import { ChevronLeft, Save, Share2, Eye, Loader2, FileText, Plus, Sparkles, RefreshCw, Clock, CheckCircle, Image as ImageIcon, FileSpreadsheet, Send, Lightbulb, AlertCircle, ChevronRight, Trash2, History } from 'lucide-react';
 import { Link } from 'wouter';
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
@@ -13,6 +13,7 @@ import { Input } from '@/components/ui/input';
 import { toast } from '@/hooks/use-toast';
 import { getProject, listDocuments, uploadDocument, uploadDocumentWithProgress, deleteDocument, generateBid, refineBid, getLatestBid, wrapInTemplate, generateShareLink, updateProjectStatus, startAgentWorkflow, cancelAgentWorkflow, type AIModel, type ProcessingProgress } from '@/lib/api';
 import { AgentProgressPanel } from '@/components/agents/AgentProgressPanel';
+import { BidHistory } from '@/components/bid/BidHistory';
 import type { Project, Document } from '@shared/schema';
 
 function getFileIcon(filename: string): React.ReactNode {
@@ -675,6 +676,18 @@ export default function ProjectWorkspace() {
                       </div>
                     </div>
                   </div>
+                </div>
+
+                {/* Bid History */}
+                <div className="pt-4 border-t">
+                  <BidHistory
+                    projectId={projectId}
+                    onSelectBid={(content, bidId) => {
+                      setEditorContent(content);
+                      if (bidId) setCurrentBidId(bidId);
+                    }}
+                    refreshTrigger={bidRefreshTrigger}
+                  />
                 </div>
               </div>
             </ScrollArea>
