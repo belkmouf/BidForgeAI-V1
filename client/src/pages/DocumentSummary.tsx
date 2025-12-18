@@ -271,9 +271,12 @@ function ProjectSummaryCard({ summary, projectId }: { summary: DocumentSummaryRe
       </CardHeader>
 
       <ScrollArea className="max-h-[500px]">
-        <CardContent className="space-y-4">
-          <div>
-            <h3 className="font-semibold mb-2">Project Overview</h3>
+        <CardContent className="space-y-6 pr-4">
+          <div className="bg-gradient-to-r from-slate-50 to-white p-4 rounded-lg border-l-4 border-blue-500">
+            <h3 className="font-semibold text-lg mb-3 flex items-center gap-2 text-slate-800">
+              <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
+              Project Overview
+            </h3>
             {editing ? (
               <Textarea
                 value={editedOverview}
@@ -282,91 +285,117 @@ function ProjectSummaryCard({ summary, projectId }: { summary: DocumentSummaryRe
                 className="w-full"
               />
             ) : (
-              <p className="text-gray-700">{summary.overview || 'No overview available'}</p>
+              <p className="text-gray-700 leading-relaxed">{summary.overview || 'No overview available'}</p>
             )}
           </div>
 
           {summary.scopeOfWork && summary.scopeOfWork.length > 0 && (
-            <div>
-              <h3 className="font-semibold mb-2">Scope of Work</h3>
-              <ul className="list-disc list-inside space-y-1">
+            <div className="bg-white p-4 rounded-lg border border-slate-200">
+              <h3 className="font-semibold text-lg mb-3 flex items-center gap-2 text-slate-800">
+                <span className="w-2 h-2 bg-teal-500 rounded-full"></span>
+                Scope of Work
+              </h3>
+              <div className="space-y-2">
                 {summary.scopeOfWork.map((item, idx) => (
-                  <li key={idx} className="text-gray-700">{item}</li>
+                  <div key={idx} className="flex items-start gap-3 p-2 hover:bg-slate-50 rounded transition-colors">
+                    <span className="flex-shrink-0 w-6 h-6 bg-teal-100 text-teal-700 rounded-full flex items-center justify-center text-sm font-medium">
+                      {idx + 1}
+                    </span>
+                    <span className="text-gray-700">{item}</span>
+                  </div>
                 ))}
-              </ul>
+              </div>
             </div>
           )}
 
           {summary.keyRequirements && (
-            <div>
-              <h3 className="font-semibold mb-2">Key Requirements</h3>
-              <div className="grid grid-cols-2 gap-3">
-                {summary.keyRequirements.budget && (
-                  <div className="bg-gray-50 p-3 rounded">
-                    <div className="text-sm font-medium text-gray-600">Budget</div>
-                    <div className="text-base">{summary.keyRequirements.budget}</div>
-                  </div>
-                )}
-                {summary.keyRequirements.timeline && (
-                  <div className="bg-gray-50 p-3 rounded">
-                    <div className="text-sm font-medium text-gray-600">Timeline</div>
-                    <div className="text-base">{summary.keyRequirements.timeline}</div>
-                  </div>
-                )}
-              </div>
-              {summary.keyRequirements.certifications && summary.keyRequirements.certifications.length > 0 && (
-                <div className="mt-2">
-                  <div className="text-sm font-medium text-gray-600 mb-1">Certifications</div>
-                  <div className="flex flex-wrap gap-2">
-                    {summary.keyRequirements.certifications.map((cert, idx) => (
-                      <Badge key={idx} variant="outline">{cert}</Badge>
-                    ))}
-                  </div>
-                </div>
-              )}
+            <div className="bg-white p-4 rounded-lg border border-slate-200">
+              <h3 className="font-semibold text-lg mb-3 flex items-center gap-2 text-slate-800">
+                <span className="w-2 h-2 bg-amber-500 rounded-full"></span>
+                Key Requirements
+              </h3>
+              <table className="w-full border-collapse">
+                <tbody>
+                  {summary.keyRequirements.budget && (
+                    <tr className="border-b border-slate-100">
+                      <td className="py-3 px-4 font-medium text-slate-600 bg-slate-50 w-1/3">Budget</td>
+                      <td className="py-3 px-4 text-slate-800">{summary.keyRequirements.budget}</td>
+                    </tr>
+                  )}
+                  {summary.keyRequirements.timeline && (
+                    <tr className="border-b border-slate-100">
+                      <td className="py-3 px-4 font-medium text-slate-600 bg-slate-50 w-1/3">Timeline</td>
+                      <td className="py-3 px-4 text-slate-800">{summary.keyRequirements.timeline}</td>
+                    </tr>
+                  )}
+                  {summary.keyRequirements.certifications && summary.keyRequirements.certifications.length > 0 && (
+                    <tr>
+                      <td className="py-3 px-4 font-medium text-slate-600 bg-slate-50 w-1/3 align-top">Certifications</td>
+                      <td className="py-3 px-4">
+                        <div className="flex flex-wrap gap-2">
+                          {summary.keyRequirements.certifications.map((cert, idx) => (
+                            <Badge key={idx} variant="outline" className="bg-amber-50 border-amber-200 text-amber-800">
+                              {cert}
+                            </Badge>
+                          ))}
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
             </div>
           )}
 
           {summary.riskFactors && summary.riskFactors.length > 0 && (
-            <Alert variant="destructive">
-              <AlertTriangle className="h-4 w-4" />
-              <AlertDescription>
-                <h4 className="font-semibold mb-1">Risk Factors Identified</h4>
-                <ul className="list-disc list-inside space-y-1">
-                  {summary.riskFactors.map((risk, idx) => (
-                    <li key={idx}>{risk}</li>
-                  ))}
-                </ul>
-              </AlertDescription>
-            </Alert>
+            <div className="bg-red-50 p-4 rounded-lg border border-red-200">
+              <h3 className="font-semibold text-lg mb-3 flex items-center gap-2 text-red-800">
+                <AlertTriangle className="h-5 w-5 text-red-600" />
+                Risk Factors
+              </h3>
+              <div className="space-y-2">
+                {summary.riskFactors.map((risk, idx) => (
+                  <div key={idx} className="flex items-start gap-3 p-2 bg-white/50 rounded">
+                    <span className="flex-shrink-0 text-red-500 mt-0.5">•</span>
+                    <span className="text-red-800">{risk}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
           )}
 
           {summary.opportunities && summary.opportunities.length > 0 && (
-            <Alert>
-              <TrendingUp className="h-4 w-4" />
-              <AlertDescription>
-                <h4 className="font-semibold mb-1">Opportunities</h4>
-                <ul className="list-disc list-inside space-y-1">
-                  {summary.opportunities.map((opp, idx) => (
-                    <li key={idx}>{opp}</li>
-                  ))}
-                </ul>
-              </AlertDescription>
-            </Alert>
+            <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+              <h3 className="font-semibold text-lg mb-3 flex items-center gap-2 text-green-800">
+                <TrendingUp className="h-5 w-5 text-green-600" />
+                Opportunities
+              </h3>
+              <div className="space-y-2">
+                {summary.opportunities.map((opp, idx) => (
+                  <div key={idx} className="flex items-start gap-3 p-2 bg-white/50 rounded">
+                    <CheckCircle className="flex-shrink-0 h-4 w-4 text-green-500 mt-0.5" />
+                    <span className="text-green-800">{opp}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
           )}
 
           {summary.missingInformation && summary.missingInformation.length > 0 && (
-            <Alert variant="default">
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>
-                <h4 className="font-semibold mb-1">Missing Information</h4>
-                <ul className="list-disc list-inside space-y-1">
-                  {summary.missingInformation.map((item, idx) => (
-                    <li key={idx}>{item}</li>
-                  ))}
-                </ul>
-              </AlertDescription>
-            </Alert>
+            <div className="bg-orange-50 p-4 rounded-lg border border-orange-200">
+              <h3 className="font-semibold text-lg mb-3 flex items-center gap-2 text-orange-800">
+                <AlertCircle className="h-5 w-5 text-orange-600" />
+                Missing Information
+              </h3>
+              <div className="space-y-2">
+                {summary.missingInformation.map((item, idx) => (
+                  <div key={idx} className="flex items-start gap-3 p-2 bg-white/50 rounded">
+                    <span className="flex-shrink-0 text-orange-500 mt-0.5">◦</span>
+                    <span className="text-orange-800">{item}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
           )}
         </CardContent>
       </ScrollArea>
