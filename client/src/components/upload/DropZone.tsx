@@ -1,10 +1,8 @@
 import { useCallback, useState } from 'react';
-import { Upload, File, Trash2, CheckCircle2, AlertCircle, FileText, FileArchive, Mail, Image, Download, Loader2 } from 'lucide-react';
+import { Upload, FileText, CheckCircle, X, Loader2, Image as ImageIcon, FileSpreadsheet, Download } from 'lucide-react';
 import { useDropzone } from 'react-dropzone';
 import { cn } from '@/lib/utils';
 import { Progress } from '@/components/ui/progress';
-import { Button } from '@/components/ui/button';
-import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface FileItem {
   id: string;
@@ -30,35 +28,41 @@ interface DropZoneProps {
   onDelete?: (documentId: number) => void;
 }
 
+function getFileIcon(filename: string): React.ReactNode {
+  const ext = filename.toLowerCase().match(/\.[^.]*$/)?.[0] || '';
+  if (['.pdf'].includes(ext)) {
+    return <FileText className="w-4 h-4 text-red-500" />;
+  }
+  if (['.png', '.jpg', '.jpeg', '.gif', '.tiff', '.bmp', '.webp'].includes(ext)) {
+    return <ImageIcon className="w-4 h-4 text-blue-500" />;
+  }
+  if (['.xlsx', '.xls', '.csv'].includes(ext)) {
+    return <FileSpreadsheet className="w-4 h-4 text-green-600" />;
+  }
+  if (['.docx', '.doc'].includes(ext)) {
+    return <FileText className="w-4 h-4 text-blue-600" />;
+  }
+  return <FileText className="w-4 h-4 text-gray-400" />;
+}
+
 export function DropZone({ onUpload, onUploadWithProgress, onDelete, files: initialFiles = [] }: DropZoneProps) {
   const [uploadingFiles, setUploadingFiles] = useState<Array<{
     id: number;
     name: string;
-    size: string;
-    type: string;
     status: 'uploading' | 'parsing' | 'chunking' | 'embedding' | 'completed' | 'error';
     progress: number;
     statusMessage?: string;
-    currentChunk?: number;
-    totalChunks?: number;
-    errorMessage?: string;
   }>>([]);
 
   const completedFiles = initialFiles.map(f => ({
     id: parseInt(f.id),
     name: f.name,
-    type: f.name.split('.').pop() || 'unknown',
-    size: f.size > 0 ? (f.size / 1024 / 1024).toFixed(2) + ' MB' : 'N/A',
-    status: (f.isProcessed !== false ? 'completed' : 'embedding') as 'completed' | 'embedding',
+    status: (f.isProcessed !== false ? 'completed' : 'processing') as 'completed' | 'processing',
     progress: f.isProcessed !== false ? 100 : 50
   }));
 
-  // Get names of completed files to filter out duplicates from uploadingFiles
   const completedFileNames = new Set(completedFiles.map(f => f.name));
-  
-  // Filter out uploadingFiles that are already in completedFiles (avoid duplicates after refresh)
   const activeUploads = uploadingFiles.filter(f => !completedFileNames.has(f.name));
-  
   const allFiles = [...completedFiles, ...activeUploads];
 
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
@@ -67,15 +71,12 @@ export function DropZone({ onUpload, onUploadWithProgress, onDelete, files: init
       const newFile = {
         id: fileId,
         name: file.name,
-        type: file.name.split('.').pop() || 'unknown',
-        size: (file.size / 1024 / 1024).toFixed(2) + ' MB',
         status: 'uploading' as const,
         progress: 0
       };
 
       setUploadingFiles(prev => [...prev, newFile]);
       
-      // Use progress-based upload if available
       if (onUploadWithProgress) {
         try {
           await onUploadWithProgress(file, (progress) => {
@@ -84,12 +85,9 @@ export function DropZone({ onUpload, onUploadWithProgress, onDelete, files: init
               progress: progress.percentage,
               status: progress.stage === 'complete' ? 'completed' : progress.stage,
               statusMessage: progress.message,
-              currentChunk: progress.currentChunk,
-              totalChunks: progress.totalChunks
             } : f));
           });
           
-          // Remove after processing indicator
           setTimeout(() => {
             setUploadingFiles(prev => prev.filter(f => f.id !== fileId));
           }, 1500);
@@ -97,11 +95,9 @@ export function DropZone({ onUpload, onUploadWithProgress, onDelete, files: init
           setUploadingFiles(prev => prev.map(f => f.id === fileId ? { 
             ...f, 
             status: 'error' as const,
-            errorMessage: error instanceof Error ? error.message : 'Upload failed'
           } : f));
         }
       } else if (onUpload) {
-        // Fallback to simple upload with simulated progress
         onUpload(file);
 
         let progress = 0;
@@ -134,119 +130,95 @@ export function DropZone({ onUpload, onUploadWithProgress, onDelete, files: init
       'image/png': ['.png'],
       'image/jpeg': ['.jpg', '.jpeg'],
       'image/gif': ['.gif'],
-      'image/webp': ['.webp']
+      'image/webp': ['.webp'],
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'],
+      'text/csv': ['.csv'],
     }
   });
 
-  const getFileIcon = (type: string) => {
-    if (type.includes('pdf')) return <FileText className="h-5 w-5 text-red-500" />;
-    if (type.includes('zip')) return <FileArchive className="h-5 w-5 text-yellow-500" />;
-    if (type.includes('msg')) return <Mail className="h-5 w-5 text-blue-500" />;
-    if (['png', 'jpg', 'jpeg', 'gif', 'webp'].includes(type.toLowerCase())) return <Image className="h-5 w-5 text-green-500" />;
-    return <File className="h-5 w-5 text-gray-500" />;
-  };
-
   return (
-    <div className="flex flex-col max-w-[200px]">
+    <div className="w-full">
       <div
         {...getRootProps()}
         className={cn(
-          "border-2 border-dashed rounded-lg p-4 text-center cursor-pointer transition-colors mb-3",
-          isDragActive ? "border-primary bg-primary/5" : "border-primary/30 hover:border-primary/50 hover:bg-muted/50"
+          "border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors mb-4",
+          isDragActive ? "border-primary bg-primary/5" : "border-muted-foreground/25 hover:border-primary/50 hover:bg-muted/30"
         )}
       >
         <input {...getInputProps()} />
-        <div className="flex flex-col items-center gap-1 text-muted-foreground">
-          <div className="bg-muted p-2 rounded-full mb-1">
-            <Upload className="h-4 w-4" />
-          </div>
-          <p className="font-medium text-foreground text-sm">Click to upload or drag and drop</p>
-          <p className="text-xs">PDF, DOCX, ZIP, MSG, PNG, JPG, GIF, WEBP (Max 50MB)</p>
+        <div className="flex flex-col items-center gap-2 text-muted-foreground">
+          <Upload className="h-8 w-8 opacity-50" />
+          <p className="font-medium text-foreground">
+            {isDragActive ? "Drop files here..." : "Click to upload or drag and drop"}
+          </p>
+          <p className="text-xs">PDF, DOCX, XLSX, PNG, JPG, and more (Max 50MB)</p>
         </div>
       </div>
 
-      <div className="flex items-center justify-between mb-2">
-        <h3 className="font-medium text-sm">Project Files</h3>
-        <span className="text-xs text-muted-foreground">{allFiles.length} files</span>
-      </div>
-
-      <ScrollArea className="flex-1 -mx-2 px-2">
-        <div className="space-y-2">
+      {allFiles.length > 0 && (
+        <div className="divide-y">
           {allFiles.map((file) => (
-            <div key={file.id} className="p-2 rounded-md border-2 border-primary/30 bg-card hover:shadow-sm transition-all max-w-[160px]">
-              <div className="flex items-start gap-2">
-                <div className="mt-0.5 flex-shrink-0">
-                  {(file.status !== 'completed' && file.status !== 'error') ? (
-                    <Loader2 className="h-4 w-4 text-primary animate-spin" />
-                  ) : (
-                    getFileIcon(file.type)
-                  )}
-                </div>
-                <div className="flex-1 min-w-0 overflow-hidden">
-                  <div className="flex items-start gap-1 mb-1">
-                    <p className="text-xs font-medium break-words leading-tight">{file.name}</p>
-                    {file.status === 'completed' && <CheckCircle2 className="h-3 w-3 text-green-500 flex-shrink-0 mt-0.5" />}
-                    {file.status === 'error' && <AlertCircle className="h-3 w-3 text-destructive flex-shrink-0 mt-0.5" />}
-                  </div>
-                  <div className="text-xs text-muted-foreground">
-                    <span>{file.size}</span>
-                    {file.status === 'uploading' && <span className="text-primary font-medium ml-1">{file.statusMessage || `${file.progress}%`}</span>}
-                    {file.status === 'parsing' && <span className="text-primary font-medium ml-1">Parsing...</span>}
-                    {file.status === 'chunking' && <span className="text-primary font-medium ml-1">Chunking...</span>}
-                    {file.status === 'embedding' && <span className="text-primary font-medium ml-1">{`${file.currentChunk || 0}/${file.totalChunks || 0}`}</span>}
-                    {file.status === 'completed' && <span className="text-green-600 ml-1">Done</span>}
-                    {file.status === 'error' && <span className="text-destructive ml-1">Error</span>}
-                  </div>
-                  {(file.status !== 'completed' && file.status !== 'error') && (
-                    <Progress value={file.progress} className="h-1.5 mt-1" />
-                  )}
-                </div>
+            <div 
+              key={file.id} 
+              className="flex items-center justify-between py-3 group"
+              data-testid={`file-row-${file.id}`}
+            >
+              <div className="flex items-center gap-3 min-w-0 flex-1">
+                {getFileIcon(file.name)}
+                <span className="truncate text-sm font-medium">{file.name}</span>
               </div>
-              {file.status === 'completed' && (
-                <div className="mt-2 pt-2 border-t border-border flex flex-col gap-1">
-                  {file.name.endsWith('_analysis.txt') && (
-                    <a 
-                      href={`/api/downloads/analysis/${encodeURIComponent(file.name)}`}
-                      download={file.name}
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        className="w-full h-5 text-xs px-1"
-                        data-testid={`button-download-document-${file.id}`}
-                      >
-                        <Download className="h-3 w-3 mr-1" />
-                        Download
-                      </Button>
-                    </a>
-                  )}
-                  {onDelete && (
-                    <Button 
-                      variant="destructive" 
-                      size="sm" 
-                      className="w-full h-5 text-xs px-1"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onDelete(file.id);
-                      }}
-                      data-testid={`button-delete-document-${file.id}`}
-                    >
-                      <Trash2 className="h-3 w-3 mr-1" />
-                      Delete
-                    </Button>
-                  )}
-                </div>
-              )}
+              <div className="flex items-center gap-3">
+                {file.status === 'completed' ? (
+                  <span className="flex items-center gap-1 text-sm text-green-600">
+                    <CheckCircle className="w-4 h-4" />
+                    Done
+                  </span>
+                ) : file.status === 'error' ? (
+                  <span className="text-sm text-red-500">Error</span>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                    <span className="text-sm text-muted-foreground">
+                      {file.status === 'uploading' ? 'Uploading...' : 
+                       file.status === 'parsing' ? 'Parsing...' :
+                       file.status === 'chunking' ? 'Processing...' :
+                       file.status === 'embedding' ? 'Analyzing...' : 'Processing...'}
+                    </span>
+                  </div>
+                )}
+                {file.name.endsWith('_analysis.txt') && file.status === 'completed' && (
+                  <a 
+                    href={`/api/downloads/analysis/${encodeURIComponent(file.name)}`}
+                    download={file.name}
+                    onClick={(e) => e.stopPropagation()}
+                    className="p-1.5 hover:bg-muted rounded-md text-muted-foreground hover:text-foreground transition-colors"
+                    title="Download"
+                  >
+                    <Download className="w-4 h-4" />
+                  </a>
+                )}
+                {onDelete && (
+                  <button 
+                    className="p-1.5 hover:bg-red-50 rounded-md text-muted-foreground hover:text-red-600 transition-colors"
+                    onClick={() => onDelete(file.id)}
+                    title="Delete"
+                    data-testid={`delete-${file.id}`}
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
             </div>
           ))}
-          {allFiles.length === 0 && (
-            <div className="text-center py-8 text-muted-foreground text-sm">
-              No files uploaded yet.
-            </div>
-          )}
         </div>
-      </ScrollArea>
+      )}
+
+      {allFiles.length === 0 && (
+        <div className="text-center py-6 text-muted-foreground text-sm">
+          <FileText className="w-10 h-10 mx-auto mb-2 opacity-40" />
+          <p>No files uploaded yet</p>
+        </div>
+      )}
     </div>
   );
 }
