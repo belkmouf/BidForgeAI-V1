@@ -469,6 +469,7 @@ export default function DocumentSummary() {
   const queryClient = useQueryClient();
   const progress = useProjectProgress(id);
   const [selectedDocumentId, setSelectedDocumentId] = useState<number | null>(null);
+  const [failedImages, setFailedImages] = useState<Set<number>>(new Set());
 
   const { data: project } = useQuery({
     queryKey: ['project', id],
@@ -658,17 +659,22 @@ export default function DocumentSummary() {
                   isImageFile(selectedDocument.filename) ? (
                     <div className="flex flex-col items-center space-y-4">
                       <div className="relative w-full h-[300px] bg-muted/50 rounded-lg overflow-hidden flex items-center justify-center">
-                        <img
-                          src={getImageUrl(selectedDocument.filename)}
-                          alt={selectedDocument.filename}
-                          className="max-w-full max-h-full object-contain"
-                          data-testid="image-preview"
-                          onError={(e) => {
-                            const target = e.target as HTMLImageElement;
-                            target.style.display = 'none';
-                            target.parentElement!.innerHTML = '<div class="text-center text-muted-foreground"><p>Image preview not available</p><p class="text-xs mt-1">The image may still be processing</p></div>';
-                          }}
-                        />
+                        {failedImages.has(selectedDocument.id) ? (
+                          <div className="text-center text-muted-foreground">
+                            <p>Image preview not available</p>
+                            <p className="text-xs mt-1">The image may still be processing</p>
+                          </div>
+                        ) : (
+                          <img
+                            src={getImageUrl(selectedDocument.filename)}
+                            alt={selectedDocument.filename}
+                            className="max-w-full max-h-full object-contain"
+                            data-testid="image-preview"
+                            onError={() => {
+                              setFailedImages(prev => new Set(prev).add(selectedDocument.id));
+                            }}
+                          />
+                        )}
                       </div>
                       {selectedDocument.summary && (
                         <div className="w-full p-3 bg-muted/30 rounded-lg">
