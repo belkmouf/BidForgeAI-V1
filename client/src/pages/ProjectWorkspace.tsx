@@ -435,24 +435,6 @@ export default function ProjectWorkspace() {
           </div>
           
           <div className="flex items-center gap-2">
-            <Link href={`/projects/${projectId}/documents`}>
-              <Button variant="outline" size="sm" className="gap-2 h-8" data-testid="button-documents">
-                <FileText className="h-3.5 w-3.5" />
-                Documents
-              </Button>
-            </Link>
-            <Link href={`/projects/${projectId}/analysis`}>
-              <Button variant="outline" size="sm" className="gap-2 h-8" data-testid="button-analysis">
-                <ShieldCheck className="h-3.5 w-3.5" />
-                RFP Analysis
-              </Button>
-            </Link>
-            <Link href={`/projects/${projectId}/conflicts`}>
-              <Button variant="outline" size="sm" className="gap-2 h-8" data-testid="button-conflicts">
-                <AlertTriangle className="h-3.5 w-3.5" />
-                Conflicts
-              </Button>
-            </Link>
             <Button variant="outline" size="sm" className="gap-2 h-8" onClick={handlePreviewPDF} data-testid="button-preview-pdf">
               <Eye className="h-3.5 w-3.5" />
               Preview PDF
