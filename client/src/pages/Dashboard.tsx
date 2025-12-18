@@ -90,7 +90,7 @@ export default function Dashboard() {
       openai: "GPT-4 (OpenAI)",
       gemini: "Gemini (Google)",
       deepseek: "DeepSeek",
-      grok: "Grok 3 (xAI)",
+      grok: "Grok 4 Fast (xAI)",
     };
     return names[model] || model;
   };

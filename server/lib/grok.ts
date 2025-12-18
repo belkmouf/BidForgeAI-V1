@@ -46,7 +46,7 @@ OUTPUT REQUIREMENTS:
 - CRITICAL: Output ONLY raw HTML content. Do NOT wrap your response in markdown code blocks (like \`\`\`html or \`\`\`). Start directly with <div> or other HTML tags.`;
 
   const response = await client.chat.completions.create({
-    model: 'grok-3',
+    model: 'grok-4-fast',
     max_tokens: 8192,
     messages: [
       { role: 'system', content: systemPrompt },
@@ -89,7 +89,7 @@ OUTPUT REQUIREMENTS:
     : `Current Bid Document:\n${params.currentHtml}\n\nFeedback to Address:\n${params.feedback}\n\nPlease refine the bid document. Output ONLY raw HTML.`;
 
   const response = await client.chat.completions.create({
-    model: 'grok-3',
+    model: 'grok-4-fast',
     max_tokens: 8192,
     messages: [
       { role: 'system', content: systemPrompt },
@@ -130,7 +130,7 @@ RULES:
     : [systemMessage, ...params.messages];
 
   const response = await client.chat.completions.create({
-    model: 'grok-3',
+    model: 'grok-4-fast',
     max_tokens: 4096,
     messages: messagesWithContext,
   });
