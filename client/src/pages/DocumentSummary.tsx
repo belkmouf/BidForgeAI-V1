@@ -294,17 +294,20 @@ function ProjectSummaryCard({ summary, projectId }: { summary: DocumentSummaryRe
               <h3 className="font-semibold text-lg mb-3 flex items-center gap-2 text-slate-800">
                 <span className="w-2 h-2 bg-teal-500 rounded-full"></span>
                 Scope of Work
+                <span className="text-xs text-slate-500 font-normal">({summary.scopeOfWork.length} items)</span>
               </h3>
-              <div className="space-y-2">
-                {summary.scopeOfWork.map((item, idx) => (
-                  <div key={idx} className="flex items-start gap-3 p-2 hover:bg-slate-50 rounded transition-colors">
-                    <span className="flex-shrink-0 w-6 h-6 bg-teal-100 text-teal-700 rounded-full flex items-center justify-center text-sm font-medium">
-                      {idx + 1}
-                    </span>
-                    <span className="text-gray-700">{item}</span>
-                  </div>
-                ))}
-              </div>
+              <ScrollArea className={summary.scopeOfWork.length > 5 ? "max-h-[250px]" : ""}>
+                <div className="space-y-2 pr-2">
+                  {summary.scopeOfWork.map((item, idx) => (
+                    <div key={idx} className="flex items-start gap-3 p-2 hover:bg-slate-50 rounded transition-colors">
+                      <span className="flex-shrink-0 w-6 h-6 bg-teal-100 text-teal-700 rounded-full flex items-center justify-center text-sm font-medium">
+                        {idx + 1}
+                      </span>
+                      <span className="text-gray-700">{item}</span>
+                    </div>
+                  ))}
+                </div>
+              </ScrollArea>
             </div>
           )}
 
