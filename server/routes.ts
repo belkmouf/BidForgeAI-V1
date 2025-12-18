@@ -1125,6 +1125,55 @@ export async function registerRoutes(
     }
   });
 
+  // PUT /api/documents/:id/summary - Update a document summary by document ID
+  app.put("/api/documents/:id/summary", authenticateToken, async (req: AuthRequest, res) => {
+    try {
+      const documentId = parseInt(req.params.id);
+      const companyId = req.user?.companyId ?? null;
+      const { summaryContent } = req.body;
+
+      // Get document and verify ownership
+      const [doc] = await db
+        .select({ projectId: documents.projectId })
+        .from(documents)
+        .where(eq(documents.id, documentId))
+        .limit(1);
+
+      if (!doc) {
+        return res.status(404).json({ error: "Document not found" });
+      }
+
+      // Verify project belongs to company
+      const project = await storage.getProject(doc.projectId, companyId);
+      if (!project) {
+        return res.status(403).json({ error: "Access denied" });
+      }
+
+      // Get existing summary for this document
+      const [existing] = await db
+        .select({ id: documentSummaries.id })
+        .from(documentSummaries)
+        .where(eq(documentSummaries.documentId, documentId))
+        .limit(1);
+
+      if (!existing) {
+        return res.status(404).json({ error: "Summary not found for this document" });
+      }
+
+      // Update summary
+      await documentSummarizationService.updateSummary(existing.id, {
+        summaryContent,
+      });
+
+      // Fetch updated summary
+      const updated = await documentSummarizationService.getSummary(documentId);
+      res.json(updated);
+    } catch (error: any) {
+      console.error('Error updating document summary:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // PUT /api/summaries/:id - Update a document summary
   app.put("/api/summaries/:id", authenticateToken, async (req: AuthRequest, res) => {
     try {

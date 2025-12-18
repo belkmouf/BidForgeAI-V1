@@ -9,6 +9,7 @@ import {
   uploadDocument,
   deleteDocument,
   getProject,
+  regenerateDocumentSummary,
   type DocumentSummaryResponse,
 } from '../lib/api';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '../components/ui/card';
@@ -470,6 +471,9 @@ export default function DocumentSummary() {
   const progress = useProjectProgress(id);
   const [selectedDocumentId, setSelectedDocumentId] = useState<number | null>(null);
   const [failedImages, setFailedImages] = useState<Set<number>>(new Set());
+  const [editingDocId, setEditingDocId] = useState<number | null>(null);
+  const [editedContent, setEditedContent] = useState<string>('');
+  const [regeneratingDocId, setRegeneratingDocId] = useState<number | null>(null);
 
   const { data: project } = useQuery({
     queryKey: ['project', id],
@@ -529,6 +533,45 @@ export default function DocumentSummary() {
   const handleDeleteDocument = async (documentId: number) => {
     await deleteDocument(documentId);
     refetch();
+  };
+
+  const handleRegenerateSummary = async (documentId: number) => {
+    setRegeneratingDocId(documentId);
+    try {
+      await regenerateDocumentSummary(documentId);
+      refetch();
+    } catch (error) {
+      console.error('Failed to regenerate summary:', error);
+    } finally {
+      setRegeneratingDocId(null);
+    }
+  };
+
+  const handleStartEdit = (documentId: number, currentContent: string) => {
+    setEditingDocId(documentId);
+    setEditedContent(currentContent);
+  };
+
+  const handleCancelEdit = () => {
+    setEditingDocId(null);
+    setEditedContent('');
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingDocId) return;
+    try {
+      await fetch(`/api/documents/${editingDocId}/summary`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ summaryContent: editedContent }),
+      });
+      refetch();
+      setEditingDocId(null);
+      setEditedContent('');
+    } catch (error) {
+      console.error('Failed to save summary:', error);
+    }
   };
 
   const workflowStatus = (project?.workflowStatus || 'uploading') as 'uploading' | 'summarizing' | 'summary_review' | 'analyzing' | 'analysis_review' | 'conflict_check' | 'generating' | 'review' | 'completed';
@@ -710,9 +753,64 @@ export default function DocumentSummary() {
                 </div>
               </div>
               {selectedDocument && (
-                <CardDescription className="truncate mt-2">
-                  {selectedDocument.filename}
-                </CardDescription>
+                <div className="flex items-center justify-between mt-2">
+                  <CardDescription className="truncate">
+                    {selectedDocument.filename}
+                  </CardDescription>
+                  {selectedDocument.summary && (
+                    <div className="flex items-center gap-2">
+                      {editingDocId === selectedDocument.id ? (
+                        <>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={handleCancelEdit}
+                            className="h-7 text-xs"
+                          >
+                            <X className="w-3 h-3 mr-1" />
+                            Cancel
+                          </Button>
+                          <Button
+                            size="sm"
+                            onClick={handleSaveEdit}
+                            className="h-7 text-xs"
+                          >
+                            <Save className="w-3 h-3 mr-1" />
+                            Save
+                          </Button>
+                        </>
+                      ) : (
+                        <>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleStartEdit(selectedDocument.id, selectedDocument.summary?.summaryContent || '')}
+                            className="h-7 text-xs"
+                            data-testid="edit-summary"
+                          >
+                            <Edit2 className="w-3 h-3 mr-1" />
+                            Edit
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleRegenerateSummary(selectedDocument.id)}
+                            disabled={regeneratingDocId === selectedDocument.id}
+                            className="h-7 text-xs"
+                            data-testid="regenerate-summary"
+                          >
+                            {regeneratingDocId === selectedDocument.id ? (
+                              <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                            ) : (
+                              <RefreshCw className="w-3 h-3 mr-1" />
+                            )}
+                            Regenerate
+                          </Button>
+                        </>
+                      )}
+                    </div>
+                  )}
+                </div>
               )}
             </CardHeader>
             <CardContent>
@@ -739,10 +837,19 @@ export default function DocumentSummary() {
                             <AlertCircle className="w-4 h-4 text-blue-500" />
                             AI Analysis
                           </h4>
-                          <div 
-                            className="prose prose-sm max-w-none text-sm text-foreground leading-relaxed [&_h2]:text-base [&_h2]:font-semibold [&_h2]:mt-4 [&_h2]:mb-2 [&_ul]:list-disc [&_ul]:pl-4 [&_li]:mb-1"
-                            dangerouslySetInnerHTML={{ __html: selectedDocument.summary.summaryContent }}
-                          />
+                          {editingDocId === selectedDocument.id ? (
+                            <Textarea
+                              value={editedContent}
+                              onChange={(e) => setEditedContent(e.target.value)}
+                              className="min-h-[200px] font-mono text-sm"
+                              data-testid="edit-summary-textarea"
+                            />
+                          ) : (
+                            <div 
+                              className="prose prose-sm max-w-none text-sm text-foreground leading-relaxed [&_h2]:text-base [&_h2]:font-semibold [&_h2]:mt-4 [&_h2]:mb-2 [&_ul]:list-disc [&_ul]:pl-4 [&_li]:mb-1"
+                              dangerouslySetInnerHTML={{ __html: selectedDocument.summary.summaryContent }}
+                            />
+                          )}
                         </div>
                       ) : failedImages.has(selectedDocument.id) ? (
                         <div className="text-center text-muted-foreground py-8">
@@ -754,10 +861,19 @@ export default function DocumentSummary() {
                     </div>
                   ) : selectedDocument.summary ? (
                     <div className="space-y-4">
-                      <div 
-                        className="prose prose-sm max-w-none text-sm text-foreground leading-relaxed [&_h2]:text-base [&_h2]:font-semibold [&_h2]:mt-4 [&_h2]:mb-2 [&_ul]:list-disc [&_ul]:pl-4 [&_li]:mb-1 [&_table]:w-full [&_table]:text-xs [&_th]:bg-muted [&_th]:p-2 [&_td]:p-2 [&_td]:border"
-                        dangerouslySetInnerHTML={{ __html: selectedDocument.summary.summaryContent }}
-                      />
+                      {editingDocId === selectedDocument.id ? (
+                        <Textarea
+                          value={editedContent}
+                          onChange={(e) => setEditedContent(e.target.value)}
+                          className="min-h-[300px] font-mono text-sm"
+                          data-testid="edit-summary-textarea"
+                        />
+                      ) : (
+                        <div 
+                          className="prose prose-sm max-w-none text-sm text-foreground leading-relaxed [&_h2]:text-base [&_h2]:font-semibold [&_h2]:mt-4 [&_h2]:mb-2 [&_ul]:list-disc [&_ul]:pl-4 [&_li]:mb-1 [&_table]:w-full [&_table]:text-xs [&_th]:bg-muted [&_th]:p-2 [&_td]:p-2 [&_td]:border"
+                          dangerouslySetInnerHTML={{ __html: selectedDocument.summary.summaryContent }}
+                        />
+                      )}
                       {selectedDocument.keyInformation && Object.keys(selectedDocument.keyInformation).length > 0 && (
                         <div className="pt-4 border-t">
                           <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
