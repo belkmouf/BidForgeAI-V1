@@ -23,6 +23,7 @@ import {
   type Bid,
   type InsertBid,
   type ProjectStatus,
+  type WorkflowStatus,
   type RFPAnalysis,
   type InsertRFPAnalysis,
   type AnalysisAlert,
@@ -66,6 +67,11 @@ export interface IStorage {
   updateProjectStatus(
     id: string,
     status: ProjectStatus,
+    companyId: number | null,
+  ): Promise<Project | undefined>;
+  updateWorkflowStatus(
+    id: string,
+    workflowStatus: WorkflowStatus,
     companyId: number | null,
   ): Promise<Project | undefined>;
   archiveProject(
@@ -332,6 +338,19 @@ export class DatabaseStorage implements IStorage {
     const [project] = await db
       .update(projects)
       .set({ status })
+      .where(and(eq(projects.id, id), this.companyFilter(companyId)))
+      .returning();
+    return project || undefined;
+  }
+
+  async updateWorkflowStatus(
+    id: string,
+    workflowStatus: WorkflowStatus,
+    companyId: number | null,
+  ): Promise<Project | undefined> {
+    const [project] = await db
+      .update(projects)
+      .set({ workflowStatus })
       .where(and(eq(projects.id, id), this.companyFilter(companyId)))
       .returning();
     return project || undefined;

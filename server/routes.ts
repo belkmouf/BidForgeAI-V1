@@ -424,6 +424,9 @@ export async function registerRoutes(
         return res.status(404).json({ error: "Project not found" });
       }
 
+      // Update workflow status to 'summarizing' as we start processing
+      await storage.updateWorkflowStatus(projectId, 'summarizing', companyId);
+
       // Classify files into sketches (images) and documents (text)
       const imageExtensions = ['.png', '.jpg', '.jpeg', '.gif', '.tiff', '.bmp', '.webp'];
       const documentExtensions = ['.pdf', '.msg', '.zip', '.txt', '.doc', '.docx'];
@@ -597,6 +600,9 @@ export async function registerRoutes(
         });
         console.log(`Saved ${sketchResults.length} sketch analysis results to project metadata`);
       }
+
+      // Update workflow status to 'summary_review' - user must review summaries
+      await storage.updateWorkflowStatus(projectId, 'summary_review', companyId);
 
       res.json({
         success: true,
@@ -882,6 +888,9 @@ export async function registerRoutes(
 
       const totalChunks = processedFiles.reduce((sum, f) => sum + f.chunksCreated, 0);
 
+      // Update workflow status to 'summary_review' - user must review summaries
+      await storage.updateWorkflowStatus(projectId, 'summary_review', companyId);
+
       // Send final result
       sendProgress({ 
         type: 'complete', 
@@ -895,6 +904,67 @@ export async function registerRoutes(
       console.error('Upload SSE error:', error);
       res.write(`data: ${JSON.stringify({ type: 'error', message: error.message })}\n\n`);
       res.end();
+    }
+  });
+
+  // Accept summaries and advance workflow to RFP Analysis
+  app.post("/api/projects/:id/accept-summaries", authenticateToken, async (req: AuthRequest, res) => {
+    try {
+      const projectId = req.params.id;
+      const companyId = req.user?.companyId ?? null;
+
+      // Verify project exists
+      const project = await storage.getProject(projectId, companyId);
+      if (!project) {
+        return res.status(404).json({ error: "Project not found" });
+      }
+
+      // Verify project is in summary_review state
+      if (project.workflowStatus !== 'summary_review') {
+        return res.status(400).json({ 
+          error: `Cannot accept summaries in current state: ${project.workflowStatus}` 
+        });
+      }
+
+      // Update workflow status to 'analyzing' - triggers RFP Analysis
+      await storage.updateWorkflowStatus(projectId, 'analyzing', companyId);
+
+      res.json({
+        success: true,
+        message: "Summaries accepted. Moving to RFP Analysis.",
+        workflowStatus: 'analyzing'
+      });
+    } catch (error: any) {
+      console.error('Accept summaries error:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Update workflow status manually (for step transitions)
+  app.patch("/api/projects/:id/workflow-status", authenticateToken, async (req: AuthRequest, res) => {
+    try {
+      const projectId = req.params.id;
+      const companyId = req.user?.companyId ?? null;
+      const { workflowStatus } = req.body;
+
+      if (!workflowStatus) {
+        return res.status(400).json({ error: "workflowStatus is required" });
+      }
+
+      const validStatuses = ['uploading', 'summarizing', 'summary_review', 'analyzing', 'analysis_review', 'conflict_check', 'generating', 'review', 'completed'];
+      if (!validStatuses.includes(workflowStatus)) {
+        return res.status(400).json({ error: `Invalid workflow status: ${workflowStatus}` });
+      }
+
+      const project = await storage.updateWorkflowStatus(projectId, workflowStatus, companyId);
+      if (!project) {
+        return res.status(404).json({ error: "Project not found" });
+      }
+
+      res.json(project);
+    } catch (error: any) {
+      console.error('Update workflow status error:', error);
+      res.status(500).json({ error: error.message });
     }
   });
 
