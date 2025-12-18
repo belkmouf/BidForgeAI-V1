@@ -476,10 +476,10 @@ export function DropZone({
                     </span>
                   </div>
                 )}
-                {file.name.endsWith('_analysis.txt') && file.status === 'completed' && (
+                {file.status === 'completed' && (
                   <a 
-                    href={`/api/downloads/analysis/${encodeURIComponent(file.name)}`}
-                    download={file.name}
+                    href={`/api/documents/${file.id}/download`}
+                    download
                     onClick={(e) => e.stopPropagation()}
                     className="p-1.5 hover:bg-muted rounded-md text-muted-foreground hover:text-foreground transition-colors"
                     title="Download"

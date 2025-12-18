@@ -353,6 +353,68 @@ export async function registerRoutes(
     }
   });
   
+  // Download endpoint for documents by ID
+  app.get('/api/documents/:id/download', authenticateToken, async (req: AuthRequest, res) => {
+    try {
+      const documentId = parseInt(req.params.id);
+      if (isNaN(documentId)) {
+        return res.status(400).json({ error: 'Invalid document ID' });
+      }
+      
+      const companyId = req.user?.companyId ?? null;
+      const document = await storage.getDocument(documentId, companyId);
+      if (!document) {
+        return res.status(404).json({ error: 'Document not found' });
+      }
+      
+      // Check different possible file locations
+      const possiblePaths = [
+        path.join(process.cwd(), 'uploads', document.filename),
+        path.join(process.cwd(), 'uploads', 'images', document.filename),
+        path.join(process.cwd(), 'uploads', 'analysis', document.filename),
+      ];
+      
+      let filePath: string | null = null;
+      for (const p of possiblePaths) {
+        try {
+          await fsPromises.access(p);
+          filePath = p;
+          break;
+        } catch {}
+      }
+      
+      if (filePath) {
+        // File exists on disk, serve it
+        const ext = document.filename.toLowerCase().match(/\.[^.]*$/)?.[0] || '';
+        const mimeTypes: Record<string, string> = {
+          '.pdf': 'application/pdf',
+          '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+          '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+          '.png': 'image/png',
+          '.jpg': 'image/jpeg',
+          '.jpeg': 'image/jpeg',
+          '.gif': 'image/gif',
+          '.txt': 'text/plain',
+          '.msg': 'application/vnd.ms-outlook',
+        };
+        
+        res.setHeader('Content-Type', mimeTypes[ext] || 'application/octet-stream');
+        res.setHeader('Content-Disposition', `attachment; filename="${document.originalFilename || document.filename}"`);
+        res.sendFile(filePath);
+      } else if (document.content) {
+        // File not on disk, but has content in database
+        res.setHeader('Content-Type', 'text/plain');
+        res.setHeader('Content-Disposition', `attachment; filename="${document.originalFilename || document.filename}.txt"`);
+        res.send(document.content);
+      } else {
+        return res.status(404).json({ error: 'File content not available' });
+      }
+    } catch (error: any) {
+      console.error('Document download error:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+  
   // ==================== API VERSIONING ====================
   // Apply API versioning middleware to all API routes
   app.use('/api', apiVersioning as any);
