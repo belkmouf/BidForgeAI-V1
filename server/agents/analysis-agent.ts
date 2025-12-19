@@ -157,6 +157,26 @@ export class AnalysisAgent extends BaseAgent {
 
         const parsed = JSON.parse(jsonMatch[0]);
         
+        // Normalize arrays - AI sometimes returns objects instead of arrays
+        const normalizeToArray = (val: unknown): unknown[] => {
+          if (Array.isArray(val)) return val;
+          if (val && typeof val === 'object') return Object.values(val);
+          return [];
+        };
+        
+        if (parsed.keyFindings && !Array.isArray(parsed.keyFindings)) {
+          parsed.keyFindings = normalizeToArray(parsed.keyFindings);
+        }
+        if (parsed.redFlags && !Array.isArray(parsed.redFlags)) {
+          parsed.redFlags = normalizeToArray(parsed.redFlags);
+        }
+        if (parsed.opportunities && !Array.isArray(parsed.opportunities)) {
+          parsed.opportunities = normalizeToArray(parsed.opportunities);
+        }
+        if (parsed.recommendations && !Array.isArray(parsed.recommendations)) {
+          parsed.recommendations = normalizeToArray(parsed.recommendations);
+        }
+        
         // Normalize recommendations to ensure action field exists
         if (parsed.recommendations && Array.isArray(parsed.recommendations)) {
           parsed.recommendations = parsed.recommendations.map((rec: Record<string, unknown>) => {

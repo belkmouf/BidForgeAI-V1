@@ -71,7 +71,7 @@ export interface ProgressEvent {
 
 // Per-agent configuration for iterations, timeouts, and grounding checks
 const AGENT_CONFIG: Record<string, { maxIterations: number; timeoutMs: number; skipGrounding?: boolean }> = {
-  analysis: { maxIterations: 1, timeoutMs: 90_000 },   // One-shot for speed
+  analysis: { maxIterations: 1, timeoutMs: 90_000, skipGrounding: true },   // One-shot, structured scores don't need grounding
   intake: { maxIterations: 1, timeoutMs: 60_000, skipGrounding: true },     // Simple data loading - no content to verify
   sketch: { maxIterations: 1, timeoutMs: 120_000, skipGrounding: true },    // Vision API - structured data
   decision: { maxIterations: 1, timeoutMs: 60_000, skipGrounding: true },   // One-shot, no document claims
