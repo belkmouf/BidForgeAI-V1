@@ -75,7 +75,7 @@ const AGENT_CONFIG: Record<string, { maxIterations: number; timeoutMs: number; s
   intake: { maxIterations: 1, timeoutMs: 60_000, skipGrounding: true },     // Simple data loading - no content to verify
   sketch: { maxIterations: 1, timeoutMs: 120_000, skipGrounding: true },    // Vision API - structured data
   decision: { maxIterations: 1, timeoutMs: 60_000, skipGrounding: true },   // One-shot, no document claims
-  generation: { maxIterations: 2, timeoutMs: 90_000 }, // 90s per iteration = 3 min max total - NEEDS grounding
+  generation: { maxIterations: 2, timeoutMs: 90_000, skipGrounding: true }, // 90s per iteration = 3 min max total - skip grounding for speed
   review: { maxIterations: 1, timeoutMs: 90_000, skipGrounding: true },     // One-shot, just reviews
 };
 const DEFAULT_AGENT_CONFIG = { maxIterations: 2, timeoutMs: 90_000, skipGrounding: false };
