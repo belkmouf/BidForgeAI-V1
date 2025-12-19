@@ -2,6 +2,8 @@ import { openai } from './openai';
 import { storage } from '../storage';
 import type { RFPAnalysis, AnalysisAlert, Vendor } from '@shared/schema';
 
+const RFP_ANALYSIS_TIMEOUT_MS = 2 * 60 * 1000; // 2 minutes
+
 interface AnalysisResult {
   qualityScore: number;
   doabilityScore: number;
@@ -70,7 +72,39 @@ Return a JSON object with this exact structure:
 
 Only return valid JSON, no additional text.`;
 
+function createFallbackResult(reason: string): AnalysisResult {
+  return {
+    qualityScore: 50,
+    clarityScore: 50,
+    doabilityScore: 50,
+    vendorRiskScore: 50,
+    overallRiskLevel: 'Medium',
+    issues: {
+      missingDocuments: [],
+      unclearRequirements: [],
+      redFlags: [],
+    },
+    opportunities: [],
+    recommendations: [{
+      action: 'Manual review recommended',
+      priority: 'HIGH',
+      details: reason,
+      estimatedTime: '30 minutes',
+    }],
+    alerts: [{
+      type: 'ANALYSIS_TIMEOUT',
+      severity: 'Medium',
+      title: 'Analysis Timeout',
+      description: reason,
+      action: 'Review documents manually or retry analysis.',
+    }],
+  };
+}
+
 export async function analyzeRFP(projectId: string): Promise<AnalysisResult> {
+  const startTime = Date.now();
+  console.log(`[RFP Analysis] Starting analysis for project ${projectId}`);
+  
   const projectDocs = await storage.listDocumentsByProject(projectId);
   
   if (projectDocs.length === 0) {
@@ -85,21 +119,44 @@ export async function analyzeRFP(projectId: string): Promise<AnalysisResult> {
   const clientName = await getClientNameFromProject(projectId);
   const vendorData = clientName ? await storage.getVendorByName(clientName) : null;
   
-  const response = await openai.chat.completions.create({
-    model: 'gpt-4o',
-    messages: [
-      { role: 'system', content: ANALYSIS_PROMPT },
-      { 
-        role: 'user', 
-        content: `Documents uploaded:\n${documentList}\n\nClient/Vendor Name: ${clientName || 'Unknown'}\n\nDocument Content:\n${documentContent}`
-      }
-    ],
-    temperature: 0.3,
-    max_tokens: 4000,
-    response_format: { type: 'json_object' }
-  });
+  console.log(`[RFP Analysis] Prepared ${chunks.length} chunks, calling OpenAI...`);
   
-  const aiResult = JSON.parse(response.choices[0].message.content || '{}');
+  let aiResult: Record<string, unknown>;
+  
+  try {
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      setTimeout(() => reject(new Error('RFP_ANALYSIS_TIMEOUT')), RFP_ANALYSIS_TIMEOUT_MS);
+    });
+    
+    const apiPromise = openai.chat.completions.create({
+      model: 'gpt-4o',
+      messages: [
+        { role: 'system', content: ANALYSIS_PROMPT },
+        { 
+          role: 'user', 
+          content: `Documents uploaded:\n${documentList}\n\nClient/Vendor Name: ${clientName || 'Unknown'}\n\nDocument Content:\n${documentContent}`
+        }
+      ],
+      temperature: 0.3,
+      max_tokens: 4000,
+      response_format: { type: 'json_object' }
+    });
+    
+    const response = await Promise.race([apiPromise, timeoutPromise]);
+    aiResult = JSON.parse(response.choices[0].message.content || '{}');
+    console.log(`[RFP Analysis] OpenAI responded in ${Date.now() - startTime}ms`);
+  } catch (error: unknown) {
+    const elapsed = Date.now() - startTime;
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    
+    if (errorMessage === 'RFP_ANALYSIS_TIMEOUT') {
+      console.warn(`[RFP Analysis] Timeout after ${elapsed}ms (limit: ${RFP_ANALYSIS_TIMEOUT_MS}ms). Using fallback result.`);
+      return createFallbackResult(`Analysis timed out after 2 minutes. The documents may be too large or complex for quick analysis.`);
+    }
+    
+    console.error(`[RFP Analysis] Error after ${elapsed}ms:`, errorMessage);
+    return createFallbackResult(`Analysis failed: ${errorMessage}. Please try again or review documents manually.`);
+  }
   
   let vendorRiskAdjustment = 0;
   let vendorInfo: AnalysisResult['vendorInfo'] | undefined;
@@ -125,8 +182,8 @@ export async function analyzeRFP(projectId: string): Promise<AnalysisResult> {
     };
     
     if (vendorData.paymentRating && ['D', 'F'].includes(vendorData.paymentRating)) {
-      aiResult.alerts = aiResult.alerts || [];
-      aiResult.alerts.push({
+      aiResult.alerts = (aiResult.alerts as unknown[]) || [];
+      (aiResult.alerts as unknown[]).push({
         type: 'VENDOR_PAYMENT',
         severity: 'Critical',
         title: 'Poor Payment History',
@@ -136,9 +193,14 @@ export async function analyzeRFP(projectId: string): Promise<AnalysisResult> {
     }
   }
   
-  const adjustedVendorRisk = Math.min(100, (aiResult.vendor_risk_score || 50) + vendorRiskAdjustment);
+  const qualityScore = (aiResult.quality_score as number) || 50;
+  const clarityScore = (aiResult.clarity_score as number) || 50;
+  const doabilityScore = (aiResult.doability_score as number) || 50;
+  const vendorRiskScore = (aiResult.vendor_risk_score as number) || 50;
   
-  const avgScore = (aiResult.quality_score + aiResult.clarity_score + aiResult.doability_score + (100 - adjustedVendorRisk)) / 4;
+  const adjustedVendorRisk = Math.min(100, vendorRiskScore + vendorRiskAdjustment);
+  
+  const avgScore = (qualityScore + clarityScore + doabilityScore + (100 - adjustedVendorRisk)) / 4;
   let overallRisk: 'Low' | 'Medium' | 'High' | 'Critical' = 'Low';
   
   if (avgScore < 40 || adjustedVendorRisk > 80) {
@@ -149,21 +211,23 @@ export async function analyzeRFP(projectId: string): Promise<AnalysisResult> {
     overallRisk = 'Medium';
   }
   
+  console.log(`[RFP Analysis] Completed in ${Date.now() - startTime}ms`);
+  
   return {
-    qualityScore: aiResult.quality_score || 50,
-    clarityScore: aiResult.clarity_score || 50,
-    doabilityScore: aiResult.doability_score || 50,
+    qualityScore,
+    clarityScore,
+    doabilityScore,
     vendorRiskScore: adjustedVendorRisk,
     overallRiskLevel: overallRisk,
     issues: {
-      missingDocuments: aiResult.missing_documents || [],
-      unclearRequirements: aiResult.unclear_requirements || [],
-      redFlags: aiResult.red_flags || [],
+      missingDocuments: (aiResult.missing_documents as string[]) || [],
+      unclearRequirements: (aiResult.unclear_requirements as Array<{ section: string; issue: string }>) || [],
+      redFlags: (aiResult.red_flags as Array<{ type: string; severity: string; description: string; action: string }>) || [],
     },
-    opportunities: aiResult.opportunities || [],
-    recommendations: aiResult.recommendations || [],
+    opportunities: (aiResult.opportunities as Array<{ type: string; description: string; benefit: string }>) || [],
+    recommendations: (aiResult.recommendations as Array<{ action: string; priority: string; details: string; estimatedTime: string }>) || [],
     vendorInfo,
-    alerts: aiResult.alerts || [],
+    alerts: (aiResult.alerts as Array<{ type: string; severity: string; title: string; description: string; action: string }>) || [],
   };
 }
 
