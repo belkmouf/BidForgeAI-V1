@@ -161,7 +161,7 @@ export class MultishotWorkflowOrchestrator {
     initialInput: Record<string, unknown>,
     options?: { hasImages?: boolean }
   ): Promise<{ success: boolean; outputs: Record<string, AgentOutput>; messages: AgentMessage[] }> {
-    const selectedModel = (initialInput.model as string) || 'anthropic';
+    const selectedModel = (initialInput.model as string) || 'deepseek';
     const state: WorkflowState = {
       projectId,
       userId,
@@ -324,7 +324,7 @@ export class MultishotWorkflowOrchestrator {
             .limit(1);
 
           // Calculate estimated LMM cost for the agent workflow
-          const modelUsed = state.model || 'anthropic';
+          const modelUsed = state.model || 'deepseek';
           const lmmCost = estimateAgentWorkflowCost(modelUsed);
           
           const savedBid = await storage.createBid({

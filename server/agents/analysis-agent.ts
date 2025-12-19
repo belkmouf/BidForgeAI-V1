@@ -30,7 +30,7 @@ export class AnalysisAgent extends BaseAgent {
     super();
   }
 
-  private getModel(modelName: string = 'openai') {
+  private getModel(modelName: string = 'deepseek') {
     switch (modelName) {
       case 'anthropic':
         return new ChatAnthropic({
@@ -41,6 +41,26 @@ export class AnalysisAgent extends BaseAgent {
         return new ChatGoogleGenerativeAI({
           model: 'gemini-2.5-flash-preview-04-17',
           temperature: 0.1,
+        });
+      case 'grok':
+        if (!process.env.XAI_API_KEY) {
+          throw new Error('XAI_API_KEY environment variable is required for Grok');
+        }
+        return new ChatOpenAI({
+          model: 'grok-4-fast',
+          temperature: 0.1,
+          baseURL: 'https://api.x.ai/v1',
+          apiKey: process.env.XAI_API_KEY,
+        });
+      case 'deepseek':
+        if (!process.env.DEEPSEEK_API_KEY) {
+          throw new Error('DEEPSEEK_API_KEY environment variable is required for DeepSeek');
+        }
+        return new ChatOpenAI({
+          model: 'deepseek-chat',
+          temperature: 0.1,
+          baseURL: 'https://api.deepseek.com',
+          apiKey: process.env.DEEPSEEK_API_KEY,
         });
       default:
         return new ChatOpenAI({
@@ -107,7 +127,9 @@ export class AnalysisAgent extends BaseAgent {
         };
       }
 
-      const model = this.getModel('openai');
+      // Get model from state or default to 'deepseek'
+      const selectedModel = (input.data as { model?: string }).model || 'deepseek';
+      const model = this.getModel(selectedModel);
 
       // Use static system prompt from context builder (optimizes KV caching)
       const systemPrompt = compiledContext.staticSystemPrompt;

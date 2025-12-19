@@ -97,7 +97,7 @@ export default function ProjectWorkspace() {
     loadProject();
   }, [projectId]);
 
-  const [selectedModel, setSelectedModel] = useState<AIModel>('openai');
+  const [selectedModel, setSelectedModel] = useState<AIModel>('deepseek');
 
   const handleGenerate = async (instructions: string, tone?: string, model?: AIModel) => {
     setIsGenerating(true);

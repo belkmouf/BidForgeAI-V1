@@ -293,7 +293,7 @@ router.get("/", authenticateToken, async (req: AuthRequest, res: Response) => {
 
 const multishotWorkflowSchema = z.object({
   projectId: z.string().uuid(),
-  model: z.enum(['openai', 'anthropic', 'gemini', 'deepseek', 'grok']).optional().default('anthropic'),
+  model: z.enum(['openai', 'anthropic', 'gemini', 'deepseek', 'grok']).optional().default('deepseek'),
 });
 
 router.post(

@@ -30,7 +30,7 @@ export function estimateBidGenerationCost(model: string): number {
 
 // Estimate LMM cost for agent workflows based on typical token usage
 // Agent workflows typically use ~10k input tokens and ~5k output tokens per run
-export function estimateAgentWorkflowCost(model: string = 'openai'): number {
+export function estimateAgentWorkflowCost(model: string = 'deepseek'): number {
   const pricing = MODEL_PRICING[model as keyof typeof MODEL_PRICING] || MODEL_PRICING.openai;
   // Estimate: ~10k input tokens, ~5k output tokens per agent workflow
   const estimatedInputTokens = 10000;

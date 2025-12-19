@@ -82,7 +82,7 @@ const modelEnum = z.enum(['anthropic', 'gemini', 'deepseek', 'openai', 'grok']);
 const generateBidSchema = z.object({
   instructions: z.string().min(1),
   tone: z.string().optional().default('professional'),
-  model: modelEnum.optional().default('anthropic'),
+  model: modelEnum.optional().default('deepseek'),
   models: z.array(modelEnum).optional(),
 });
 
@@ -193,7 +193,7 @@ async function processKnowledgeBaseDocument(
 const refineBidSchema = z.object({
   currentHtml: z.string().min(1),
   feedback: z.string().min(1),
-  model: z.enum(['anthropic', 'gemini', 'deepseek', 'openai', 'grok']).optional().default('anthropic'),
+  model: z.enum(['anthropic', 'gemini', 'deepseek', 'openai', 'grok']).optional().default('deepseek'),
 });
 
 const updateStatusSchema = z.object({
