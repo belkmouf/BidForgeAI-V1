@@ -9,6 +9,8 @@ import rateLimit from "express-rate-limit";
 import { logger, logContext, requestLogger, errorLogger } from "./lib/logger.js";
 import { cache } from "./lib/cache.js";
 import { jobManager } from "./lib/job-manager.js";
+import { appendFileSync, mkdirSync } from "fs";
+import { dirname, join } from "path";
 
 const app = express();
 const httpServer = createServer(app);
@@ -347,26 +349,72 @@ export function log(message: string, source = "express") {
   logger.info(message, { source });
 }
 
+// Debug logging helper that writes directly to file
+const DEBUG_LOG_PATH = join(process.cwd(), '.cursor', 'debug.log');
+function debugLog(data: any) {
+  const logEntry = {...data, timestamp: Date.now()};
+  // Console fallback for immediate visibility
+  console.log('[DEBUG]', logEntry);
+  try {
+    const logDir = dirname(DEBUG_LOG_PATH);
+    try { mkdirSync(logDir, { recursive: true }); } catch (e) { console.error('Failed to create log dir:', e); }
+    appendFileSync(DEBUG_LOG_PATH, JSON.stringify(logEntry) + '\n', 'utf8');
+  } catch (e) {
+    console.error('Failed to write debug log:', e);
+  }
+  // Also try HTTP logging
+  fetch('http://127.0.0.1:7242/ingest/1c1f0185-3e76-42da-a40c-d0cb450d8372',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(logEntry)}).catch(()=>{});
+}
+
 // Add structured request logging
 app.use(requestLogger);
 
 (async () => {
-  // Initialize cache
-  await cache.connect();
-  
-  // Initialize job manager and background processing
-  await jobManager.initialize();
-  
-  // Schedule periodic maintenance
-  jobManager.schedulePeriodicMaintenance();
-  
-  await registerRoutes(httpServer, app);
+  // #region agent log
+  debugLog({location:'server/index.ts:353',message:'Async IIFE started',data:{step:'init_start'},sessionId:'debug-session',runId:'init',hypothesisId:'A'});
+  // #endregion
 
-  // Add error logging middleware
-  app.use(errorLogger);
+  try {
+    // #region agent log
+    debugLog({location:'server/index.ts:360',message:'Starting cache.connect()',data:{step:'cache_connect_before'},sessionId:'debug-session',runId:'init',hypothesisId:'A'});
+    // #endregion
+
+    // Initialize cache
+    await cache.connect();
+
+    // #region agent log
+    debugLog({location:'server/index.ts:367',message:'cache.connect() completed',data:{step:'cache_connect_after'},sessionId:'debug-session',runId:'init',hypothesisId:'A'});
+    // #endregion
+
+    // #region agent log
+    debugLog({location:'server/index.ts:370',message:'Starting jobManager.initialize()',data:{step:'job_manager_init_before'},sessionId:'debug-session',runId:'init',hypothesisId:'A'});
+    // #endregion
+
+    // Initialize job manager and background processing
+    await jobManager.initialize();
+
+    // #region agent log
+    debugLog({location:'server/index.ts:377',message:'jobManager.initialize() completed',data:{step:'job_manager_init_after'},sessionId:'debug-session',runId:'init',hypothesisId:'A'});
+    // #endregion
+
+    // Schedule periodic maintenance
+    jobManager.schedulePeriodicMaintenance();
+
+    // #region agent log
+    debugLog({location:'server/index.ts:385',message:'Starting registerRoutes()',data:{step:'register_routes_before'},sessionId:'debug-session',runId:'init',hypothesisId:'A'});
+    // #endregion
+
+    await registerRoutes(httpServer, app);
+
+    // #region agent log
+    debugLog({location:'server/index.ts:391',message:'registerRoutes() completed',data:{step:'register_routes_after'},sessionId:'debug-session',runId:'init',hypothesisId:'A'});
+    // #endregion
+
+    // Add error logging middleware
+    app.use(errorLogger);
   
-  // Error handling middleware - hide stack traces in production
-  app.use((err: any, req: Request, res: Response, _next: NextFunction) => {
+    // Error handling middleware - hide stack traces in production
+    app.use((err: any, req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
     
     // Create error ID for tracking
@@ -404,73 +452,108 @@ app.use(requestLogger);
         errorId
       });
     }
-  });
+    });
 
-  // importantly only setup vite in development and after
-  // setting up all the other routes so the catch-all route
-  // doesn't interfere with the other routes
-  if (process.env.NODE_ENV === "production") {
-    serveStatic(app);
-  } else {
-    const { setupVite } = await import("./vite");
-    await setupVite(httpServer, app);
-  }
+    // #region agent log
+    debugLog({location:'server/index.ts:442',message:'Starting vite/static setup',data:{step:'vite_setup_before',env:process.env.NODE_ENV},sessionId:'debug-session',runId:'init',hypothesisId:'A'});
+    // #endregion
 
-  // ALWAYS serve the app on the port specified in the environment variable PORT
-  // Other ports are firewalled. Default to 5000 if not specified.
-  // this serves both the API and the client.
-  // It is the only port that is not firewalled.
-  const port = parseInt(process.env.PORT || "5000", 10);
-  httpServer.listen(
-    {
-      port,
-      host: "0.0.0.0",
-      reusePort: true,
-    },
-    () => {
-      log(`serving on port ${port}`);
-      logger.info('BidForge AI server started successfully', {
-        port,
-        environment: process.env.NODE_ENV,
-        services: {
-          cache: 'initialized',
-          jobManager: 'initialized',
-          database: 'connected'
-        }
-      });
-    },
-  );
-
-  // Enhanced graceful shutdown handler
-  const enhancedGracefulShutdown = async (signal: string) => {
-    logger.info(`Received ${signal}, initiating graceful shutdown...`);
-    
-    try {
-      // Stop accepting new connections
-      httpServer.close(() => {
-        logger.info('HTTP server closed');
-      });
-      
-      // Stop job manager to prevent new jobs and wait for current jobs to complete
-      await jobManager.shutdown();
-      logger.info('Job manager shut down successfully');
-      
-      // Disconnect cache
-      await cache.disconnect();
-      logger.info('Cache disconnected successfully');
-      
-      logger.info('Graceful shutdown completed successfully');
-      process.exit(0);
-    } catch (error: any) {
-      logger.error('Error during graceful shutdown', { error: error.message });
-      process.exit(1);
+    // importantly only setup vite in development and after
+    // setting up all the other routes so the catch-all route
+    // doesn't interfere with the other routes
+    if (process.env.NODE_ENV === "production") {
+      serveStatic(app);
+    } else {
+      const { setupVite } = await import("./vite");
+      await setupVite(httpServer, app);
     }
-  };
 
-  // Override the default graceful shutdown from logger to include our services
-  process.removeAllListeners('SIGINT');
-  process.removeAllListeners('SIGTERM');
-  
-  process.on('SIGINT', () => enhancedGracefulShutdown('SIGINT'));
-  process.on('SIGTERM', () => enhancedGracefulShutdown('SIGTERM'));
+    // #region agent log
+    debugLog({location:'server/index.ts:453',message:'vite/static setup completed',data:{step:'vite_setup_after'},sessionId:'debug-session',runId:'init',hypothesisId:'A'});
+    // #endregion
+
+    // #region agent log
+    debugLog({location:'server/index.ts:456',message:'Starting httpServer.listen()',data:{step:'server_listen_before',port:parseInt(process.env.PORT || "5000", 10)},sessionId:'debug-session',runId:'init',hypothesisId:'A'});
+    // #endregion
+
+    // ALWAYS serve the app on the port specified in the environment variable PORT
+    // Other ports are firewalled. Default to 5000 if not specified.
+    // this serves both the API and the client.
+    // It is the only port that is not firewalled.
+    const port = parseInt(process.env.PORT || "5000", 10);
+    httpServer.listen(
+      {
+        port,
+        host: "0.0.0.0",
+        reusePort: true,
+      },
+      () => {
+        // #region agent log
+        debugLog({location:'server/index.ts:472',message:'Server listening callback executed',data:{step:'server_listen_callback',port},sessionId:'debug-session',runId:'init',hypothesisId:'A'});
+        // #endregion
+
+        log(`serving on port ${port}`);
+        logger.info('BidForge AI server started successfully', {
+          port,
+          environment: process.env.NODE_ENV,
+          services: {
+            cache: 'initialized',
+            jobManager: 'initialized',
+            database: 'connected'
+          }
+        });
+      },
+    );
+
+    // Enhanced graceful shutdown handler
+    const enhancedGracefulShutdown = async (signal: string) => {
+      logger.info(`Received ${signal}, initiating graceful shutdown...`);
+      
+      try {
+        // Stop accepting new connections
+        httpServer.close(() => {
+          logger.info('HTTP server closed');
+        });
+        
+        // Stop job manager to prevent new jobs and wait for current jobs to complete
+        await jobManager.shutdown();
+        logger.info('Job manager shut down successfully');
+        
+        // Disconnect cache
+        await cache.disconnect();
+        logger.info('Cache disconnected successfully');
+        
+        logger.info('Graceful shutdown completed successfully');
+        process.exit(0);
+      } catch (error: any) {
+        logger.error('Error during graceful shutdown', { error: error.message });
+        process.exit(1);
+      }
+    };
+
+    // Override the default graceful shutdown from logger to include our services
+    process.removeAllListeners('SIGINT');
+    process.removeAllListeners('SIGTERM');
+    
+    process.on('SIGINT', () => enhancedGracefulShutdown('SIGINT'));
+    process.on('SIGTERM', () => enhancedGracefulShutdown('SIGTERM'));
+
+    // #region agent log
+    debugLog({location:'server/index.ts:516',message:'Async IIFE completed successfully',data:{step:'init_complete'},sessionId:'debug-session',runId:'init',hypothesisId:'A'});
+    // #endregion
+
+  } catch (error: any) {
+    // #region agent log
+    debugLog({location:'server/index.ts:520',message:'Async IIFE error caught',data:{step:'init_error',errorMessage:error?.message,errorStack:error?.stack?.substring(0,500)},sessionId:'debug-session',runId:'init',hypothesisId:'A'});
+    // #endregion
+
+    logger.error('FATAL: Failed to initialize server', {
+      error: error.message,
+      stack: error.stack,
+      type: 'initialization-error'
+    });
+    
+    console.error('FATAL: Server initialization failed:', error);
+    process.exit(1);
+  }
 })();
