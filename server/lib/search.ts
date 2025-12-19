@@ -4,6 +4,7 @@ import { eq, sql, desc } from 'drizzle-orm';
 import { OpenAI } from 'openai';
 import { cache } from './cache.js';
 import { logger, logContext } from './logger.js';
+import crypto from 'crypto';
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -438,7 +439,6 @@ export class SearchService {
   }
 
   private hashQuery(query: string): string {
-    const crypto = require('crypto');
     return crypto.createHash('md5').update(query.toLowerCase().trim()).digest('hex');
   }
 }
