@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
-import { TiptapEditor } from '@/components/editor/TiptapEditor';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Textarea } from '@/components/ui/textarea';
 import {
   Save,
   FileText,
@@ -15,7 +17,9 @@ import {
   CheckCircle,
   Clock,
   Loader2,
-  Edit3
+  Edit3,
+  Eye,
+  Pencil
 } from 'lucide-react';
 import {
   getIndividualDocumentSummary,
@@ -41,6 +45,7 @@ export function DocumentSummaryEditor({
   const [isLoading, setIsLoading] = useState(true);
   const [isRegenerating, setIsRegenerating] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
 
   useEffect(() => {
     loadSummary();
@@ -227,11 +232,44 @@ export function DocumentSummaryEditor({
               </Alert>
             )}
 
+            <div className="flex justify-end mb-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsEditing(!isEditing)}
+              >
+                {isEditing ? (
+                  <>
+                    <Eye className="h-4 w-4 mr-2" />
+                    Preview
+                  </>
+                ) : (
+                  <>
+                    <Pencil className="h-4 w-4 mr-2" />
+                    Edit
+                  </>
+                )}
+              </Button>
+            </div>
+
             <div className="border rounded-lg h-[500px] overflow-hidden">
-              <TiptapEditor
-                content={content}
-                onChange={handleContentChange}
-              />
+              {isEditing ? (
+                <Textarea
+                  value={content}
+                  onChange={(e) => handleContentChange(e.target.value)}
+                  className="h-full w-full resize-none font-mono text-sm p-4 border-0 focus-visible:ring-0"
+                  placeholder="Enter markdown content..."
+                  data-testid="textarea-summary-content"
+                />
+              ) : (
+                <ScrollArea className="h-full p-4">
+                  <div className="prose prose-sm dark:prose-invert max-w-none">
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                      {content}
+                    </ReactMarkdown>
+                  </div>
+                </ScrollArea>
+              )}
             </div>
           </TabsContent>
 
