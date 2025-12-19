@@ -6,15 +6,35 @@ import { ChatAnthropic } from '@langchain/anthropic';
 import { ChatGoogleGenerativeAI } from '@langchain/google-genai';
 import { z } from 'zod';
 
+// Helper to convert string or object to string (handles DeepSeek returning objects)
+const stringOrObjectToString = z.union([
+  z.string(),
+  z.object({}).passthrough()
+]).transform((val) => {
+  if (typeof val === 'string') return val;
+  // Convert object to string - try common patterns
+  if (typeof val === 'object' && val !== null) {
+    const obj = val as Record<string, unknown>;
+    if (obj.text) return String(obj.text);
+    if (obj.finding) return String(obj.finding);
+    if (obj.description) return String(obj.description);
+    if (obj.content) return String(obj.content);
+    if (obj.value) return String(obj.value);
+    // Fallback: stringify the object
+    return JSON.stringify(val);
+  }
+  return String(val);
+});
+
 const AnalysisResponseSchema = z.object({
   qualityScore: z.number().default(50),
   clarityScore: z.number().default(50),
   doabilityScore: z.number().default(50),
   vendorRiskScore: z.number().default(50),
   overallRiskLevel: z.enum(['Low', 'Medium', 'High', 'Critical']).default('Medium'),
-  keyFindings: z.array(z.string()).default([]),
-  redFlags: z.array(z.string()).default([]),
-  opportunities: z.array(z.string()).default([]),
+  keyFindings: z.array(stringOrObjectToString).default([]),
+  redFlags: z.array(stringOrObjectToString).default([]),
+  opportunities: z.array(stringOrObjectToString).default([]),
   recommendations: z.array(z.object({
     action: z.string().default('Review this item'),
     priority: z.enum(['high', 'medium', 'low']).default('medium'),
