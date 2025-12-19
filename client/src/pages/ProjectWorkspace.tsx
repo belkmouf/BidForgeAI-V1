@@ -575,7 +575,7 @@ export default function ProjectWorkspace() {
             <ResizablePanel defaultSize={25} minSize={20} maxSize={40} className="bg-primary/20 border-l border-border">
               <div className="h-full flex flex-col p-4">
                 <div className="flex-1 flex flex-col min-h-0 gap-6">
-                  <GeneratePanel onGenerate={handleGenerate} isGenerating={isGenerating} />
+                  <GeneratePanel onGenerate={handleGenerate} onKill={handleCancelWorkflow} isGenerating={isGenerating} />
                   
                   {/* Agent Progress Panel - shown during workflow */}
                   {showAgentProgress && (

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Sparkles, Wand2, Loader2, Settings } from 'lucide-react';
+import { Sparkles, Wand2, Loader2, Settings, StopCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
@@ -9,10 +9,11 @@ import { Link } from 'wouter';
 
 interface GeneratePanelProps {
   onGenerate: (instructions: string, tone?: string, model?: AIModel) => void;
+  onKill?: () => void;
   isGenerating: boolean;
 }
 
-export function GeneratePanel({ onGenerate, isGenerating }: GeneratePanelProps) {
+export function GeneratePanel({ onGenerate, onKill, isGenerating }: GeneratePanelProps) {
   const [instructions, setInstructions] = useState<AIInstruction[]>([]);
   const [selectedInstructionId, setSelectedInstructionId] = useState<string>('');
   const [tone, setTone] = useState('technical');
@@ -49,9 +50,23 @@ export function GeneratePanel({ onGenerate, isGenerating }: GeneratePanelProps) 
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-2 text-primary font-display font-semibold">
-        <Sparkles className="h-5 w-5" />
-        <h3>AI Bid Generator</h3>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2 text-primary font-display font-semibold">
+          <Sparkles className="h-5 w-5" />
+          <h3>AI Bid Generator</h3>
+        </div>
+        {isGenerating && onKill && (
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={onKill}
+            data-testid="button-kill-generation"
+            className="h-7 px-2 text-xs"
+          >
+            <StopCircle className="h-3.5 w-3.5 mr-1" />
+            Stop
+          </Button>
+        )}
       </div>
 
       <Card className="p-4 bg-card border-2 border-primary/30 shadow-sm">
