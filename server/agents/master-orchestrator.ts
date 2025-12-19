@@ -4,6 +4,7 @@ import { db } from '../db';
 import { agentExecutions, agentStates } from '@shared/schema';
 import { eq } from 'drizzle-orm';
 import type { AgentOutput, AgentContext } from './base-agent';
+import { searchService, SearchResult } from '../lib/search';
 
 const anthropicApiKey = process.env.AI_INTEGRATIONS_ANTHROPIC_API_KEY || process.env.ANTHROPIC_API_KEY;
 const integrationBaseUrl = process.env.AI_INTEGRATIONS_ANTHROPIC_BASE_URL;
@@ -32,6 +33,8 @@ export interface OrchestratorEvaluation {
   reasoning: string;
   improvements: string[];
   criticalIssues: string[];
+  groundingScore?: number;
+  unsupportedClaims?: string[];
 }
 
 export interface MultishotFeedbackData {
@@ -66,15 +69,187 @@ export interface ProgressEvent {
   timestamp: Date;
 }
 
+// Per-agent configuration for iterations, timeouts, and grounding checks
+const AGENT_CONFIG: Record<string, { maxIterations: number; timeoutMs: number; skipGrounding?: boolean }> = {
+  analysis: { maxIterations: 1, timeoutMs: 90_000 },   // One-shot for speed
+  intake: { maxIterations: 1, timeoutMs: 60_000, skipGrounding: true },     // Simple data loading - no content to verify
+  sketch: { maxIterations: 1, timeoutMs: 120_000, skipGrounding: true },    // Vision API - structured data
+  decision: { maxIterations: 1, timeoutMs: 60_000, skipGrounding: true },   // One-shot, no document claims
+  generation: { maxIterations: 2, timeoutMs: 120_000 }, // Multi-shot for quality - NEEDS grounding
+  review: { maxIterations: 1, timeoutMs: 90_000, skipGrounding: true },     // One-shot, just reviews
+};
+const DEFAULT_AGENT_CONFIG = { maxIterations: 2, timeoutMs: 90_000, skipGrounding: false };
+
 export class MasterOrchestrator extends EventEmitter {
-  private maxIterationsPerAgent: number = 3;
+  private maxIterationsPerAgent: number = 2;
   private acceptanceThreshold: number = 75;
   private maxOutputChars: number = 50000;
+  private groundingThreshold: number = 60;
   
-  constructor(options?: { maxIterationsPerAgent?: number; acceptanceThreshold?: number }) {
+  constructor(options?: { maxIterationsPerAgent?: number; acceptanceThreshold?: number; groundingThreshold?: number }) {
     super();
     if (options?.maxIterationsPerAgent) this.maxIterationsPerAgent = options.maxIterationsPerAgent;
     if (options?.acceptanceThreshold) this.acceptanceThreshold = options.acceptanceThreshold;
+    if (options?.groundingThreshold) this.groundingThreshold = options.groundingThreshold;
+  }
+
+  private getAgentConfig(agentName: string): { maxIterations: number; timeoutMs: number; skipGrounding?: boolean } {
+    return AGENT_CONFIG[agentName] || DEFAULT_AGENT_CONFIG;
+  }
+
+  private async retrieveDocumentContext(projectId: string, output: AgentOutput): Promise<{
+    context: string;
+    sources: SearchResult[];
+    searchFailed: boolean;
+  }> {
+    try {
+      const outputText = typeof output.data === 'string' 
+        ? output.data 
+        : JSON.stringify(output.data);
+      
+      const keyPhrases = this.extractKeyPhrases(outputText);
+      let allSources: SearchResult[] = [];
+      
+      if (keyPhrases.length > 0) {
+        const technicalQuery = keyPhrases.slice(0, 5).join(' ');
+        const technicalSources = await searchService.searchDocuments(technicalQuery, projectId, {
+          limit: 10,
+          threshold: 0.4,
+          useCache: true
+        });
+        allSources.push(...technicalSources);
+      }
+      
+      const summaryText = output.summary?.summary || '';
+      if (summaryText.length > 20) {
+        const summarySources = await searchService.searchDocuments(summaryText.substring(0, 300), projectId, {
+          limit: 8,
+          threshold: 0.4,
+          useCache: true
+        });
+        const existingIds = new Set(allSources.map(s => s.id));
+        summarySources.forEach(s => {
+          if (!existingIds.has(s.id)) allSources.push(s);
+        });
+      }
+      
+      if (allSources.length < 5) {
+        const broadTerms = ['scope', 'specifications', 'requirements', 'dimensions', 'materials', 'timeline'];
+        const broadQuery = broadTerms.join(' ');
+        const broadSources = await searchService.searchDocuments(broadQuery, projectId, {
+          limit: 10,
+          threshold: 0.3,
+          useCache: true
+        });
+        const existingIds = new Set(allSources.map(s => s.id));
+        broadSources.forEach(s => {
+          if (!existingIds.has(s.id)) allSources.push(s);
+        });
+      }
+      
+      allSources.sort((a, b) => b.score - a.score);
+      const sources = allSources.slice(0, 15);
+      
+      const context = sources
+        .map((s, i) => `[Source ${i + 1} - ${s.documentName}]: ${s.content.substring(0, 800)}`)
+        .join('\n\n');
+      
+      console.log(`[MasterOrchestrator] Retrieved ${sources.length} document chunks for grounding check`);
+      return { context, sources, searchFailed: false };
+    } catch (error) {
+      console.error('[MasterOrchestrator] Failed to retrieve document context:', error);
+      return { context: '', sources: [], searchFailed: true };
+    }
+  }
+
+  private extractKeyPhrases(text: string): string[] {
+    const technicalPatterns = [
+      /\d+(?:\.\d+)?\s*(?:sq\.?\s*(?:ft|m)|square\s*(?:feet|meters?))/gi,
+      /\d+(?:\.\d+)?\s*(?:ft|m|cm|mm|inches?|"|')\s*x\s*\d+(?:\.\d+)?\s*(?:ft|m|cm|mm|inches?|"|')/gi,
+      /\d+(?:\.\d+)?\s*(?:PSI|MPa|kPa)/gi,
+      /(?:Grade|ASTM|ACI|AISC|ISO)\s*[A-Z0-9\-]+/gi,
+      /\$[\d,]+(?:\.\d{2})?(?:\s*(?:million|billion|thousand|k|M|B))?/gi,
+      /\d+\s*(?:days?|weeks?|months?|years?)/gi,
+      /(?:concrete|steel|rebar|foundation|slab|column|beam|HVAC|MEP|electrical|plumbing|roofing)/gi
+    ];
+    
+    const phrases: string[] = [];
+    for (const pattern of technicalPatterns) {
+      const matches = text.match(pattern);
+      if (matches) {
+        phrases.push(...matches.slice(0, 3));
+      }
+    }
+    
+    return [...new Set(phrases)].slice(0, 10);
+  }
+
+  private async verifyGrounding(
+    agentName: string,
+    output: AgentOutput,
+    documentContext: string,
+    sources: SearchResult[]
+  ): Promise<{ groundingScore: number; unsupportedClaims: string[] }> {
+    if (!documentContext || sources.length === 0) {
+      return { groundingScore: 100, unsupportedClaims: [] };
+    }
+
+    const truncatedOutput = this.truncateOutput(output);
+    
+    const verificationPrompt = `You are a fact-checking specialist for construction bids. Verify if the agent output is grounded in the provided source documents.
+
+AGENT OUTPUT TO VERIFY:
+${truncatedOutput}
+
+SOURCE DOCUMENTS (retrieved from project files):
+${documentContext}
+
+VERIFICATION TASK:
+1. Identify specific claims in the agent output (dimensions, materials, quantities, costs, timelines, specifications)
+2. Check if each claim is supported by the source documents
+3. Flag any claims that:
+   - Contain specific numbers/values not found in sources
+   - Make technical assertions without document backing
+   - Include specifications that contradict source documents
+
+Respond in JSON:
+{
+  "groundingScore": number (0-100, where 100 = fully grounded in documents),
+  "verifiedClaims": ["list of claims that ARE supported by documents"],
+  "unsupportedClaims": ["list of specific claims NOT found in source documents"],
+  "contradictions": ["claims that CONTRADICT source documents"],
+  "reasoning": "brief explanation of grounding assessment"
+}`;
+
+    try {
+      const response = await anthropic.messages.create({
+        model: 'claude-sonnet-4-5',
+        max_tokens: 2048,
+        messages: [{ role: 'user', content: verificationPrompt }],
+      });
+
+      const textBlock = response.content.find(block => block.type === 'text');
+      const content = textBlock?.text || '{}';
+      
+      const jsonMatch = content.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) {
+        return { groundingScore: 70, unsupportedClaims: [] };
+      }
+
+      const result = JSON.parse(jsonMatch[0]);
+      console.log(`[MasterOrchestrator] Grounding check for ${agentName}: score=${result.groundingScore}, unsupported=${result.unsupportedClaims?.length || 0}`);
+      
+      return {
+        groundingScore: result.groundingScore || 70,
+        unsupportedClaims: [
+          ...(result.unsupportedClaims || []),
+          ...(result.contradictions || [])
+        ]
+      };
+    } catch (error) {
+      console.error('[MasterOrchestrator] Grounding verification failed:', error);
+      return { groundingScore: 70, unsupportedClaims: [] };
+    }
   }
 
   private truncateOutput(output: unknown): string {
@@ -148,44 +323,105 @@ export class MasterOrchestrator extends EventEmitter {
       previousEvaluations?: OrchestratorEvaluation[];
     }
   ): Promise<OrchestratorEvaluation> {
+    // Use per-agent config for grounding - only generation needs it
+    const agentConfig = this.getAgentConfig(agentName);
+    const requiresGrounding = !agentConfig.skipGrounding;
+    
+    let documentContext = '';
+    let sources: SearchResult[] = [];
+    let searchFailed = false;
+    let groundingResult = { groundingScore: 100, unsupportedClaims: [] as string[] };
+    
+    if (requiresGrounding && output.success) {
+      console.log(`[MasterOrchestrator] Retrieving document context for ${agentName} grounding check...`);
+      const docResult = await this.retrieveDocumentContext(context.projectId, output);
+      documentContext = docResult.context;
+      sources = docResult.sources;
+      searchFailed = docResult.searchFailed;
+      
+      if (searchFailed) {
+        groundingResult = { 
+          groundingScore: 25, 
+          unsupportedClaims: ['CRITICAL: Unable to retrieve source documents for verification - content cannot be verified against project files. All technical claims are unverified.'] 
+        };
+        console.log(`[MasterOrchestrator] Document retrieval FAILED - setting grounding score to 25 (hard failure)`);
+      } else if (sources.length === 0) {
+        groundingResult = { 
+          groundingScore: 30, 
+          unsupportedClaims: ['CRITICAL: No matching source documents found in project. Output contains claims that cannot be verified against uploaded RFP documents.'] 
+        };
+        console.log(`[MasterOrchestrator] NO source documents found - setting grounding score to 30 (hard failure)`);
+      } else if (sources.length < 3) {
+        groundingResult = await this.verifyGrounding(agentName, output, documentContext, sources);
+        groundingResult.groundingScore = Math.min(groundingResult.groundingScore, 65);
+        groundingResult.unsupportedClaims = [
+          ...(groundingResult.unsupportedClaims || []),
+          `Limited source coverage: only ${sources.length} document chunks available for verification`
+        ];
+        console.log(`[MasterOrchestrator] Limited sources (${sources.length}) - capping grounding score at 65`);
+      } else {
+        groundingResult = await this.verifyGrounding(agentName, output, documentContext, sources);
+        console.log(`[MasterOrchestrator] ${agentName} grounding score: ${groundingResult.groundingScore}/100`);
+      }
+    }
+    
     const previousContext = context.previousEvaluations?.length
       ? `\nPrevious Iterations:\n${context.previousEvaluations.map((e, i) => 
           `Iteration ${i + 1}: Score ${e.score}/100 - ${e.reasoning}\nImprovements needed: ${e.improvements.join(', ')}`
         ).join('\n\n')}`
       : '';
 
+    const groundingContext = requiresGrounding
+      ? `\n\nDOCUMENT GROUNDING VERIFICATION:
+Grounding Score: ${groundingResult.groundingScore}/100
+Source Documents Retrieved: ${sources.length}
+Search Status: ${searchFailed ? 'FAILED' : sources.length === 0 ? 'NO DOCUMENTS FOUND' : 'SUCCESS'}
+${groundingResult.unsupportedClaims.length > 0 
+  ? `GROUNDING ISSUES DETECTED:\n${groundingResult.unsupportedClaims.map(c => `- ${c}`).join('\n')}`
+  : 'All claims appear to be grounded in source documents.'}
+${sources.length === 0 ? '\nWARNING: Without source documents, the output cannot be verified for factual accuracy. The agent may have generated fabricated content.' : ''}`
+      : '';
+
     const systemPrompt = `You are the Master Orchestrator overseeing a construction bid generation workflow. You are a HIGHLY TECHNICAL construction expert. Your role is to evaluate agent outputs with extreme attention to technical accuracy and completeness.
 
+CRITICAL: DOCUMENT GROUNDING REQUIREMENT
+All technical claims, dimensions, specifications, and values in the output MUST be traceable to the uploaded project documents. Outputs with fabricated or hallucinated information must be REJECTED.
+
 CRITICAL TECHNICAL FOCUS AREAS:
-1. DIMENSIONS & MEASUREMENTS: All dimensions must be explicit (length, width, height, area, volume)
-2. MATERIALS & SPECIFICATIONS: Material grades, standards (ASTM, ACI, AISC), brand specifications
-3. QUANTITIES: Bill of quantities, unit counts, material volumes, labor hours
+1. DIMENSIONS & MEASUREMENTS: All dimensions must be explicit (length, width, height, area, volume) AND match source documents
+2. MATERIALS & SPECIFICATIONS: Material grades, standards (ASTM, ACI, AISC), brand specifications - MUST come from documents
+3. QUANTITIES: Bill of quantities, unit counts, material volumes, labor hours - MUST be extracted from or calculated from documents
 4. CONSTRUCTION METHODS: Detailed methodology, equipment requirements, sequencing
 5. TIMELINES: Realistic durations based on scope, resource loading, critical path items
 
 Evaluation Criteria by Agent Type:
 - intake: Document extraction completeness, ALL dimensions extracted, material specs captured, quantities identified, timeline requirements noted
 - sketch: Dimensions MUST be accurate to specification, materials fully identified with grades/standards, all technical specifications extracted, scale verification
-- analysis: Risk assessment with technical root causes, structural/MEP/civil considerations, resource requirements, timeline feasibility analysis
+- analysis: Risk assessment with technical root causes, structural/MEP/civil considerations, resource requirements, timeline feasibility analysis. ALL FINDINGS MUST BE GROUNDED IN DOCUMENTS.
 - decision: Technical feasibility assessment, resource availability, subcontractor requirements, equipment needs, timeline realism
 - generation: MUST include: 
-  * Detailed scope with ALL dimensions from documents
-  * Complete material specifications with standards
+  * Detailed scope with ALL dimensions from documents - NO FABRICATED NUMBERS
+  * Complete material specifications with standards - MUST MATCH DOCUMENTS
   * Realistic timeline with phase breakdown (based on similar project data)
   * Resource loading and labor estimates
   * Equipment requirements
   * Quality control procedures
-  * NO PLACEHOLDER TEXT - all technical details must be specific
+  * NO PLACEHOLDER TEXT - all technical details must be specific AND document-backed
 - review: Verify technical accuracy, dimensions match source docs, materials properly specified, timeline realistic
 
-Scoring Guidelines:
-- 90-100: Technically complete, all dimensions/materials/timelines specified accurately
+Scoring Guidelines (Quality Score):
+- 90-100: Technically complete, all dimensions/materials/timelines specified accurately and grounded
 - 75-89: Good technical content, minor gaps in specifications
 - 60-74: Missing key technical details, needs refinement
 - Below 60: Major technical omissions, significant rework needed
 
+GROUNDING PENALTY: If grounding verification detects unsupported claims, reduce the final score accordingly. An output with many hallucinated values should FAIL even if otherwise well-structured.
+
 Your evaluation threshold is ${this.acceptanceThreshold}/100. Accept outputs scoring at or above this threshold.
-REJECT any output with placeholder text like "[TBD]", "[INSERT]", or generic statements without specific technical details.`;
+REJECT any output with:
+- Placeholder text like "[TBD]", "[INSERT]", or generic statements
+- Specific numbers/dimensions NOT found in source documents
+- Technical claims that contradict source documents`;
 
     const truncatedOutput = this.truncateOutput(output);
     const userPrompt = `Evaluate this ${agentName} agent output (Iteration ${context.iteration}/${this.maxIterationsPerAgent}):
@@ -193,14 +429,15 @@ REJECT any output with placeholder text like "[TBD]", "[INSERT]", or generic sta
 Agent Output:
 ${truncatedOutput}
 ${previousContext}
+${groundingContext}
 
 Provide your evaluation in JSON format:
 {
   "accepted": boolean,
   "score": number (0-100),
-  "reasoning": "explanation of evaluation",
+  "reasoning": "explanation of evaluation including grounding assessment",
   "improvements": ["list of specific improvements if not accepted"],
-  "criticalIssues": ["any critical issues that must be fixed"]
+  "criticalIssues": ["any critical issues including unsupported claims that must be fixed"]
 }`;
 
     try {
@@ -221,6 +458,47 @@ Provide your evaluation in JSON format:
 
       const evaluation = JSON.parse(jsonMatch[0]) as OrchestratorEvaluation;
       
+      evaluation.groundingScore = groundingResult.groundingScore;
+      evaluation.unsupportedClaims = groundingResult.unsupportedClaims;
+      
+      if (requiresGrounding && groundingResult.groundingScore < this.groundingThreshold) {
+        const groundingDeficit = this.groundingThreshold - groundingResult.groundingScore;
+        const groundingPenalty = Math.round(groundingDeficit * 1.0);
+        const adjustedScore = Math.max(0, evaluation.score - groundingPenalty);
+        
+        console.log(`[MasterOrchestrator] Grounding penalty: ${evaluation.score} - ${groundingPenalty} = ${adjustedScore}`);
+        evaluation.score = adjustedScore;
+        
+        const isHardGroundingFailure = groundingResult.groundingScore <= 35;
+        
+        if (isHardGroundingFailure) {
+          evaluation.accepted = false;
+          console.log(`[MasterOrchestrator] HARD GROUNDING FAILURE (score ${groundingResult.groundingScore}): Forcing rejection regardless of quality score`);
+          
+          evaluation.criticalIssues = [
+            ...(evaluation.criticalIssues || []),
+            `GROUNDING FAILURE: Cannot verify output against project documents. Content may contain fabricated or hallucinated information.`,
+            ...groundingResult.unsupportedClaims.slice(0, 3)
+          ];
+          evaluation.reasoning = `[GROUNDING BLOCKED] ${evaluation.reasoning}. OUTPUT REJECTED: No sufficient document evidence to verify claims.`;
+        } else {
+          evaluation.accepted = adjustedScore >= this.acceptanceThreshold;
+          
+          if (groundingResult.unsupportedClaims.length > 0) {
+            evaluation.criticalIssues = [
+              ...(evaluation.criticalIssues || []),
+              `GROUNDING WARNING: ${groundingResult.unsupportedClaims.length} claims could not be verified against project documents.`
+            ];
+          }
+        }
+        
+        evaluation.improvements = [
+          ...(evaluation.improvements || []),
+          'Ensure all dimensions, quantities, and specifications are extracted directly from uploaded documents',
+          ...groundingResult.unsupportedClaims.slice(0, 3).map(c => `Verify or remove: "${c.substring(0, 80)}..."`)
+        ];
+      }
+      
       return evaluation;
     } catch (error) {
       console.error('[MasterOrchestrator] Evaluation failed:', error);
@@ -230,6 +508,8 @@ Provide your evaluation in JSON format:
         reasoning: 'Evaluation failed, accepting output with default score',
         improvements: [],
         criticalIssues: [],
+        groundingScore: groundingResult.groundingScore,
+        unsupportedClaims: groundingResult.unsupportedClaims,
       };
     }
   }
@@ -282,18 +562,24 @@ Provide clear, specific feedback that will help the agent improve its output. Be
     const outputs: AgentOutput[] = [];
     const evaluations: OrchestratorEvaluation[] = [];
     
+    const agentConfig = this.getAgentConfig(agentName);
+    const maxIterations = agentConfig.maxIterations;
+    const timeoutMs = agentConfig.timeoutMs;
+    
     let iteration = 0;
     let currentOutput: AgentOutput | null = null;
     let accepted = false;
 
-    while (iteration < this.maxIterationsPerAgent && !accepted) {
+    console.log(`[MasterOrchestrator] Agent ${agentName}: maxIterations=${maxIterations}, timeout=${timeoutMs}ms`);
+
+    while (iteration < maxIterations && !accepted) {
       iteration++;
       
       this.emitProgressWithProject(context.projectId, {
         type: 'agent_start',
         agentName,
         iteration,
-        message: `Starting ${agentName} agent (iteration ${iteration}/${this.maxIterationsPerAgent})`,
+        message: `Starting ${agentName} agent (iteration ${iteration}/${maxIterations})`,
       });
 
       messages.push({
@@ -311,7 +597,7 @@ Provide clear, specific feedback that will help the agent improve its output. Be
         const refinementText = await this.generateRefinementFeedback(agentName, outputs[outputs.length - 1], lastEval);
         feedbackData = {
           iteration,
-          maxIterations: this.maxIterationsPerAgent,
+          maxIterations,
           feedback: refinementText,
           improvements: lastEval.improvements,
           criticalIssues: lastEval.criticalIssues,
@@ -320,7 +606,14 @@ Provide clear, specific feedback that will help the agent improve its output. Be
       }
 
       try {
-        currentOutput = await executeAgent(feedbackData);
+        // Execute agent with timeout protection
+        const startTime = Date.now();
+        const timeoutPromise = new Promise<AgentOutput>((_, reject) => {
+          setTimeout(() => reject(new Error(`AGENT_TIMEOUT: ${agentName} exceeded ${timeoutMs}ms`)), timeoutMs);
+        });
+        
+        currentOutput = await Promise.race([executeAgent(feedbackData), timeoutPromise]);
+        console.log(`[MasterOrchestrator] Agent ${agentName} iteration ${iteration} completed in ${Date.now() - startTime}ms`);
         outputs.push(currentOutput);
 
         messages.push({
@@ -380,7 +673,7 @@ Provide clear, specific feedback that will help the agent improve its output. Be
 
         accepted = isAccepted;
 
-        if (!accepted && iteration < this.maxIterationsPerAgent) {
+        if (!accepted && iteration < maxIterations) {
           this.emitProgressWithProject(context.projectId, {
             type: 'refinement_request',
             agentName,
@@ -475,6 +768,6 @@ Provide clear, specific feedback that will help the agent improve its output. Be
 }
 
 export const masterOrchestrator = new MasterOrchestrator({
-  maxIterationsPerAgent: 2,
-  acceptanceThreshold: 75,
+  maxIterationsPerAgent: 2, // Default, overridden by per-agent config
+  acceptanceThreshold: 75, // Quality threshold for acceptance
 });

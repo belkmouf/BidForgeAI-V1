@@ -62,7 +62,25 @@ export class SketchAgent extends MultishotAgent {
         imagePaths: string[];
         projectContext?: string;
         refinementContext?: string;
+        existingAnalysis?: SketchAnalysisOutput[];
       };
+
+      if (inputData.existingAnalysis && inputData.existingAnalysis.length > 0) {
+        this.log(`Sketch analysis already exists from upload (${inputData.existingAnalysis.length} images). Skipping re-analysis.`);
+        return {
+          success: true,
+          data: {
+            analyses: inputData.existingAnalysis,
+            sketchAnalysisComplete: true,
+            skippedReason: 'Analysis already completed during document upload',
+          },
+          summary: {
+            summary: `Using existing sketch analysis for ${inputData.existingAnalysis.length} image(s) from upload`,
+            keyPoints: ['Sketch analysis was completed during document upload', 'No additional processing required'],
+            nextSteps: ['Proceed with bid analysis using existing data'],
+          },
+        };
+      }
 
       if (!inputData.imagePaths || inputData.imagePaths.length === 0) {
         return {

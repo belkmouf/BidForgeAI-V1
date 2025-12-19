@@ -269,7 +269,10 @@ export async function cancelAgentWorkflow(projectId: string): Promise<{ message:
   const res = await apiRequest(`${API_BASE}/agents/multishot/${projectId}/cancel`, {
     method: 'POST',
   });
-  if (!res.ok) throw new Error(await res.text());
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({ error: 'Failed to cancel workflow' }));
+    throw new Error(errorData.error || 'Failed to cancel workflow');
+  }
   return res.json();
 }
 
@@ -281,7 +284,8 @@ export async function getAgentWorkflowState(projectId: string): Promise<{
   const res = await apiRequest(`${API_BASE}/agent-progress/state/${projectId}`);
   if (!res.ok) {
     if (res.status === 404) return null;
-    throw new Error(await res.text());
+    const errorData = await res.json().catch(() => ({ error: 'Failed to get workflow state' }));
+    throw new Error(errorData.error || 'Failed to get workflow state');
   }
   return res.json();
 }
