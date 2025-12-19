@@ -55,7 +55,7 @@ export function GeneratePanel({ onGenerate, onKill, isGenerating }: GeneratePane
           <Sparkles className="h-5 w-5" />
           <h3>AI Bid Generator</h3>
         </div>
-        {isGenerating && onKill && (
+        {onKill && (
           <Button
             variant="destructive"
             size="sm"
