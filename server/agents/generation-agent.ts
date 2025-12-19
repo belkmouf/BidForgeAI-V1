@@ -9,7 +9,7 @@ export class GenerationAgent extends BaseAgent {
   name = 'generation';
   description = 'Generates professional bid proposals based on analyzed RFQ documents';
 
-  private getModel(modelName: string = 'deepseek') {
+  private getModel(modelName: string = 'grok') {
     switch (modelName) {
       case 'anthropic':
         return new ChatAnthropic({

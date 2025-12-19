@@ -30,7 +30,7 @@ export class AnalysisAgent extends BaseAgent {
     super();
   }
 
-  private getModel(modelName: string = 'deepseek') {
+  private getModel(modelName: string = 'grok') {
     switch (modelName) {
       case 'anthropic':
         return new ChatAnthropic({
