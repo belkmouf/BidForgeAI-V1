@@ -356,7 +356,7 @@ export class MultishotWorkflowOrchestrator {
             .limit(1);
 
           // Calculate estimated LMM cost for the agent workflow
-          const modelUsed = state.model || 'deepseek';
+          const modelUsed = state.model || 'grok';
           const lmmCost = estimateAgentWorkflowCost(modelUsed);
           
           const savedBid = await storage.createBid({

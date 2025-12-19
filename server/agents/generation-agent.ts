@@ -94,8 +94,8 @@ export class GenerationAgent extends BaseAgent {
         reviewAttempts: state.review?.attempts || 0,
       });
 
-      // Get model from state or default to 'deepseek'
-      const selectedModel = (input.data as { model?: string }).model || 'deepseek';
+      // Get model from state or default to 'grok'
+      const selectedModel = (input.data as { model?: string }).model || 'grok';
       const model = this.getModel(selectedModel);
 
       let analysisContext = '';

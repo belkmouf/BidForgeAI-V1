@@ -127,8 +127,8 @@ export class AnalysisAgent extends BaseAgent {
         };
       }
 
-      // Get model from state or default to 'deepseek'
-      const selectedModel = (input.data as { model?: string }).model || 'deepseek';
+      // Get model from state or default to 'grok'
+      const selectedModel = (input.data as { model?: string }).model || 'grok';
       const model = this.getModel(selectedModel);
 
       // Use static system prompt from context builder (optimizes KV caching)
