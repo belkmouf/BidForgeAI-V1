@@ -81,6 +81,14 @@ function formatFileSize(bytes: number): string {
   return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
 }
 
+function truncateFileName(filename: string, maxLength: number = 20): string {
+  if (filename.length <= maxLength) return filename;
+  const ext = filename.match(/\.[^.]*$/)?.[0] || '';
+  const nameWithoutExt = filename.slice(0, filename.length - ext.length);
+  const truncatedName = nameWithoutExt.slice(0, maxLength - ext.length - 3) + '...';
+  return truncatedName + ext;
+}
+
 function validateFileName(filename: string): ValidationIssue | null {
   const problematicChars = /[<>:"/\\|?*\x00-\x1F]/;
   if (problematicChars.test(filename)) {
@@ -453,9 +461,15 @@ export function DropZone({
               className="flex items-center justify-between py-3 group"
               data-testid={`file-row-${file.id}`}
             >
-              <div className="flex items-center gap-3 min-w-0 flex-1">
+              <div className="flex items-center gap-2 min-w-0 flex-1 max-w-[180px]">
                 {getFileIcon(file.name)}
-                <span className="truncate text-sm font-medium">{file.name}</span>
+                <span 
+                  className="text-sm font-medium break-all" 
+                  title={file.name}
+                  style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}
+                >
+                  {truncateFileName(file.name, 20)}
+                </span>
               </div>
               <div className="flex items-center gap-3">
                 {file.status === 'completed' ? (

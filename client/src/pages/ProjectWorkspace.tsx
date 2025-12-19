@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useRoute } from 'wouter';
 import { AppSidebar, useSidebarStore } from '@/components/layout/AppSidebar';
 import { DropZone } from '@/components/upload/DropZone';
+import { ProjectFilesList } from '@/components/documents/ProjectFilesList';
 import { TiptapEditor } from '@/components/editor/TiptapEditor';
 import { GeneratePanel } from '@/components/ai/GeneratePanel';
 import { RefineChat } from '@/components/ai/RefineChat';
@@ -455,7 +456,7 @@ export default function ProjectWorkspace() {
           <ResizablePanelGroup direction="horizontal">
             
             {/* Left: Upload Zone + Bid History + Summaries */}
-            <ResizablePanel defaultSize={20} minSize={15} maxSize={30} className="bg-primary/20">
+            <ResizablePanel defaultSize={25} minSize={20} maxSize={35} className="bg-primary/20">
               <ScrollArea className="h-full">
                 <div className="p-4 flex flex-col gap-4">
                   <Tabs defaultValue="documents" className="w-full">
@@ -472,10 +473,7 @@ export default function ProjectWorkspace() {
                       {!showSummaries ? (
                         <>
                           <div>
-                            <h2 className="font-semibold text-sm mb-4 flex items-center gap-2">
-                              Source Documents
-                            </h2>
-                            <DropZone
+                            <ProjectFilesList
                               files={documents.filter(doc => doc).map(doc => ({
                                 name: doc.filename,
                                 size: 0,
@@ -483,7 +481,7 @@ export default function ProjectWorkspace() {
                                 id: doc.id.toString(),
                                 isProcessed: doc.isProcessed
                               }))}
-                              onUploadWithProgress={handleFileUploadWithProgress}
+                              onUpload={handleFileUploadWithProgress}
                               onDelete={handleDeleteDocument}
                             />
                           </div>
