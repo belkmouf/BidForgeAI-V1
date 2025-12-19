@@ -1457,17 +1457,17 @@ export async function registerRoutes(
         return res.status(404).json({ error: "Project not found" });
       }
       
-      const documents = await storage.getDocuments(projectId);
+      const documents = await storage.listDocumentsByProject(projectId);
       if (documents.length === 0) {
         return res.status(400).json({ error: "No documents found to extract requirements from" });
       }
       
-      const documentsWithContent = documents.filter(doc => doc.content && doc.content.trim().length > 100);
+      const documentsWithContent = documents.filter((doc: typeof documents[0]) => doc.content && doc.content.trim().length > 100);
       if (documentsWithContent.length === 0) {
         return res.status(400).json({ error: "No document content available for extraction" });
       }
       
-      const documentContext = documentsWithContent.map(doc => {
+      const documentContext = documentsWithContent.map((doc: typeof documents[0]) => {
         const content = doc.content?.substring(0, 15000) || '';
         return `--- Document: ${doc.filename} (ID: ${doc.id}) ---\n${content}`;
       }).join('\n\n');
