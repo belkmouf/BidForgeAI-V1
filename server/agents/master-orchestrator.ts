@@ -69,8 +69,19 @@ export interface ProgressEvent {
   timestamp: Date;
 }
 
+// Per-agent configuration for iterations and timeouts
+const AGENT_CONFIG: Record<string, { maxIterations: number; timeoutMs: number }> = {
+  analysis: { maxIterations: 1, timeoutMs: 90_000 },   // One-shot for speed
+  intake: { maxIterations: 1, timeoutMs: 60_000 },     // Simple data loading
+  sketch: { maxIterations: 1, timeoutMs: 120_000 },    // Vision API can be slow
+  decision: { maxIterations: 2, timeoutMs: 60_000 },   // Multi-shot for quality
+  generation: { maxIterations: 2, timeoutMs: 120_000 }, // Multi-shot for quality
+  review: { maxIterations: 2, timeoutMs: 90_000 },     // Multi-shot for quality
+};
+const DEFAULT_AGENT_CONFIG = { maxIterations: 2, timeoutMs: 90_000 };
+
 export class MasterOrchestrator extends EventEmitter {
-  private maxIterationsPerAgent: number = 3;
+  private maxIterationsPerAgent: number = 2;
   private acceptanceThreshold: number = 75;
   private maxOutputChars: number = 50000;
   private groundingThreshold: number = 60;
@@ -80,6 +91,10 @@ export class MasterOrchestrator extends EventEmitter {
     if (options?.maxIterationsPerAgent) this.maxIterationsPerAgent = options.maxIterationsPerAgent;
     if (options?.acceptanceThreshold) this.acceptanceThreshold = options.acceptanceThreshold;
     if (options?.groundingThreshold) this.groundingThreshold = options.groundingThreshold;
+  }
+
+  private getAgentConfig(agentName: string): { maxIterations: number; timeoutMs: number } {
+    return AGENT_CONFIG[agentName] || DEFAULT_AGENT_CONFIG;
   }
 
   private async retrieveDocumentContext(projectId: string, output: AgentOutput): Promise<{
@@ -546,18 +561,24 @@ Provide clear, specific feedback that will help the agent improve its output. Be
     const outputs: AgentOutput[] = [];
     const evaluations: OrchestratorEvaluation[] = [];
     
+    const agentConfig = this.getAgentConfig(agentName);
+    const maxIterations = agentConfig.maxIterations;
+    const timeoutMs = agentConfig.timeoutMs;
+    
     let iteration = 0;
     let currentOutput: AgentOutput | null = null;
     let accepted = false;
 
-    while (iteration < this.maxIterationsPerAgent && !accepted) {
+    console.log(`[MasterOrchestrator] Agent ${agentName}: maxIterations=${maxIterations}, timeout=${timeoutMs}ms`);
+
+    while (iteration < maxIterations && !accepted) {
       iteration++;
       
       this.emitProgressWithProject(context.projectId, {
         type: 'agent_start',
         agentName,
         iteration,
-        message: `Starting ${agentName} agent (iteration ${iteration}/${this.maxIterationsPerAgent})`,
+        message: `Starting ${agentName} agent (iteration ${iteration}/${maxIterations})`,
       });
 
       messages.push({
@@ -575,7 +596,7 @@ Provide clear, specific feedback that will help the agent improve its output. Be
         const refinementText = await this.generateRefinementFeedback(agentName, outputs[outputs.length - 1], lastEval);
         feedbackData = {
           iteration,
-          maxIterations: this.maxIterationsPerAgent,
+          maxIterations,
           feedback: refinementText,
           improvements: lastEval.improvements,
           criticalIssues: lastEval.criticalIssues,
@@ -584,7 +605,14 @@ Provide clear, specific feedback that will help the agent improve its output. Be
       }
 
       try {
-        currentOutput = await executeAgent(feedbackData);
+        // Execute agent with timeout protection
+        const startTime = Date.now();
+        const timeoutPromise = new Promise<AgentOutput>((_, reject) => {
+          setTimeout(() => reject(new Error(`AGENT_TIMEOUT: ${agentName} exceeded ${timeoutMs}ms`)), timeoutMs);
+        });
+        
+        currentOutput = await Promise.race([executeAgent(feedbackData), timeoutPromise]);
+        console.log(`[MasterOrchestrator] Agent ${agentName} iteration ${iteration} completed in ${Date.now() - startTime}ms`);
         outputs.push(currentOutput);
 
         messages.push({
@@ -644,7 +672,7 @@ Provide clear, specific feedback that will help the agent improve its output. Be
 
         accepted = isAccepted;
 
-        if (!accepted && iteration < this.maxIterationsPerAgent) {
+        if (!accepted && iteration < maxIterations) {
           this.emitProgressWithProject(context.projectId, {
             type: 'refinement_request',
             agentName,
@@ -739,6 +767,6 @@ Provide clear, specific feedback that will help the agent improve its output. Be
 }
 
 export const masterOrchestrator = new MasterOrchestrator({
-  maxIterationsPerAgent: 1, // Single iteration - no refinement loops to speed up workflow
-  acceptanceThreshold: 60, // Lower threshold since we're not refining
+  maxIterationsPerAgent: 2, // Default, overridden by per-agent config
+  acceptanceThreshold: 75, // Quality threshold for acceptance
 });
