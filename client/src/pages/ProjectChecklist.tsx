@@ -1,6 +1,7 @@
 import { useParams, useLocation } from 'wouter';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState, useEffect } from 'react';
+import { apiRequest } from '../lib/auth';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
@@ -432,7 +433,7 @@ export default function ProjectChecklist() {
   const { data: project, isLoading: projectLoading } = useQuery({
     queryKey: ['project', projectId],
     queryFn: async () => {
-      const res = await fetch(`/api/projects/${projectId}`, { credentials: 'include' });
+      const res = await apiRequest(`/api/projects/${projectId}`);
       if (!res.ok) throw new Error('Failed to load project');
       return res.json();
     },
@@ -442,7 +443,7 @@ export default function ProjectChecklist() {
   const { data: profile, isLoading: profileLoading } = useQuery<IntakeProfile | null>({
     queryKey: ['intakeProfile', projectId],
     queryFn: async () => {
-      const res = await fetch(`/api/projects/${projectId}/intake-profile`, { credentials: 'include' });
+      const res = await apiRequest(`/api/projects/${projectId}/intake-profile`);
       if (!res.ok) throw new Error('Failed to load profile');
       return res.json();
     },
@@ -452,7 +453,7 @@ export default function ProjectChecklist() {
   const { data: checklist, isLoading: checklistLoading } = useQuery<ChecklistProgress>({
     queryKey: ['checklist', projectId],
     queryFn: async () => {
-      const res = await fetch(`/api/projects/${projectId}/checklist`, { credentials: 'include' });
+      const res = await apiRequest(`/api/projects/${projectId}/checklist`);
       if (!res.ok) throw new Error('Failed to load checklist');
       return res.json();
     },
@@ -461,10 +462,8 @@ export default function ProjectChecklist() {
 
   const saveProfileMutation = useMutation({
     mutationFn: async (data: IntakeProfileFormData) => {
-      const res = await fetch(`/api/projects/${projectId}/intake-profile`, {
+      const res = await apiRequest(`/api/projects/${projectId}/intake-profile`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
         body: JSON.stringify(data),
       });
       if (!res.ok) throw new Error('Failed to save profile');
@@ -485,9 +484,8 @@ export default function ProjectChecklist() {
 
   const generateChecklistMutation = useMutation({
     mutationFn: async () => {
-      const res = await fetch(`/api/projects/${projectId}/checklist/generate`, {
+      const res = await apiRequest(`/api/projects/${projectId}/checklist/generate`, {
         method: 'POST',
-        credentials: 'include',
       });
       if (!res.ok) throw new Error('Failed to generate checklist');
       return res.json();
