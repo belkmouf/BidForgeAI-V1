@@ -9,7 +9,7 @@ export class GenerationAgent extends BaseAgent {
   name = 'generation';
   description = 'Generates professional bid proposals based on analyzed RFQ documents';
 
-  private getModel(modelName: string = 'openai') {
+  private getModel(modelName: string = 'deepseek') {
     switch (modelName) {
       case 'anthropic':
         return new ChatAnthropic({
@@ -20,6 +20,26 @@ export class GenerationAgent extends BaseAgent {
         return new ChatGoogleGenerativeAI({
           model: 'gemini-2.5-flash-preview-04-17',
           temperature: 0.7,
+        });
+      case 'grok':
+        if (!process.env.XAI_API_KEY) {
+          throw new Error('XAI_API_KEY environment variable is required for Grok');
+        }
+        return new ChatOpenAI({
+          model: 'grok-4-fast',
+          temperature: 0.7,
+          baseURL: 'https://api.x.ai/v1',
+          apiKey: process.env.XAI_API_KEY,
+        });
+      case 'deepseek':
+        if (!process.env.DEEPSEEK_API_KEY) {
+          throw new Error('DEEPSEEK_API_KEY environment variable is required for DeepSeek');
+        }
+        return new ChatOpenAI({
+          model: 'deepseek-chat',
+          temperature: 0.7,
+          baseURL: 'https://api.deepseek.com',
+          apiKey: process.env.DEEPSEEK_API_KEY,
         });
       default:
         return new ChatOpenAI({
@@ -74,7 +94,9 @@ export class GenerationAgent extends BaseAgent {
         reviewAttempts: state.review?.attempts || 0,
       });
 
-      const model = this.getModel('openai');
+      // Get model from state or default to 'deepseek'
+      const selectedModel = (input.data as { model?: string }).model || 'deepseek';
+      const model = this.getModel(selectedModel);
 
       let analysisContext = '';
       if (analysis) {
@@ -181,7 +203,7 @@ ${documentContent.slice(0, 40000)}${previousFeedback}`;
           content,
           format: 'html',
           generatedAt: new Date(),
-          modelUsed: 'gpt-4o',
+          modelUsed: selectedModel === 'grok' ? 'grok-4-fast' : selectedModel === 'anthropic' ? 'claude-sonnet-4' : selectedModel === 'gemini' ? 'gemini-2.5-flash' : selectedModel === 'deepseek' ? 'deepseek-chat' : 'gpt-4o',
         };
 
         this.log('Bid proposal generated successfully');

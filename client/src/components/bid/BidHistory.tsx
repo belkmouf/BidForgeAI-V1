@@ -65,7 +65,7 @@ export function BidHistory({ projectId, onSelectBid, refreshTrigger }: BidHistor
       case 'openai':
         return 'GPT-4o';
       case 'grok':
-        return 'Grok 4 Fast';
+        return 'Grok 4';
       case 'multishot-agent':
         return 'Claude Sonnet';
       default:

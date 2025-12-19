@@ -16,7 +16,7 @@ export function GeneratePanel({ onGenerate, isGenerating }: GeneratePanelProps) 
   const [instructions, setInstructions] = useState<AIInstruction[]>([]);
   const [selectedInstructionId, setSelectedInstructionId] = useState<string>('');
   const [tone, setTone] = useState('technical');
-  const [model, setModel] = useState<AIModel>('openai');
+  const [model, setModel] = useState<AIModel>('deepseek');
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -67,7 +67,7 @@ export function GeneratePanel({ onGenerate, isGenerating }: GeneratePanelProps) 
                 <SelectItem value="gemini">Google Gemini</SelectItem>
                 <SelectItem value="deepseek">DeepSeek</SelectItem>
                 <SelectItem value="openai">OpenAI GPT-4o</SelectItem>
-                <SelectItem value="grok">xAI Grok 4 Fast</SelectItem>
+                <SelectItem value="grok">xAI Grok 4</SelectItem>
               </SelectContent>
             </Select>
           </div>

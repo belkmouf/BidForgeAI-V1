@@ -431,7 +431,7 @@ or contact details from other sources.
       // Build context (with caching and parallel execution)
       const context = await this.buildContext(params, project, options);
 
-      streamProgress?.({ stage: 'generation', message: `Generating bid with ${params.model || 'anthropic'}...`, percentage: 75 });
+      streamProgress?.({ stage: 'generation', message: `Generating bid with ${params.model || 'deepseek'}...`, percentage: 75 });
 
       // Combine all context
       const fullContext = context.companyProfileContext + 
@@ -440,7 +440,7 @@ or contact details from other sources.
         context.sketchAnalysisContext;
 
       // Generate bid
-      const selectedModel = params.models?.[0] || params.model || 'anthropic';
+      const selectedModel = params.models?.[0] || params.model || 'deepseek';
       const result = await this.generateBidWithModel(
         selectedModel,
         {
