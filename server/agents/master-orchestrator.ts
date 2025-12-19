@@ -739,6 +739,6 @@ Provide clear, specific feedback that will help the agent improve its output. Be
 }
 
 export const masterOrchestrator = new MasterOrchestrator({
-  maxIterationsPerAgent: 2,
-  acceptanceThreshold: 75,
+  maxIterationsPerAgent: 1, // Single iteration - no refinement loops to speed up workflow
+  acceptanceThreshold: 60, // Lower threshold since we're not refining
 });
