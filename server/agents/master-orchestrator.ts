@@ -69,16 +69,23 @@ export interface ProgressEvent {
   timestamp: Date;
 }
 
-// Per-agent configuration for iterations, timeouts, and grounding checks
-const AGENT_CONFIG: Record<string, { maxIterations: number; timeoutMs: number; skipGrounding?: boolean }> = {
-  analysis: { maxIterations: 1, timeoutMs: 90_000, skipGrounding: true },   // One-shot, structured scores don't need grounding
-  intake: { maxIterations: 1, timeoutMs: 60_000, skipGrounding: true },     // Simple data loading - no content to verify
-  sketch: { maxIterations: 1, timeoutMs: 120_000, skipGrounding: true },    // Vision API - structured data
-  decision: { maxIterations: 1, timeoutMs: 60_000, skipGrounding: true },   // One-shot, no document claims
-  generation: { maxIterations: 2, timeoutMs: 60_000, skipGrounding: true }, // 60s per iteration × 2 = 2 min max total - accept best result
-  review: { maxIterations: 1, timeoutMs: 90_000, skipGrounding: true },     // One-shot, just reviews
+// Time-window based configuration: agents iterate within their time budget
+// Critical agents (generation) get feedback-based refinement, others are one-shot
+interface AgentTimeConfig {
+  timeWindowMs: number;      // Total time budget for this agent
+  allowRefinement: boolean;  // Whether to use feedback loop (only for critical steps)
+  skipGrounding: boolean;    // Skip document grounding verification
+}
+
+const AGENT_CONFIG: Record<string, AgentTimeConfig> = {
+  intake: { timeWindowMs: 30_000, allowRefinement: false, skipGrounding: true },     // 30s - simple data loading
+  analysis: { timeWindowMs: 45_000, allowRefinement: false, skipGrounding: true },   // 45s - structured scores
+  sketch: { timeWindowMs: 60_000, allowRefinement: false, skipGrounding: true },     // 60s - vision API
+  decision: { timeWindowMs: 30_000, allowRefinement: false, skipGrounding: true },   // 30s - quick decision
+  generation: { timeWindowMs: 90_000, allowRefinement: true, skipGrounding: true },  // 90s - critical, with refinement
+  review: { timeWindowMs: 45_000, allowRefinement: false, skipGrounding: true },     // 45s - final review
 };
-const DEFAULT_AGENT_CONFIG = { maxIterations: 2, timeoutMs: 90_000, skipGrounding: false };
+const DEFAULT_AGENT_CONFIG: AgentTimeConfig = { timeWindowMs: 60_000, allowRefinement: false, skipGrounding: false };
 
 export class MasterOrchestrator extends EventEmitter {
   private maxIterationsPerAgent: number = 2;
@@ -93,7 +100,7 @@ export class MasterOrchestrator extends EventEmitter {
     if (options?.groundingThreshold) this.groundingThreshold = options.groundingThreshold;
   }
 
-  private getAgentConfig(agentName: string): { maxIterations: number; timeoutMs: number; skipGrounding?: boolean } {
+  private getAgentConfig(agentName: string): AgentTimeConfig {
     return AGENT_CONFIG[agentName] || DEFAULT_AGENT_CONFIG;
   }
 
@@ -563,23 +570,43 @@ Provide clear, specific feedback that will help the agent improve its output. Be
     const evaluations: OrchestratorEvaluation[] = [];
     
     const agentConfig = this.getAgentConfig(agentName);
-    const maxIterations = agentConfig.maxIterations;
-    const timeoutMs = agentConfig.timeoutMs;
+    const timeWindowMs = agentConfig.timeWindowMs;
+    const allowRefinement = agentConfig.allowRefinement;
     
     let iteration = 0;
     let currentOutput: AgentOutput | null = null;
+    let bestOutput: AgentOutput | null = null;
+    let bestScore = 0;
     let accepted = false;
+    const windowStartTime = Date.now();
 
-    console.log(`[MasterOrchestrator] Agent ${agentName}: maxIterations=${maxIterations}, timeout=${timeoutMs}ms`);
+    console.log(`[MasterOrchestrator] Agent ${agentName}: timeWindow=${timeWindowMs}ms, allowRefinement=${allowRefinement}`);
 
-    while (iteration < maxIterations && !accepted) {
+    // Time-window loop: iterate until time runs out or output is accepted
+    while (!accepted) {
+      const elapsedMs = Date.now() - windowStartTime;
+      const remainingMs = timeWindowMs - elapsedMs;
+      
+      // Stop if time window exhausted
+      if (remainingMs < 5000 && iteration > 0) {
+        console.log(`[MasterOrchestrator] Time window exhausted for ${agentName}, using best result`);
+        break;
+      }
+      
+      // For non-refinement agents, only run once
+      if (!allowRefinement && iteration > 0) {
+        break;
+      }
+      
       iteration++;
       
       this.emitProgressWithProject(context.projectId, {
         type: 'agent_start',
         agentName,
         iteration,
-        message: `Starting ${agentName} agent (iteration ${iteration}/${maxIterations})`,
+        message: allowRefinement 
+          ? `Starting ${agentName} agent (iteration ${iteration}, ${Math.round(remainingMs/1000)}s remaining)`
+          : `Starting ${agentName} agent`,
       });
 
       messages.push({
@@ -592,12 +619,12 @@ Provide clear, specific feedback that will help the agent improve its output. Be
       });
 
       let feedbackData: MultishotFeedbackData | undefined;
-      if (evaluations.length > 0) {
+      if (evaluations.length > 0 && allowRefinement) {
         const lastEval = evaluations[evaluations.length - 1];
         const refinementText = await this.generateRefinementFeedback(agentName, outputs[outputs.length - 1], lastEval);
         feedbackData = {
           iteration,
-          maxIterations,
+          maxIterations: 99, // Time-based, not iteration-based
           feedback: refinementText,
           improvements: lastEval.improvements,
           criticalIssues: lastEval.criticalIssues,
@@ -606,10 +633,11 @@ Provide clear, specific feedback that will help the agent improve its output. Be
       }
 
       try {
-        // Execute agent with timeout protection
+        // Execute agent with remaining time as timeout
+        const iterationTimeout = Math.min(remainingMs, allowRefinement ? 60_000 : timeWindowMs);
         const startTime = Date.now();
         const timeoutPromise = new Promise<AgentOutput>((_, reject) => {
-          setTimeout(() => reject(new Error(`AGENT_TIMEOUT: ${agentName} exceeded ${timeoutMs}ms`)), timeoutMs);
+          setTimeout(() => reject(new Error(`AGENT_TIMEOUT: ${agentName} exceeded ${iterationTimeout}ms`)), iterationTimeout);
         });
         
         currentOutput = await Promise.race([executeAgent(feedbackData), timeoutPromise]);
@@ -640,6 +668,15 @@ Provide clear, specific feedback that will help the agent improve its output. Be
           break;
         }
 
+        // For non-refinement agents, accept immediately without evaluation
+        if (!allowRefinement) {
+          accepted = true;
+          bestOutput = currentOutput;
+          console.log(`[MasterOrchestrator] ${agentName} completed (no refinement needed)`);
+          break;
+        }
+
+        // For refinement agents, evaluate and potentially iterate
         const evaluation = await this.evaluateAgentOutput(agentName, currentOutput, {
           projectId: context.projectId,
           iteration,
@@ -648,6 +685,12 @@ Provide clear, specific feedback that will help the agent improve its output. Be
         });
 
         evaluations.push(evaluation);
+
+        // Track best result
+        if (evaluation.score > bestScore) {
+          bestScore = evaluation.score;
+          bestOutput = currentOutput;
+        }
 
         const isAccepted = evaluation.score >= this.acceptanceThreshold && evaluation.accepted;
 
@@ -673,7 +716,7 @@ Provide clear, specific feedback that will help the agent improve its output. Be
 
         accepted = isAccepted;
 
-        if (!accepted && iteration < maxIterations) {
+        if (!accepted) {
           this.emitProgressWithProject(context.projectId, {
             type: 'refinement_request',
             agentName,
@@ -700,9 +743,21 @@ Provide clear, specific feedback that will help the agent improve its output. Be
           message: `Error: ${errorMessage}`,
         });
 
-        currentOutput = { success: false, error: errorMessage };
+        // On timeout, use best result if available
+        if (errorMessage.includes('AGENT_TIMEOUT') && bestOutput) {
+          console.log(`[MasterOrchestrator] ${agentName} timed out, using best result (score: ${bestScore})`);
+          currentOutput = bestOutput;
+        } else {
+          currentOutput = { success: false, error: errorMessage };
+        }
         break;
       }
+    }
+
+    // Use best output if we didn't meet threshold but have results
+    if (!accepted && bestOutput && bestOutput.success) {
+      console.log(`[MasterOrchestrator] ${agentName}: Using best result (score: ${bestScore}) since threshold not met`);
+      currentOutput = bestOutput;
     }
 
     this.emitProgressWithProject(context.projectId, {
@@ -711,8 +766,8 @@ Provide clear, specific feedback that will help the agent improve its output. Be
       iteration,
       message: accepted 
         ? `${agentName} completed successfully after ${iteration} iteration(s)`
-        : `${agentName} completed after ${iteration} iteration(s) (max iterations reached or error)`,
-      data: { accepted, iterations: iteration },
+        : `${agentName} completed with best result after ${iteration} iteration(s)`,
+      data: { accepted, iterations: iteration, bestScore },
     });
 
     return {
