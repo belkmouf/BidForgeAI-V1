@@ -8,6 +8,9 @@ import { analysisAgent } from './analysis-agent';
 import { decisionAgent } from './decision-agent';
 import { generationAgent } from './generation-agent';
 import { reviewAgent } from './review-agent';
+import { conflictDetectionAgent, type ConflictOutput } from './conflict-detection-agent';
+import { technicalSpecValidator, type TechValidationResult } from './technical-spec-validator';
+import { ensembleReviewAgent } from './ensemble-review-agent';
 import { db } from '../db';
 import { agentStates, agentExecutions, projects, projectSummaries } from '@shared/schema';
 import { eq } from 'drizzle-orm';
@@ -41,7 +44,8 @@ export interface WorkflowState {
   projectId: string;
   userId: number;
   currentStep: number;
-  status: 'pending' | 'running' | 'completed' | 'failed' | 'cancelled';
+  currentPhase: 'intake' | 'enrichment' | 'validation' | 'decision' | 'generation' | 'review';
+  status: 'pending' | 'running' | 'completed' | 'failed' | 'cancelled' | 'hard_stop';
   messages: AgentMessage[];
   outputs: Record<string, AgentOutput>;
   hasImages: boolean;
@@ -49,25 +53,14 @@ export interface WorkflowState {
   startedAt: Date;
   updatedAt: Date;
   model?: string;
+  hardStopReason?: string;
 }
 
-const workflowSteps: WorkflowStep[] = [
-  { name: 'intake', agent: intakeAgent, required: true },
-  { 
-    name: 'sketch', 
-    agent: sketchAgent, 
-    required: false,
-    condition: (state) => state.hasImages && !state.hasExistingSketchAnalysis
-  },
-  { name: 'analysis', agent: analysisAgent, required: true },
-  { name: 'decision', agent: decisionAgent, required: true },
-  { name: 'generation', agent: generationAgent, required: true },
-  { name: 'review', agent: reviewAgent, required: true },
-];
+const WORKFLOW_PHASES = ['intake', 'enrichment', 'validation', 'decision', 'generation', 'review'] as const;
 
 export class MultishotWorkflowOrchestrator {
   private orchestrator: MasterOrchestrator;
-  private readonly workflowTimeoutMs = 5 * 60 * 1000; // 5 minutes total workflow timeout
+  private readonly workflowTimeoutMs = 6 * 60 * 1000; // 6 minutes for parallel architecture
   
   constructor() {
     this.orchestrator = masterOrchestrator;
@@ -162,15 +155,13 @@ export class MultishotWorkflowOrchestrator {
     initialInput: Record<string, unknown>,
     options?: { hasImages?: boolean }
   ): Promise<{ success: boolean; outputs: Record<string, AgentOutput>; messages: AgentMessage[] }> {
-    const selectedModel = (initialInput.model as string) || 'anthropic';
+    const selectedModel = (initialInput.model as string) || 'deepseek';
     
-    // Fetch and format project summary for inclusion in prompts
     const projectSummary = await this.getProjectSummary(projectId);
     const projectSummaryText = projectSummary 
       ? this.formatProjectSummaryForPrompt(projectSummary)
       : '';
 
-    // Check for existing sketch analysis from document upload
     let existingSketchAnalysis: unknown[] = [];
     try {
       const [project] = await db
@@ -182,7 +173,7 @@ export class MultishotWorkflowOrchestrator {
       const projectMetadata = project?.metadata as Record<string, unknown> | null;
       if (projectMetadata?.sketchAnalysis && Array.isArray(projectMetadata.sketchAnalysis)) {
         existingSketchAnalysis = projectMetadata.sketchAnalysis;
-        console.log(`[Orchestrator] Found ${existingSketchAnalysis.length} existing sketch analysis from upload - will skip sketch agent`);
+        console.log(`[Orchestrator] Found ${existingSketchAnalysis.length} existing sketch analysis from upload`);
       }
     } catch (e) {
       console.warn('[Orchestrator] Could not check for existing sketch analysis:', e);
@@ -193,6 +184,7 @@ export class MultishotWorkflowOrchestrator {
       projectId,
       userId,
       currentStep: 0,
+      currentPhase: 'intake',
       status: 'running',
       messages: [],
       outputs: {},
@@ -209,8 +201,8 @@ export class MultishotWorkflowOrchestrator {
       type: 'agent_start',
       agentName: 'workflow',
       iteration: 0,
-      message: 'Starting multi-shot bid generation workflow',
-      data: { model: selectedModel },
+      message: 'Starting Parallelized Blackboard Architecture workflow',
+      data: { model: selectedModel, architecture: 'blackboard-v2' },
     });
 
     let currentInput = {
@@ -219,182 +211,393 @@ export class MultishotWorkflowOrchestrator {
       projectSummaryData: projectSummary,
       sketchAnalysis: hasExistingSketchAnalysis ? existingSketchAnalysis : undefined,
     };
-    
-    for (const step of workflowSteps) {
-      if (step.condition && !step.condition(state)) {
-        // Provide informative skip messages based on the step
-        let skipMessage = `Skipping ${step.name} agent (condition not met)`;
-        if (step.name === 'sketch') {
-          if (hasExistingSketchAnalysis) {
-            skipMessage = `Using cached sketch analysis from upload (${existingSketchAnalysis.length} image(s))`;
-          } else if (!state.hasImages) {
-            skipMessage = 'No images to analyze - skipping sketch agent';
-          }
-        }
+
+    try {
+      // ═══════════════════════════════════════════════════════════════════════
+      // PHASE 1: INTAKE (Sequential - must complete first)
+      // ═══════════════════════════════════════════════════════════════════════
+      state.currentPhase = 'intake';
+      this.emitWithProject(projectId, {
+        type: 'phase_start',
+        agentName: 'intake',
+        iteration: 0,
+        message: 'Phase 1: Document Intake',
+      });
+
+      const intakeResult = await this.executeAgent('intake', intakeAgent, currentInput, state);
+      if (!intakeResult.success) {
+        state.status = 'failed';
+        return this.finalizeWorkflow(projectId, state, 'Intake failed');
+      }
+      state.outputs.intake = { success: true, data: intakeResult.data };
+      currentInput = { ...currentInput, ...intakeResult.data };
+
+      if (await this.checkCancellation(projectId)) {
+        state.status = 'cancelled';
+        return this.finalizeWorkflow(projectId, state, 'Cancelled by user');
+      }
+
+      // ═══════════════════════════════════════════════════════════════════════
+      // PHASE 2: PARALLEL ENRICHMENT (Sketch + Analysis run simultaneously)
+      // ═══════════════════════════════════════════════════════════════════════
+      state.currentPhase = 'enrichment';
+      state.currentStep++;
+      this.emitWithProject(projectId, {
+        type: 'parallel_start',
+        agentName: 'enrichment',
+        iteration: 0,
+        message: 'Phase 2: Parallel Enrichment (Sketch + Analysis)',
+        data: { agents: ['sketch', 'analysis'] },
+      });
+
+      const shouldRunSketch = state.hasImages && !state.hasExistingSketchAnalysis;
+      
+      const enrichmentPromises: Promise<{ agent: string; result: AgentOutput }>[] = [];
+
+      if (shouldRunSketch) {
+        enrichmentPromises.push(
+          this.executeAgent('sketch', sketchAgent, currentInput, state)
+            .then(result => ({ agent: 'sketch', result: { success: result.success, data: result.data, error: result.error } }))
+        );
+      } else if (hasExistingSketchAnalysis) {
         this.emitWithProject(projectId, {
           type: 'agent_complete',
-          agentName: step.name,
+          agentName: 'sketch',
           iteration: 0,
-          message: skipMessage,
+          message: `Using cached sketch analysis (${existingSketchAnalysis.length} image(s))`,
         });
-        continue;
       }
 
-      const cancelled = await this.checkCancellation(projectId);
-      if (cancelled) {
-        state.status = 'cancelled';
-        break;
-      }
-
-      // Check workflow timeout
-      const elapsedMs = Date.now() - state.startedAt.getTime();
-      if (elapsedMs > this.workflowTimeoutMs) {
-        this.emitWithProject(projectId, {
-          type: 'error',
-          agentName: 'workflow',
-          iteration: state.currentStep,
-          message: `Workflow timed out after ${Math.round(elapsedMs / 1000)}s. Completing with available results.`,
-        });
-        state.status = 'completed';
-        break;
-      }
-
-      state.currentStep++;
-      state.updatedAt = new Date();
-
-      const context: AgentContext = {
-        projectId,
-        userId,
-        metadata: {
-          step: state.currentStep,
-          totalSteps: workflowSteps.length,
-          previousOutputs: state.outputs,
-        },
-      };
-
-      const agentInput: AgentInput = {
-        type: step.name,
-        data: currentInput,
-        context,
-      };
-
-      const result = await this.orchestrator.orchestrateAgent(
-        step.name,
-        async (feedbackData?: MultishotFeedbackData) => {
-          if (feedbackData && step.agent instanceof MultishotAgent) {
-            const multishotInput: AgentInput = {
-              ...agentInput,
-              data: {
-                ...currentInput,
-                refinementFeedback: feedbackData,
-              },
-            };
-            return step.agent.execute(multishotInput, context);
-          }
-          return step.agent.execute(agentInput, context);
-        },
-        context
+      enrichmentPromises.push(
+        this.executeAgent('analysis', analysisAgent, currentInput, state)
+          .then(result => ({ agent: 'analysis', result: { success: result.success, data: result.data, error: result.error } }))
       );
 
-      state.outputs[step.name] = result.output;
-      state.messages.push(...result.messages);
+      const enrichmentResults = await Promise.all(enrichmentPromises);
 
-      if (!result.output.success && step.required) {
+      for (const { agent, result } of enrichmentResults) {
+        state.outputs[agent] = result;
+        if (result.success && result.data) {
+          currentInput = { ...currentInput, ...result.data };
+        }
+      }
+
+      const analysisResult = enrichmentResults.find(r => r.agent === 'analysis');
+      if (!analysisResult?.result.success) {
         state.status = 'failed';
-        this.emitWithProject(projectId, {
-          type: 'error',
-          agentName: step.name,
-          iteration: result.iterations,
-          message: `Required agent ${step.name} failed: ${result.output.error}`,
-        });
-        break;
+        return this.finalizeWorkflow(projectId, state, 'Analysis failed');
       }
 
-      if (result.output.success && result.output.data) {
-        currentInput = {
-          ...currentInput,
-          ...result.output.data,
-        };
+      this.emitWithProject(projectId, {
+        type: 'parallel_complete',
+        agentName: 'enrichment',
+        iteration: 0,
+        message: 'Parallel enrichment complete',
+        data: { completedAgents: enrichmentResults.map(r => r.agent) },
+      });
+
+      if (await this.checkCancellation(projectId)) {
+        state.status = 'cancelled';
+        return this.finalizeWorkflow(projectId, state, 'Cancelled by user');
       }
 
-      if (step.name === 'decision' && result.output.data) {
-        const decisionData = result.output.data as { shouldProceed?: boolean };
+      // ═══════════════════════════════════════════════════════════════════════
+      // PHASE 3: VALIDATION GATES (Cross-Modal Conflict + Technical Spec)
+      // ═══════════════════════════════════════════════════════════════════════
+      state.currentPhase = 'validation';
+      state.currentStep++;
+      this.emitWithProject(projectId, {
+        type: 'phase_start',
+        agentName: 'validation',
+        iteration: 0,
+        message: 'Phase 3: Validation Gates (Conflict Detection + Technical Validation)',
+        data: { agents: ['conflict-detection', 'technical-validator'] },
+      });
+
+      const validationPromises = [
+        this.executeAgent('conflict-detection', conflictDetectionAgent, currentInput, state)
+          .then(result => ({ agent: 'conflict-detection', result: { success: result.success, data: result.data, error: result.error } })),
+        this.executeAgent('technical-validator', technicalSpecValidator, currentInput, state)
+          .then(result => ({ agent: 'technical-validator', result: { success: result.success, data: result.data, error: result.error } })),
+      ];
+
+      const validationResults = await Promise.all(validationPromises);
+
+      for (const { agent, result } of validationResults) {
+        state.outputs[agent] = result;
+        if (result.data) {
+          currentInput = { ...currentInput, ...result.data };
+        }
+      }
+
+      // Check for HARD STOP conditions
+      for (const { agent, result } of validationResults) {
+        const data = result.data as Record<string, unknown> | undefined;
+        if (data?.hardStop) {
+          state.status = 'hard_stop';
+          state.hardStopReason = result.error || `Critical violation in ${agent}`;
+          this.emitWithProject(projectId, {
+            type: 'gate_stop',
+            agentName: agent,
+            iteration: 0,
+            message: `HARD STOP: ${state.hardStopReason}`,
+            data: { hardStop: true, agent, reason: state.hardStopReason },
+          });
+          return this.finalizeWorkflow(projectId, state, state.hardStopReason);
+        }
+      }
+
+      this.emitWithProject(projectId, {
+        type: 'validation_pass',
+        agentName: 'validation',
+        iteration: 0,
+        message: 'All validation gates passed',
+      });
+
+      if (await this.checkCancellation(projectId)) {
+        state.status = 'cancelled';
+        return this.finalizeWorkflow(projectId, state, 'Cancelled by user');
+      }
+
+      // ═══════════════════════════════════════════════════════════════════════
+      // PHASE 4: DECISION (Go/No-Go)
+      // ═══════════════════════════════════════════════════════════════════════
+      state.currentPhase = 'decision';
+      state.currentStep++;
+      this.emitWithProject(projectId, {
+        type: 'phase_start',
+        agentName: 'decision',
+        iteration: 0,
+        message: 'Phase 4: Strategic Go/No-Go Decision',
+      });
+
+      const decisionResult = await this.executeAgent('decision', decisionAgent, currentInput, state);
+      state.outputs.decision = { success: decisionResult.success, data: decisionResult.data };
+      
+      if (decisionResult.success && decisionResult.data) {
+        currentInput = { ...currentInput, ...decisionResult.data };
+        const decisionData = decisionResult.data as { shouldProceed?: boolean };
         if (decisionData.shouldProceed === false) {
           state.status = 'completed';
           this.emitWithProject(projectId, {
             type: 'workflow_complete',
             agentName: 'decision',
-            iteration: result.iterations,
-            message: 'Workflow terminated by decision agent (go/no-go decision: no-go)',
+            iteration: 0,
+            message: 'Workflow terminated: Go/No-Go decision = NO-GO',
             data: { terminatedByDecision: true },
           });
-          break;
+          return this.finalizeWorkflow(projectId, state, 'No-go decision');
         }
       }
 
-      await this.updateWorkflowState(projectId, state);
-    }
+      if (await this.checkCancellation(projectId)) {
+        state.status = 'cancelled';
+        return this.finalizeWorkflow(projectId, state, 'Cancelled by user');
+      }
 
-    if (state.status === 'running') {
+      // ═══════════════════════════════════════════════════════════════════════
+      // PHASE 5: BID GENERATION (With refinement loop)
+      // ═══════════════════════════════════════════════════════════════════════
+      state.currentPhase = 'generation';
+      state.currentStep++;
+      this.emitWithProject(projectId, {
+        type: 'phase_start',
+        agentName: 'generation',
+        iteration: 0,
+        message: 'Phase 5: Bid Generation (DeepSeek optimized)',
+        data: { model: selectedModel, timeout: '150s' },
+      });
+
+      const context: AgentContext = {
+        projectId,
+        userId,
+        metadata: { previousOutputs: state.outputs },
+      };
+
+      const generationResult = await this.orchestrator.orchestrateAgent(
+        'generation',
+        async (feedbackData?: MultishotFeedbackData) => {
+          const agentInput: AgentInput = {
+            type: 'generation',
+            data: feedbackData ? { ...currentInput, refinementFeedback: feedbackData } : currentInput,
+            context,
+          };
+          return generationAgent.execute(agentInput, context);
+        },
+        context
+      );
+
+      state.outputs.generation = generationResult.output;
+      state.messages.push(...generationResult.messages);
+
+      if (!generationResult.output.success) {
+        state.status = 'failed';
+        return this.finalizeWorkflow(projectId, state, 'Generation failed');
+      }
+
+      if (generationResult.output.data) {
+        currentInput = { ...currentInput, ...generationResult.output.data };
+      }
+
+      if (await this.checkCancellation(projectId)) {
+        state.status = 'cancelled';
+        return this.finalizeWorkflow(projectId, state, 'Cancelled by user');
+      }
+
+      // ═══════════════════════════════════════════════════════════════════════
+      // PHASE 6: ENSEMBLE REVIEW (Claude + Gemini, 85% threshold)
+      // ═══════════════════════════════════════════════════════════════════════
+      state.currentPhase = 'review';
+      state.currentStep++;
+      this.emitWithProject(projectId, {
+        type: 'phase_start',
+        agentName: 'ensemble-review',
+        iteration: 0,
+        message: 'Phase 6: Ensemble Review (Claude + Gemini, 85% threshold)',
+        data: { models: ['claude-sonnet', 'gemini-flash'], threshold: 85 },
+      });
+
+      const reviewResult = await this.executeAgent('ensemble-review', ensembleReviewAgent, currentInput, state);
+      state.outputs['ensemble-review'] = { success: reviewResult.success, data: reviewResult.data };
+
+      if (reviewResult.data) {
+        currentInput = { ...currentInput, ...reviewResult.data };
+      }
+
       state.status = 'completed';
+
+    } catch (error) {
+      console.error('[MultishotOrchestrator] Workflow error:', error);
+      state.status = 'failed';
+      this.emitWithProject(projectId, {
+        type: 'error',
+        agentName: 'workflow',
+        iteration: state.currentStep,
+        message: `Workflow error: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      });
     }
 
-    // Calculate generation time in seconds
+    return this.finalizeWorkflow(projectId, state);
+  }
+
+  private async executeAgent(
+    name: string,
+    agent: BaseAgent,
+    input: Record<string, unknown>,
+    state: WorkflowState
+  ): Promise<{ success: boolean; data?: Record<string, unknown>; error?: string }> {
+    const startTime = Date.now();
+    
+    this.emitWithProject(state.projectId, {
+      type: 'agent_start',
+      agentName: name,
+      iteration: 0,
+      message: `Starting ${name} agent`,
+    });
+
+    try {
+      const context: AgentContext = {
+        projectId: state.projectId,
+        userId: state.userId,
+        metadata: { previousOutputs: state.outputs },
+      };
+
+      const agentInput: AgentInput = {
+        type: name,
+        data: input,
+        context,
+      };
+
+      const result = await agent.execute(agentInput, context);
+      const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+
+      this.emitWithProject(state.projectId, {
+        type: 'agent_complete',
+        agentName: name,
+        iteration: 0,
+        message: `${name} completed in ${elapsed}s`,
+        data: { elapsed, success: result.success },
+      });
+
+      return {
+        success: result.success,
+        data: result.data as Record<string, unknown> | undefined,
+        error: result.error,
+      };
+    } catch (error) {
+      const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+      
+      this.emitWithProject(state.projectId, {
+        type: 'error',
+        agentName: name,
+        iteration: 0,
+        message: `${name} failed after ${elapsed}s: ${errorMsg}`,
+      });
+
+      return { success: false, error: errorMsg };
+    }
+  }
+
+  private async finalizeWorkflow(
+    projectId: string,
+    state: WorkflowState,
+    reason?: string
+  ): Promise<{ success: boolean; outputs: Record<string, AgentOutput>; messages: AgentMessage[] }> {
     const generationTimeSeconds = Math.round((Date.now() - state.startedAt.getTime()) / 1000);
 
-    // Save the generated bid to the database if workflow completed successfully
     let savedBidId: number | undefined;
     const generationData = state.outputs.generation?.data as Record<string, unknown> | undefined;
     const draft = generationData?.draft as { content?: string } | undefined;
+    
     if (state.status === 'completed' && draft?.content) {
       try {
-        if (draft.content) {
-          // Get project details for company association
-          const [project] = await db
-            .select()
-            .from(projects)
-            .where(eq(projects.id, projectId))
-            .limit(1);
+        const [project] = await db
+          .select()
+          .from(projects)
+          .where(eq(projects.id, projectId))
+          .limit(1);
 
-          // Calculate estimated LMM cost for the agent workflow
-          const modelUsed = state.model || 'grok';
-          const lmmCost = estimateAgentWorkflowCost(modelUsed);
-          
-          const savedBid = await storage.createBid({
-            projectId,
-            companyId: project?.companyId ?? null,
-            userId: userId,
-            content: draft.content,
-            rawContent: draft.content,
-            instructions: 'Generated via AI Agent Workflow',
-            tone: 'professional',
-            model: modelUsed,
-            searchMethod: 'agent-workflow',
-            chunksUsed: 0,
-            generationTimeSeconds,
-            lmmCost,
-          });
-          savedBidId = savedBid.id;
-          console.log(`[MultishotOrchestrator] Saved bid ${savedBid.id} for project ${projectId} (${generationTimeSeconds}s)`);
-        }
+        const modelUsed = state.model || 'deepseek';
+        const lmmCost = estimateAgentWorkflowCost(modelUsed);
+        
+        const savedBid = await storage.createBid({
+          projectId,
+          companyId: project?.companyId ?? null,
+          userId: state.userId,
+          content: draft.content,
+          rawContent: draft.content,
+          instructions: 'Generated via Blackboard Architecture v2',
+          tone: 'professional',
+          model: modelUsed,
+          searchMethod: 'agent-workflow-v2',
+          chunksUsed: 0,
+          generationTimeSeconds,
+          lmmCost,
+        });
+        savedBidId = savedBid.id;
+        console.log(`[MultishotOrchestrator] Saved bid ${savedBid.id} for project ${projectId} (${generationTimeSeconds}s)`);
       } catch (error) {
         console.error('[MultishotOrchestrator] Failed to save bid:', error);
       }
     }
 
-    await this.finalizeWorkflowState(projectId, state);
+    await this.updateWorkflowStateFinal(projectId, state);
 
     this.emitWithProject(projectId, {
       type: 'workflow_complete',
       agentName: 'workflow',
       iteration: state.currentStep,
-      message: `Workflow ${state.status}`,
+      message: reason || `Workflow ${state.status}`,
       data: { 
         status: state.status,
+        phase: state.currentPhase,
         stepsCompleted: state.currentStep,
         totalMessages: state.messages.length,
         generationTimeSeconds,
         bidId: savedBidId,
+        hardStop: state.status === 'hard_stop',
+        hardStopReason: state.hardStopReason,
       },
     });
 
@@ -438,28 +641,12 @@ export class MultishotWorkflowOrchestrator {
     }
   }
 
-  private async updateWorkflowState(projectId: string, state: WorkflowState): Promise<void> {
+  private async updateWorkflowStateFinal(projectId: string, state: WorkflowState): Promise<void> {
     try {
       await db
         .update(agentStates)
         .set({
-          status: state.status,
-          currentAgent: workflowSteps[state.currentStep - 1]?.name || 'workflow',
-          state: state as unknown as Record<string, unknown>,
-          updatedAt: new Date(),
-        })
-        .where(eq(agentStates.projectId, projectId));
-    } catch (error) {
-      console.error('[MultishotOrchestrator] Failed to update workflow state:', error);
-    }
-  }
-
-  private async finalizeWorkflowState(projectId: string, state: WorkflowState): Promise<void> {
-    try {
-      await db
-        .update(agentStates)
-        .set({
-          status: state.status,
+          status: state.status === 'hard_stop' ? 'failed' : state.status,
           currentAgent: 'complete',
           state: state as unknown as Record<string, unknown>,
           updatedAt: new Date(),
@@ -472,13 +659,13 @@ export class MultishotWorkflowOrchestrator {
 
   private async checkCancellation(projectId: string): Promise<boolean> {
     try {
-      const [state] = await db
+      const [agentState] = await db
         .select()
         .from(agentStates)
         .where(eq(agentStates.projectId, projectId))
         .limit(1);
 
-      return state?.status === 'cancelled';
+      return agentState?.status === 'cancelled';
     } catch (error) {
       return false;
     }
