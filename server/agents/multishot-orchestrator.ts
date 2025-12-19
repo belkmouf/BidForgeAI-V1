@@ -45,6 +45,7 @@ export interface WorkflowState {
   messages: AgentMessage[];
   outputs: Record<string, AgentOutput>;
   hasImages: boolean;
+  hasExistingSketchAnalysis: boolean;
   startedAt: Date;
   updatedAt: Date;
   model?: string;
@@ -56,7 +57,7 @@ const workflowSteps: WorkflowStep[] = [
     name: 'sketch', 
     agent: sketchAgent, 
     required: false,
-    condition: (state) => state.hasImages
+    condition: (state) => state.hasImages && !state.hasExistingSketchAnalysis
   },
   { name: 'analysis', agent: analysisAgent, required: true },
   { name: 'decision', agent: decisionAgent, required: true },
@@ -162,28 +163,7 @@ export class MultishotWorkflowOrchestrator {
     options?: { hasImages?: boolean }
   ): Promise<{ success: boolean; outputs: Record<string, AgentOutput>; messages: AgentMessage[] }> {
     const selectedModel = (initialInput.model as string) || 'anthropic';
-    const state: WorkflowState = {
-      projectId,
-      userId,
-      currentStep: 0,
-      status: 'running',
-      messages: [],
-      outputs: {},
-      hasImages: options?.hasImages ?? false,
-      startedAt: new Date(),
-      updatedAt: new Date(),
-      model: selectedModel,
-    };
-
-    await this.initializeWorkflowState(projectId, state);
-
-    this.emitWithProject(projectId, {
-      type: 'agent_start',
-      agentName: 'workflow',
-      iteration: 0,
-      message: 'Starting multi-shot bid generation workflow',
-    });
-
+    
     // Fetch and format project summary for inclusion in prompts
     const projectSummary = await this.getProjectSummary(projectId);
     const projectSummaryText = projectSummary 
@@ -202,26 +182,60 @@ export class MultishotWorkflowOrchestrator {
       const projectMetadata = project?.metadata as Record<string, unknown> | null;
       if (projectMetadata?.sketchAnalysis && Array.isArray(projectMetadata.sketchAnalysis)) {
         existingSketchAnalysis = projectMetadata.sketchAnalysis;
-        console.log(`[Orchestrator] Found ${existingSketchAnalysis.length} existing sketch analysis from upload - will reuse`);
+        console.log(`[Orchestrator] Found ${existingSketchAnalysis.length} existing sketch analysis from upload - will skip sketch agent`);
       }
     } catch (e) {
       console.warn('[Orchestrator] Could not check for existing sketch analysis:', e);
     }
 
+    const hasExistingSketchAnalysis = existingSketchAnalysis.length > 0;
+    
+    const state: WorkflowState = {
+      projectId,
+      userId,
+      currentStep: 0,
+      status: 'running',
+      messages: [],
+      outputs: {},
+      hasImages: options?.hasImages ?? false,
+      hasExistingSketchAnalysis,
+      startedAt: new Date(),
+      updatedAt: new Date(),
+      model: selectedModel,
+    };
+
+    await this.initializeWorkflowState(projectId, state);
+
+    this.emitWithProject(projectId, {
+      type: 'agent_start',
+      agentName: 'workflow',
+      iteration: 0,
+      message: 'Starting multi-shot bid generation workflow',
+    });
+
     let currentInput = {
       ...initialInput,
       projectSummary: projectSummaryText,
       projectSummaryData: projectSummary,
-      existingAnalysis: existingSketchAnalysis.length > 0 ? existingSketchAnalysis : undefined,
+      sketchAnalysis: hasExistingSketchAnalysis ? existingSketchAnalysis : undefined,
     };
     
     for (const step of workflowSteps) {
       if (step.condition && !step.condition(state)) {
+        // Provide informative skip messages based on the step
+        let skipMessage = `Skipping ${step.name} agent (condition not met)`;
+        if (step.name === 'sketch') {
+          if (hasExistingSketchAnalysis) {
+            skipMessage = `Using cached sketch analysis from upload (${existingSketchAnalysis.length} image(s))`;
+          } else if (!state.hasImages) {
+            skipMessage = 'No images to analyze - skipping sketch agent';
+          }
+        }
         this.emitWithProject(projectId, {
           type: 'agent_complete',
           agentName: step.name,
           iteration: 0,
-          message: `Skipping ${step.name} agent (condition not met)`,
+          message: skipMessage,
         });
         continue;
       }
