@@ -634,7 +634,8 @@ Provide clear, specific feedback that will help the agent improve its output. Be
 
       try {
         // Execute agent with remaining time as timeout
-        const iterationTimeout = Math.min(remainingMs, allowRefinement ? 60_000 : timeWindowMs);
+        // DeepSeek needs ~100-120s per iteration, so use 150s max per iteration for refinement agents
+        const iterationTimeout = Math.min(remainingMs, allowRefinement ? 150_000 : timeWindowMs);
         const startTime = Date.now();
         const timeoutPromise = new Promise<AgentOutput>((_, reject) => {
           setTimeout(() => reject(new Error(`AGENT_TIMEOUT: ${agentName} exceeded ${iterationTimeout}ms`)), iterationTimeout);
