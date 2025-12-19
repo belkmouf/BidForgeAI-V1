@@ -190,10 +190,29 @@ export class MultishotWorkflowOrchestrator {
       ? this.formatProjectSummaryForPrompt(projectSummary)
       : '';
 
+    // Check for existing sketch analysis from document upload
+    let existingSketchAnalysis: unknown[] = [];
+    try {
+      const [project] = await db
+        .select()
+        .from(projects)
+        .where(eq(projects.id, projectId))
+        .limit(1);
+      
+      const projectMetadata = project?.metadata as Record<string, unknown> | null;
+      if (projectMetadata?.sketchAnalysis && Array.isArray(projectMetadata.sketchAnalysis)) {
+        existingSketchAnalysis = projectMetadata.sketchAnalysis;
+        console.log(`[Orchestrator] Found ${existingSketchAnalysis.length} existing sketch analysis from upload - will reuse`);
+      }
+    } catch (e) {
+      console.warn('[Orchestrator] Could not check for existing sketch analysis:', e);
+    }
+
     let currentInput = {
       ...initialInput,
       projectSummary: projectSummaryText,
       projectSummaryData: projectSummary,
+      existingAnalysis: existingSketchAnalysis.length > 0 ? existingSketchAnalysis : undefined,
     };
     
     for (const step of workflowSteps) {
