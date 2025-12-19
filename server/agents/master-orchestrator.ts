@@ -82,7 +82,7 @@ const AGENT_CONFIG: Record<string, AgentTimeConfig> = {
   analysis: { timeWindowMs: 45_000, allowRefinement: false, skipGrounding: true },   // 45s - structured scores
   sketch: { timeWindowMs: 60_000, allowRefinement: false, skipGrounding: true },     // 60s - vision API
   decision: { timeWindowMs: 30_000, allowRefinement: false, skipGrounding: true },   // 30s - quick decision
-  generation: { timeWindowMs: 90_000, allowRefinement: true, skipGrounding: true },  // 90s - critical, with refinement
+  generation: { timeWindowMs: 150_000, allowRefinement: true, skipGrounding: true },  // 150s - critical, DeepSeek needs ~100s
   review: { timeWindowMs: 45_000, allowRefinement: false, skipGrounding: true },     // 45s - final review
 };
 const DEFAULT_AGENT_CONFIG: AgentTimeConfig = { timeWindowMs: 60_000, allowRefinement: false, skipGrounding: false };
