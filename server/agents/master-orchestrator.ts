@@ -640,13 +640,6 @@ Provide clear, specific feedback that will help the agent improve its output. Be
           break;
         }
 
-        // Skip Claude evaluation for one-shot agents - no point evaluating if we can't refine
-        if (maxIterations === 1) {
-          console.log(`[MasterOrchestrator] Skipping evaluation for one-shot agent ${agentName}`);
-          accepted = true;
-          break;
-        }
-
         const evaluation = await this.evaluateAgentOutput(agentName, currentOutput, {
           projectId: context.projectId,
           iteration,
