@@ -210,6 +210,7 @@ export class MultishotWorkflowOrchestrator {
       agentName: 'workflow',
       iteration: 0,
       message: 'Starting multi-shot bid generation workflow',
+      data: { model: selectedModel },
     });
 
     let currentInput = {

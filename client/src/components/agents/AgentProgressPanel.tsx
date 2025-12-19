@@ -110,9 +110,18 @@ function EvaluationDetails({ data }: { data: unknown }) {
   );
 }
 
+const modelLabels: Record<string, string> = {
+  grok: 'Grok 4',
+  anthropic: 'Claude',
+  gemini: 'Gemini',
+  deepseek: 'DeepSeek',
+  openai: 'GPT-4o',
+};
+
 export function AgentProgressPanel({ projectId, isActive, onComplete, onCancel }: AgentProgressPanelProps) {
   const [events, setEvents] = useState<ProgressEvent[]>([]);
   const [currentAgent, setCurrentAgent] = useState<string | null>(null);
+  const [currentModel, setCurrentModel] = useState<string | null>(null);
   const [status, setStatus] = useState<'idle' | 'running' | 'completed' | 'failed'>('idle');
   const [expandedEvents, setExpandedEvents] = useState<Set<number>>(new Set());
   const [startTime, setStartTime] = useState<Date | null>(null);
@@ -177,6 +186,13 @@ export function AgentProgressPanel({ projectId, isActive, onComplete, onCancel }
             setElapsedSeconds(0);
           }
           setStatus('running');
+          // Extract model from workflow start event
+          if (data.agentName === 'workflow' && data.data) {
+            const eventData = data.data as { model?: string };
+            if (eventData.model) {
+              setCurrentModel(eventData.model);
+            }
+          }
         } else if (data.type === 'workflow_complete') {
           setStatus('completed');
           onComplete?.();
@@ -263,6 +279,15 @@ export function AgentProgressPanel({ projectId, isActive, onComplete, onCancel }
             AI Agent Progress
           </CardTitle>
           <div className="flex items-center gap-2">
+            {currentModel && (
+              <Badge
+                variant="outline"
+                className="text-xs bg-purple-50 border-purple-200 text-purple-700"
+                data-testid="agent-model-badge"
+              >
+                {modelLabels[currentModel] || currentModel}
+              </Badge>
+            )}
             <Button
               variant="ghost"
               size="sm"
