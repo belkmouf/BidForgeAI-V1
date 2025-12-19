@@ -39,7 +39,7 @@ export class AnalysisAgent extends BaseAgent {
         });
       case 'gemini':
         return new ChatGoogleGenerativeAI({
-          model: 'gemini-2.5-flash-preview-04-17',
+          model: 'gemini-2.5-flash',
           temperature: 0.1,
         });
       case 'grok':
