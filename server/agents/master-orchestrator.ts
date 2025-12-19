@@ -69,16 +69,16 @@ export interface ProgressEvent {
   timestamp: Date;
 }
 
-// Per-agent configuration for iterations and timeouts
-const AGENT_CONFIG: Record<string, { maxIterations: number; timeoutMs: number }> = {
+// Per-agent configuration for iterations, timeouts, and grounding checks
+const AGENT_CONFIG: Record<string, { maxIterations: number; timeoutMs: number; skipGrounding?: boolean }> = {
   analysis: { maxIterations: 1, timeoutMs: 90_000 },   // One-shot for speed
-  intake: { maxIterations: 1, timeoutMs: 60_000 },     // Simple data loading
-  sketch: { maxIterations: 1, timeoutMs: 120_000 },    // Vision API can be slow
-  decision: { maxIterations: 2, timeoutMs: 60_000 },   // Multi-shot for quality
-  generation: { maxIterations: 2, timeoutMs: 120_000 }, // Multi-shot for quality
-  review: { maxIterations: 2, timeoutMs: 90_000 },     // Multi-shot for quality
+  intake: { maxIterations: 1, timeoutMs: 60_000, skipGrounding: true },     // Simple data loading - no content to verify
+  sketch: { maxIterations: 1, timeoutMs: 120_000, skipGrounding: true },    // Vision API - structured data
+  decision: { maxIterations: 1, timeoutMs: 60_000, skipGrounding: true },   // One-shot, no document claims
+  generation: { maxIterations: 2, timeoutMs: 120_000 }, // Multi-shot for quality - NEEDS grounding
+  review: { maxIterations: 1, timeoutMs: 90_000, skipGrounding: true },     // One-shot, just reviews
 };
-const DEFAULT_AGENT_CONFIG = { maxIterations: 2, timeoutMs: 90_000 };
+const DEFAULT_AGENT_CONFIG = { maxIterations: 2, timeoutMs: 90_000, skipGrounding: false };
 
 export class MasterOrchestrator extends EventEmitter {
   private maxIterationsPerAgent: number = 2;
@@ -93,7 +93,7 @@ export class MasterOrchestrator extends EventEmitter {
     if (options?.groundingThreshold) this.groundingThreshold = options.groundingThreshold;
   }
 
-  private getAgentConfig(agentName: string): { maxIterations: number; timeoutMs: number } {
+  private getAgentConfig(agentName: string): { maxIterations: number; timeoutMs: number; skipGrounding?: boolean } {
     return AGENT_CONFIG[agentName] || DEFAULT_AGENT_CONFIG;
   }
 
@@ -323,8 +323,9 @@ Respond in JSON:
       previousEvaluations?: OrchestratorEvaluation[];
     }
   ): Promise<OrchestratorEvaluation> {
-    const agentsRequiringGrounding = ['generation', 'analysis', 'decision', 'review'];
-    const requiresGrounding = agentsRequiringGrounding.includes(agentName);
+    // Use per-agent config for grounding - only generation needs it
+    const agentConfig = this.getAgentConfig(agentName);
+    const requiresGrounding = !agentConfig.skipGrounding;
     
     let documentContext = '';
     let sources: SearchResult[] = [];
