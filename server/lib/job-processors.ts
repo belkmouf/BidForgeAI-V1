@@ -1,11 +1,5 @@
 import { Job } from './queue.js';
 import { logger, logContext } from './logger.js';
-import { searchService } from './search.js';
-import { generateBidContent } from './openai.js';
-import { generateBidWithAnthropic } from './anthropic.js';
-import { generateBidWithGemini } from './gemini.js';
-import { generateBidWithDeepSeek } from './deepseek.js';
-import { generateBidWithGrok } from './grok.js';
 import { analyzeRFP } from './analysis.js';
 import { cache } from './cache.js';
 import { ingestionService } from './ingestion.js';
@@ -51,6 +45,7 @@ export interface DocumentProcessingData {
 }
 
 // Bid Generation Processor
+// OPTIMIZED: Uses unified bid generation service
 export async function processBidGeneration(job: Job, data: BidGenerationData): Promise<any> {
   const startTime = Date.now();
   const { projectId, instructions, tone, model, userId, companyId } = data;
@@ -63,47 +58,24 @@ export async function processBidGeneration(job: Job, data: BidGenerationData): P
       userId
     });
 
-    // Step 1: Search for relevant content
-    const searchResults = await searchService.searchDocuments(instructions, projectId, {
-      limit: 15,
-      threshold: 0.7,
-      useCache: true
-    });
-
-    if (searchResults.length === 0) {
-      throw new Error('No relevant content found for bid generation');
-    }
-
-    // Step 2: Get knowledge base context
-    const knowledgeResults = await searchService.searchKnowledgeBase(instructions, companyId, {
-      limit: 5,
-      threshold: 0.75,
-      useCache: true
-    });
-
-    // Step 3: Generate bid using selected model
-    let bidResult;
-    const contextText = searchResults.map(r => r.content).join('\n\n');
-    const knowledgeText = knowledgeResults.map(r => r.content).join('\n\n');
-
-    const combinedContext = `${contextText}\n\n${knowledgeText}`;
-
-    switch (model) {
-      case 'anthropic':
-        bidResult = await generateBidWithAnthropic({ instructions, context: combinedContext, tone });
-        break;
-      case 'gemini':
-        bidResult = await generateBidWithGemini({ instructions, context: combinedContext, tone });
-        break;
-      case 'deepseek':
-        bidResult = await generateBidWithDeepSeek({ instructions, context: combinedContext, tone });
-        break;
-      case 'grok':
-        bidResult = await generateBidWithGrok({ instructions, context: combinedContext, tone });
-        break;
-      default:
-        bidResult = await generateBidContent({ instructions, context: combinedContext, tone });
-    }
+    // Use unified bid generation service
+    const { bidGenerationService } = await import('./bid-generation-service.js');
+    
+    const result = await bidGenerationService.generateBid(
+      {
+        projectId,
+        companyId,
+        userId,
+        instructions,
+        tone,
+        model,
+      },
+      {
+        saveToDatabase: true, // Job processor should save results
+        useCache: true,
+        maxRetries: 3,
+      }
+    );
 
     const duration = Date.now() - startTime;
 
@@ -113,17 +85,21 @@ export async function processBidGeneration(job: Job, data: BidGenerationData): P
       projectId,
       userId,
       duration,
-      tokenUsage: 0,
+      tokenUsage: result.tokenUsage.inputTokens + result.tokenUsage.outputTokens,
       success: true
     });
 
     return {
-      bidContent: bidResult,
-      model,
-      chunksUsed: searchResults.length,
-      knowledgeChunks: knowledgeResults.length,
+      bidId: result.bidId,
+      version: result.version,
+      bidContent: result.html,
+      rawContent: result.rawContent,
+      model: result.model,
+      chunksUsed: result.chunksUsed,
+      searchMethod: result.searchMethod,
+      tokenUsage: result.tokenUsage,
       metadata: {
-        searchResults: searchResults.map(r => ({ id: r.id, score: r.score })),
+        generationTimeSeconds: result.generationTimeSeconds,
         duration
       }
     };

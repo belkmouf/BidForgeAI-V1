@@ -16,7 +16,7 @@ const DEFAULT_CONFIG: OrchestratorConfig = {
   maxRetries: 3,
   minDoabilityScore: 30,
   criticalRiskThreshold: true,
-  agentTimeoutMs: 5 * 60 * 1000, // 5 minutes default timeout
+  agentTimeoutMs: 3 * 60 * 1000, // 3 minutes default timeout (optimized from 5)
 };
 
 export class AgentOrchestrator {
@@ -132,6 +132,38 @@ export class AgentOrchestrator {
     ]);
   }
 
+  // Helper to execute with retry logic and timeout
+  private async executeWithRetry<T>(
+    executeFn: () => Promise<T>,
+    timeoutMs: number,
+    agentName: string,
+    maxRetries: number = this.config.maxRetries
+  ): Promise<T> {
+    let lastError: Error | null = null;
+    
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        // Create a fresh promise for each attempt
+        const promise = executeFn();
+        return await this.executeWithTimeout(promise, timeoutMs, agentName);
+      } catch (error) {
+        lastError = error as Error;
+        const isTimeout = lastError.message.includes('timed out');
+        
+        if (attempt < maxRetries) {
+          // Exponential backoff: 1s, 2s, 4s
+          const delay = Math.pow(2, attempt - 1) * 1000;
+          console.log(`[Orchestrator] Retrying ${agentName} after ${delay}ms (attempt ${attempt + 1}/${maxRetries})${isTimeout ? ' - previous attempt timed out' : ''}`);
+          await new Promise(resolve => setTimeout(resolve, delay));
+        } else {
+          console.error(`[Orchestrator] ${agentName} failed after ${maxRetries} attempts:`, lastError.message);
+        }
+      }
+    }
+    
+    throw lastError || new Error(`Agent ${agentName} execution failed after ${maxRetries} attempts`);
+  }
+
   private createAgentNode(agentName: string) {
     return async (state: BidWorkflowState): Promise<Partial<BidWorkflowState>> => {
       const agent = this.registry.get(agentName);
@@ -163,9 +195,9 @@ export class AgentOrchestrator {
         await this.logExecution(state.projectId, agentName, 'running', state, undefined, undefined, startTime);
         await this.updateState(state.projectId, agentName, 'running', state);
 
-        // Execute agent with timeout protection
-        const result = await this.executeWithTimeout(
-          agent.execute(
+        // Execute agent with timeout protection and retry logic
+        const result = await this.executeWithRetry(
+          () => agent.execute(
             {
               type: agentName,
               data: state,
@@ -182,7 +214,8 @@ export class AgentOrchestrator {
             }
           ),
           this.config.agentTimeoutMs,
-          agentName
+          agentName,
+          this.config.maxRetries
         );
 
         if (!result.success) {
