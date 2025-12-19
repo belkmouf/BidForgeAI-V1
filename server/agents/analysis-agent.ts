@@ -49,8 +49,10 @@ export class AnalysisAgent extends BaseAgent {
         return new ChatOpenAI({
           model: 'grok-4-fast',
           temperature: 0.1,
-          baseURL: 'https://api.x.ai/v1',
           apiKey: process.env.XAI_API_KEY,
+          configuration: {
+            baseURL: 'https://api.x.ai/v1',
+          },
         });
       case 'deepseek':
         if (!process.env.DEEPSEEK_API_KEY) {
@@ -59,8 +61,10 @@ export class AnalysisAgent extends BaseAgent {
         return new ChatOpenAI({
           model: 'deepseek-chat',
           temperature: 0.1,
-          baseURL: 'https://api.deepseek.com',
           apiKey: process.env.DEEPSEEK_API_KEY,
+          configuration: {
+            baseURL: 'https://api.deepseek.com',
+          },
         });
       default:
         return new ChatOpenAI({
