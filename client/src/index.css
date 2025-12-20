@@ -55,31 +55,29 @@
   --color-sidebar-border: hsl(var(--sidebar-border));
   --color-sidebar-ring: hsl(var(--sidebar-ring));
 
-  --color-charcoal-900: #1a1a1a;
-  --color-charcoal-800: #2c2c2c;
-  --color-charcoal-700: #3d3d3d;
-  --color-charcoal-600: #4f4f4f;
-  --color-charcoal-500: #666666;
+  --color-navy-900: #0F172A;
+  --color-navy-800: #1E293B;
+  --color-navy-700: #334155;
+  --color-navy-600: #475569;
+  --color-navy-500: #64748B;
   
-  --color-teal-900: #0a4d4f;
-  --color-teal-800: #0c6265;
-  --color-teal-700: #0d7377;
-  --color-teal-600: #108387;
-  --color-teal-500: #14a39e;
-  --color-teal-400: #3db8b3;
-  --color-teal-300: #66ccc8;
-  --color-teal-200: #99e0dd;
-  --color-teal-100: #e6f5f5;
+  --color-blue-900: #1E3A8A;
+  --color-blue-800: #1E40AF;
+  --color-blue-700: #1D4ED8;
+  --color-blue-600: #2563EB;
+  --color-blue-500: #3B82F6;
+  --color-blue-400: #60A5FA;
+  --color-blue-300: #93C5FD;
+  --color-blue-200: #BFDBFE;
+  --color-blue-100: #DBEAFE;
   
-  --color-gold-900: #6b5322;
-  --color-gold-800: #8a6f2f;
-  --color-gold-700: #9d7d38;
-  --color-gold-600: #b8995a;
-  --color-gold-500: #c8a962;
-  --color-gold-400: #d4bd8a;
-  --color-gold-300: #e0d1a8;
-  --color-gold-200: #ece5c7;
-  --color-gold-100: #f8f4ed;
+  --color-success-600: #16A34A;
+  --color-success-500: #22C55E;
+  --color-success-400: #4ADE80;
+  
+  --color-warning-600: #D97706;
+  --color-warning-500: #F59E0B;
+  --color-warning-400: #FBBF24;
   
   --font-sans: 'Inter', sans-serif;
   --font-display: 'Syne', sans-serif;
@@ -113,95 +111,95 @@
 }
 
 :root {
-  --background: 0 0% 82%;
-  --foreground: 0 0% 10%;
+  --background: 210 40% 98%;
+  --foreground: 222 47% 11%;
 
-  --card: 0 0% 90%;
-  --card-foreground: 0 0% 10%;
+  --card: 0 0% 100%;
+  --card-foreground: 222 47% 11%;
 
-  --popover: 0 0% 92%;
-  --popover-foreground: 0 0% 10%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 222 47% 11%;
 
-  --primary: 181 75% 35%;
+  --primary: 217 91% 53%;
   --primary-foreground: 0 0% 100%;
 
-  --secondary: 42 45% 58%;
-  --secondary-foreground: 0 0% 10%;
+  --secondary: 217 91% 60%;
+  --secondary-foreground: 0 0% 100%;
 
-  --muted: 0 0% 85%;
-  --muted-foreground: 0 0% 45%;
+  --muted: 210 40% 96%;
+  --muted-foreground: 215 16% 47%;
 
-  --accent: 181 70% 26%;
+  --accent: 217 91% 60%;
   --accent-foreground: 0 0% 100%;
 
   --destructive: 0 84% 60%;
   --destructive-foreground: 0 0% 100%;
 
-  --border: 0 0% 65%;
-  --input: 0 0% 75%;
-  --ring: 181 75% 35%;
+  --border: 214 32% 91%;
+  --input: 214 32% 91%;
+  --ring: 217 91% 53%;
 
   --radius: 0.5rem;
 
-  --chart-1: 181 75% 35%;
-  --chart-2: 42 45% 58%;
-  --chart-3: 174 70% 40%;
-  --chart-4: 0 0% 10%;
-  --chart-5: 0 0% 60%;
+  --chart-1: 217 91% 53%;
+  --chart-2: 142 76% 36%;
+  --chart-3: 38 92% 50%;
+  --chart-4: 222 47% 11%;
+  --chart-5: 215 16% 47%;
 
-  --sidebar: 0 0% 10%;
-  --sidebar-foreground: 0 0% 98%;
-  --sidebar-primary: 42 45% 58%;
-  --sidebar-primary-foreground: 0 0% 10%;
-  --sidebar-accent: 0 0% 15%;
-  --sidebar-accent-foreground: 0 0% 98%;
-  --sidebar-border: 0 0% 20%;
-  --sidebar-ring: 42 45% 58%;
+  --sidebar: 222 47% 11%;
+  --sidebar-foreground: 210 40% 98%;
+  --sidebar-primary: 217 91% 53%;
+  --sidebar-primary-foreground: 0 0% 100%;
+  --sidebar-accent: 222 47% 15%;
+  --sidebar-accent-foreground: 210 40% 98%;
+  --sidebar-border: 222 47% 20%;
+  --sidebar-ring: 217 91% 53%;
 }
 
 .dark {
-  --background: 0 0% 8%;
-  --foreground: 0 0% 98%;
+  --background: 222 47% 8%;
+  --foreground: 210 40% 98%;
 
-  --card: 0 0% 12%;
-  --card-foreground: 0 0% 98%;
+  --card: 222 47% 11%;
+  --card-foreground: 210 40% 98%;
 
-  --popover: 0 0% 12%;
-  --popover-foreground: 0 0% 98%;
+  --popover: 222 47% 11%;
+  --popover-foreground: 210 40% 98%;
 
-  --primary: 181 60% 40%;
+  --primary: 217 91% 60%;
   --primary-foreground: 0 0% 100%;
 
-  --secondary: 42 40% 55%;
-  --secondary-foreground: 0 0% 10%;
+  --secondary: 217 91% 53%;
+  --secondary-foreground: 0 0% 100%;
 
-  --muted: 0 0% 15%;
-  --muted-foreground: 0 0% 60%;
+  --muted: 222 47% 15%;
+  --muted-foreground: 215 16% 60%;
 
-  --accent: 181 50% 30%;
+  --accent: 217 91% 53%;
   --accent-foreground: 0 0% 100%;
 
-  --destructive: 0 62% 30%;
+  --destructive: 0 62% 40%;
   --destructive-foreground: 0 0% 98%;
 
-  --border: 0 0% 20%;
-  --input: 0 0% 20%;
-  --ring: 42 40% 55%;
+  --border: 222 47% 20%;
+  --input: 222 47% 20%;
+  --ring: 217 91% 60%;
 
-  --chart-1: 181 60% 40%;
-  --chart-2: 42 40% 55%;
-  --chart-3: 174 60% 50%;
-  --chart-4: 0 0% 70%;
-  --chart-5: 0 0% 40%;
+  --chart-1: 217 91% 60%;
+  --chart-2: 142 76% 40%;
+  --chart-3: 38 92% 55%;
+  --chart-4: 210 40% 80%;
+  --chart-5: 215 16% 50%;
 
-  --sidebar: 0 0% 6%;
-  --sidebar-foreground: 0 0% 98%;
-  --sidebar-primary: 42 40% 55%;
-  --sidebar-primary-foreground: 0 0% 10%;
-  --sidebar-accent: 0 0% 12%;
-  --sidebar-accent-foreground: 0 0% 98%;
-  --sidebar-border: 0 0% 15%;
-  --sidebar-ring: 42 40% 55%;
+  --sidebar: 222 47% 6%;
+  --sidebar-foreground: 210 40% 98%;
+  --sidebar-primary: 217 91% 60%;
+  --sidebar-primary-foreground: 0 0% 100%;
+  --sidebar-accent: 222 47% 12%;
+  --sidebar-accent-foreground: 210 40% 98%;
+  --sidebar-border: 222 47% 15%;
+  --sidebar-ring: 217 91% 60%;
 }
 
 * {
@@ -214,7 +212,7 @@ html {
 }
 
 ::selection {
-  background: var(--color-teal-700);
+  background: var(--color-blue-600);
   color: white;
 }
 
@@ -234,7 +232,7 @@ html {
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #14a39e;
+  background: #2563EB;
 }
 
 @layer base {
@@ -251,31 +249,31 @@ html {
 
 @layer components {
   .btn-primary {
-    @apply px-8 py-4 bg-gradient-to-r from-teal-700 to-teal-600 text-white font-medium tracking-wide;
+    @apply px-8 py-4 bg-gradient-to-r from-blue-700 to-blue-600 text-white font-medium tracking-wide;
     @apply hover:shadow-2xl hover:scale-105 transition-all duration-300;
-    @apply focus:outline-none focus:ring-2 focus:ring-teal-700 focus:ring-offset-2;
+    @apply focus:outline-none focus:ring-2 focus:ring-blue-600 focus:ring-offset-2;
   }
 
   .btn-secondary {
-    @apply px-8 py-4 border-2 border-gold-600 text-gold-600 font-medium tracking-wide;
-    @apply hover:bg-gold-600 hover:text-charcoal-900 transition-all duration-300;
+    @apply px-8 py-4 border-2 border-blue-500 text-blue-500 font-medium tracking-wide;
+    @apply hover:bg-blue-500 hover:text-white transition-all duration-300;
   }
 
   .card-premium {
     @apply bg-card border border-border transition-all duration-500;
-    @apply hover:shadow-2xl hover:border-teal-700 hover:-translate-y-1;
+    @apply hover:shadow-2xl hover:border-blue-500 hover:-translate-y-1;
   }
 
   .text-gradient-gold {
-    @apply bg-gradient-to-r from-gold-800 via-gold-600 to-gold-800 bg-clip-text text-transparent;
+    @apply bg-gradient-to-r from-blue-800 via-blue-600 to-blue-800 bg-clip-text text-transparent;
   }
 
   .text-gradient-teal {
-    @apply bg-gradient-to-r from-teal-700 via-teal-500 to-teal-700 bg-clip-text text-transparent;
+    @apply bg-gradient-to-r from-blue-700 via-blue-500 to-blue-700 bg-clip-text text-transparent;
   }
 
   .divider-premium {
-    @apply w-24 h-1 bg-gradient-to-r from-transparent via-teal-700 to-transparent;
+    @apply w-24 h-1 bg-gradient-to-r from-transparent via-blue-600 to-transparent;
   }
 
   .section-header {
@@ -283,7 +281,7 @@ html {
   }
 
   .section-label {
-    @apply text-teal-700 uppercase tracking-wider text-sm font-medium mb-4 block;
+    @apply text-blue-600 uppercase tracking-wider text-sm font-medium mb-4 block;
   }
 
   .section-title {
@@ -295,7 +293,7 @@ html {
   }
 
   .stat-number {
-    @apply text-4xl font-bold text-teal-700 mb-1;
+    @apply text-4xl font-bold text-blue-600 mb-1;
   }
 
   .stat-label {
@@ -382,7 +380,7 @@ html {
   }
 
   blockquote {
-    border-left: 3px solid var(--color-gold-600);
+    border-left: 3px solid var(--color-blue-600);
     background-color: hsl(var(--secondary) / 0.1);
     margin: 1.5rem 0;
     padding: 1rem;
@@ -424,7 +422,7 @@ html {
     }
 
     .selectedCell:after {
-      background: rgba(13, 115, 119, 0.2);
+      background: rgba(37, 99, 235, 0.2);
       content: "";
       left: 0;
       right: 0;
@@ -436,7 +434,7 @@ html {
     }
 
     .column-resize-handle {
-      background-color: var(--color-gold-600);
+      background-color: var(--color-blue-600);
       bottom: -2px;
       pointer-events: none;
       position: absolute;

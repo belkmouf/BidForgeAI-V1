@@ -1,0 +1,35 @@
+:root {
+  /* Primary Branding */
+  --primary-navy: #0F172A;
+  --primary-blue: #2563EB;
+  --accent-blue: #3B82F6;
+
+  /* Status Indicators */
+  --success-green: #16A34A;
+  --warning-orange: #F59E0B;
+
+  /* Backgrounds & Text */
+  --bg-white: #FFFFFF;
+  --bg-light: #F8FAFC;
+  --text-main: #0F172A;
+  --text-muted: #64748B;
+}
+
+body {
+  background-color: var(--bg-light);
+  color: var(--text-main);
+  font-family: 'Inter', sans-serif; /* Recommended for Shadcn/Tailwind look */
+}
+
+h1, h2, h3 {
+  color: var(--primary-navy);
+}
+
+.btn-primary {
+  background-color: var(--primary-blue);
+  color: white;
+}
+
+.win-probability {
+  color: var(--success-green);
+}
