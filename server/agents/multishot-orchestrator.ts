@@ -480,6 +480,21 @@ export class MultishotWorkflowOrchestrator {
     return this.finalizeWorkflow(projectId, state);
   }
 
+  private getAgentTimeout(name: string): number {
+    const timeouts: Record<string, number> = {
+      'intake': 30_000,
+      'sketch': 60_000,
+      'analysis': 45_000,
+      'decision': 30_000,
+      'generation': 150_000,
+      'review': 45_000,
+      'conflict-detection': 30_000,
+      'technical-validator': 30_000,
+      'ensemble-review': 45_000,
+    };
+    return timeouts[name] || 60_000;
+  }
+
   private async executeAgent(
     name: string,
     agent: BaseAgent,
@@ -487,12 +502,13 @@ export class MultishotWorkflowOrchestrator {
     state: WorkflowState
   ): Promise<{ success: boolean; data?: Record<string, unknown>; error?: string }> {
     const startTime = Date.now();
+    const timeoutMs = this.getAgentTimeout(name);
     
     this.emitWithProject(state.projectId, {
       type: 'agent_start',
       agentName: name,
       iteration: 0,
-      message: `Starting ${name} agent`,
+      message: `Starting ${name} agent (timeout: ${timeoutMs / 1000}s)`,
     });
 
     try {
@@ -508,7 +524,14 @@ export class MultishotWorkflowOrchestrator {
         context,
       };
 
-      const result = await agent.execute(agentInput, context);
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(() => reject(new Error(`TIMEOUT: ${name} exceeded ${timeoutMs / 1000}s`)), timeoutMs);
+      });
+
+      const result = await Promise.race([
+        agent.execute(agentInput, context),
+        timeoutPromise,
+      ]);
       const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
 
       this.emitWithProject(state.projectId, {

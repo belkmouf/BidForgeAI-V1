@@ -84,6 +84,9 @@ const AGENT_CONFIG: Record<string, AgentTimeConfig> = {
   decision: { timeWindowMs: 30_000, allowRefinement: false, skipGrounding: true },   // 30s - quick decision
   generation: { timeWindowMs: 150_000, allowRefinement: true, skipGrounding: true },  // 150s - critical, DeepSeek needs ~100s
   review: { timeWindowMs: 45_000, allowRefinement: false, skipGrounding: true },     // 45s - final review
+  'conflict-detection': { timeWindowMs: 30_000, allowRefinement: false, skipGrounding: true },  // 30s - conflict check
+  'technical-validator': { timeWindowMs: 30_000, allowRefinement: false, skipGrounding: true }, // 30s - spec validation
+  'ensemble-review': { timeWindowMs: 45_000, allowRefinement: false, skipGrounding: true },     // 45s - multi-model review
 };
 const DEFAULT_AGENT_CONFIG: AgentTimeConfig = { timeWindowMs: 60_000, allowRefinement: false, skipGrounding: false };
 
