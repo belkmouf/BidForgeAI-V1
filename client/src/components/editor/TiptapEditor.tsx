@@ -306,6 +306,116 @@ export function TiptapEditor({ content, onChange }: TiptapEditorProps) {
           padding: 0 2px;
           border-radius: 2px;
         }
+        
+        /* Bid Proposal Styling - matches generated bid CSS */
+        .ProseMirror .bid-proposal {
+          font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+          max-width: 100%;
+          margin: 0 auto;
+          padding: 20px;
+          background: #ffffff;
+          line-height: 1.6;
+        }
+        
+        .ProseMirror .section {
+          margin-bottom: 30px;
+          padding: 24px;
+          background: #f8f9fa;
+          border-left: 4px solid #0066cc;
+          border-radius: 8px;
+        }
+        
+        .ProseMirror h1 {
+          color: #003366;
+          font-size: 28px;
+          margin-bottom: 10px;
+          border-bottom: 3px solid #0066cc;
+          padding-bottom: 12px;
+        }
+        
+        .ProseMirror h2 {
+          color: #0066cc;
+          font-size: 22px;
+          margin-top: 24px;
+          margin-bottom: 12px;
+        }
+        
+        .ProseMirror h3 {
+          color: #004080;
+          font-size: 18px;
+          margin-top: 16px;
+          margin-bottom: 8px;
+        }
+        
+        .ProseMirror .highlight-box {
+          background: #e6f2ff;
+          border: 2px solid #0066cc;
+          padding: 16px;
+          margin: 16px 0;
+          border-radius: 6px;
+        }
+        
+        .ProseMirror .spec-table,
+        .ProseMirror table {
+          width: 100%;
+          border-collapse: collapse;
+          margin: 16px 0;
+          border: 1px solid #ddd;
+          box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .ProseMirror .spec-table th,
+        .ProseMirror table th {
+          background: #0066cc;
+          color: white;
+          padding: 10px;
+          text-align: left;
+          border: 1px solid #0052a3;
+          font-weight: 600;
+        }
+        
+        .ProseMirror .spec-table td,
+        .ProseMirror table td {
+          padding: 8px 10px;
+          border: 1px solid #ddd;
+        }
+        
+        .ProseMirror .spec-table tr:hover,
+        .ProseMirror table tr:hover {
+          background: #f5f5f5;
+        }
+        
+        .ProseMirror .timeline-phase {
+          background: #fff;
+          border-left: 4px solid #28a745;
+          padding: 12px;
+          margin: 12px 0;
+          box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        
+        .ProseMirror .key-metric {
+          display: inline-block;
+          background: #0066cc;
+          color: white;
+          padding: 6px 12px;
+          border-radius: 20px;
+          margin: 4px;
+          font-weight: bold;
+          font-size: 14px;
+        }
+        
+        .ProseMirror ul, .ProseMirror ol {
+          margin: 12px 0;
+          padding-left: 24px;
+        }
+        
+        .ProseMirror li {
+          margin: 6px 0;
+        }
+        
+        .ProseMirror strong, .ProseMirror b {
+          font-weight: 600;
+        }
       `}</style>
       <MenuBar 
         editor={editor} 
