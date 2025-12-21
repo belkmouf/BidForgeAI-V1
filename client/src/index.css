@@ -3,6 +3,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,500;9..144,700&display=swap');
 @import "tailwindcss";
 @import "tw-animate-css";
+@import "./bidforge-colors.css";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -55,29 +56,29 @@
   --color-sidebar-border: hsl(var(--sidebar-border));
   --color-sidebar-ring: hsl(var(--sidebar-ring));
 
-  --color-navy-900: #0F172A;
-  --color-navy-800: #1E293B;
-  --color-navy-700: #334155;
-  --color-navy-600: #475569;
-  --color-navy-500: #64748B;
+  --color-bf-blue: #003D82;
+  --color-bf-blue-dark: #002855;
+  --color-bf-blue-light: #0052A3;
   
-  --color-blue-900: #1E3A8A;
-  --color-blue-800: #1E40AF;
-  --color-blue-700: #1D4ED8;
-  --color-blue-600: #2563EB;
-  --color-blue-500: #3B82F6;
-  --color-blue-400: #60A5FA;
-  --color-blue-300: #93C5FD;
-  --color-blue-200: #BFDBFE;
-  --color-blue-100: #DBEAFE;
+  --color-bf-cream: #E8E4DA;
+  --color-bf-cream-light: #F5F3EE;
   
-  --color-success-600: #16A34A;
-  --color-success-500: #22C55E;
-  --color-success-400: #4ADE80;
+  --color-bf-accent: #C1272D;
+  --color-bf-accent-light: #E63946;
   
-  --color-warning-600: #D97706;
-  --color-warning-500: #F59E0B;
-  --color-warning-400: #FBBF24;
+  --color-bf-gray-100: #E8E8E8;
+  --color-bf-gray-200: #D1D1D1;
+  --color-bf-gray-300: #BABABA;
+  --color-bf-gray-400: #A3A3A3;
+  --color-bf-gray-500: #8C8C8C;
+  --color-bf-gray-600: #5A5A5A;
+  --color-bf-gray-700: #3D3D3D;
+  --color-bf-gray-800: #2B2B2B;
+  --color-bf-gray-900: #1A1A1A;
+  
+  --color-bf-success: #28A745;
+  --color-bf-warning: #FFC107;
+  --color-bf-error: #DC3545;
   
   --font-sans: 'Inter', sans-serif;
   --font-display: 'Syne', sans-serif;
@@ -111,95 +112,95 @@
 }
 
 :root {
-  --background: 210 40% 98%;
-  --foreground: 222 47% 11%;
+  --background: 42 23% 89%;
+  --foreground: 0 0% 17%;
 
   --card: 0 0% 100%;
-  --card-foreground: 222 47% 11%;
+  --card-foreground: 0 0% 17%;
 
   --popover: 0 0% 100%;
-  --popover-foreground: 222 47% 11%;
+  --popover-foreground: 0 0% 17%;
 
-  --primary: 217 91% 53%;
+  --primary: 210 100% 25%;
   --primary-foreground: 0 0% 100%;
 
-  --secondary: 217 91% 60%;
-  --secondary-foreground: 0 0% 100%;
+  --secondary: 42 24% 95%;
+  --secondary-foreground: 0 0% 17%;
 
-  --muted: 210 40% 96%;
-  --muted-foreground: 215 16% 47%;
+  --muted: 42 24% 95%;
+  --muted-foreground: 0 0% 35%;
 
-  --accent: 217 91% 60%;
+  --accent: 358 67% 46%;
   --accent-foreground: 0 0% 100%;
 
-  --destructive: 0 84% 60%;
+  --destructive: 358 67% 46%;
   --destructive-foreground: 0 0% 100%;
 
-  --border: 214 32% 91%;
-  --input: 214 32% 91%;
-  --ring: 217 91% 53%;
+  --border: 42 15% 85%;
+  --input: 42 15% 85%;
+  --ring: 210 100% 25%;
 
   --radius: 0.5rem;
 
-  --chart-1: 217 91% 53%;
-  --chart-2: 142 76% 36%;
+  --chart-1: 210 100% 25%;
+  --chart-2: 134 61% 41%;
   --chart-3: 38 92% 50%;
   --chart-4: 222 47% 11%;
   --chart-5: 215 16% 47%;
 
-  --sidebar: 222 47% 11%;
-  --sidebar-foreground: 210 40% 98%;
-  --sidebar-primary: 217 91% 53%;
+  --sidebar: 210 100% 17%;
+  --sidebar-foreground: 0 0% 100%;
+  --sidebar-primary: 210 100% 25%;
   --sidebar-primary-foreground: 0 0% 100%;
-  --sidebar-accent: 222 47% 15%;
-  --sidebar-accent-foreground: 210 40% 98%;
-  --sidebar-border: 222 47% 20%;
-  --sidebar-ring: 217 91% 53%;
+  --sidebar-accent: 210 100% 22%;
+  --sidebar-accent-foreground: 0 0% 100%;
+  --sidebar-border: 210 100% 20%;
+  --sidebar-ring: 358 67% 46%;
 }
 
 .dark {
-  --background: 222 47% 8%;
-  --foreground: 210 40% 98%;
+  --background: 0 0% 10%;
+  --foreground: 0 0% 95%;
 
-  --card: 222 47% 11%;
-  --card-foreground: 210 40% 98%;
+  --card: 0 0% 14%;
+  --card-foreground: 0 0% 95%;
 
-  --popover: 222 47% 11%;
-  --popover-foreground: 210 40% 98%;
+  --popover: 0 0% 14%;
+  --popover-foreground: 0 0% 95%;
 
-  --primary: 217 91% 60%;
+  --primary: 210 100% 35%;
   --primary-foreground: 0 0% 100%;
 
-  --secondary: 217 91% 53%;
-  --secondary-foreground: 0 0% 100%;
+  --secondary: 0 0% 18%;
+  --secondary-foreground: 0 0% 95%;
 
-  --muted: 222 47% 15%;
-  --muted-foreground: 215 16% 60%;
+  --muted: 0 0% 18%;
+  --muted-foreground: 0 0% 55%;
 
-  --accent: 217 91% 53%;
+  --accent: 358 67% 50%;
   --accent-foreground: 0 0% 100%;
 
-  --destructive: 0 62% 40%;
-  --destructive-foreground: 0 0% 98%;
+  --destructive: 358 67% 50%;
+  --destructive-foreground: 0 0% 100%;
 
-  --border: 222 47% 20%;
-  --input: 222 47% 20%;
-  --ring: 217 91% 60%;
+  --border: 0 0% 22%;
+  --input: 0 0% 22%;
+  --ring: 210 100% 35%;
 
-  --chart-1: 217 91% 60%;
-  --chart-2: 142 76% 40%;
+  --chart-1: 210 100% 35%;
+  --chart-2: 134 61% 45%;
   --chart-3: 38 92% 55%;
-  --chart-4: 210 40% 80%;
-  --chart-5: 215 16% 50%;
+  --chart-4: 0 0% 75%;
+  --chart-5: 0 0% 45%;
 
-  --sidebar: 222 47% 6%;
-  --sidebar-foreground: 210 40% 98%;
-  --sidebar-primary: 217 91% 60%;
+  --sidebar: 210 100% 12%;
+  --sidebar-foreground: 0 0% 100%;
+  --sidebar-primary: 210 100% 35%;
   --sidebar-primary-foreground: 0 0% 100%;
-  --sidebar-accent: 222 47% 12%;
-  --sidebar-accent-foreground: 210 40% 98%;
-  --sidebar-border: 222 47% 15%;
-  --sidebar-ring: 217 91% 60%;
+  --sidebar-accent: 210 100% 18%;
+  --sidebar-accent-foreground: 0 0% 100%;
+  --sidebar-border: 210 100% 15%;
+  --sidebar-ring: 358 67% 50%;
 }
 
 * {
@@ -212,7 +213,7 @@ html {
 }
 
 ::selection {
-  background: var(--color-blue-600);
+  background: var(--bf-primary-blue);
   color: white;
 }
 
@@ -232,7 +233,7 @@ html {
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #2563EB;
+  background: var(--bf-primary-blue);
 }
 
 @layer base {
@@ -249,31 +250,60 @@ html {
 
 @layer components {
   .btn-primary {
-    @apply px-8 py-4 bg-gradient-to-r from-blue-700 to-blue-600 text-white font-medium tracking-wide;
+    @apply px-8 py-4 text-white font-medium tracking-wide;
+    background: linear-gradient(to right, var(--bf-primary-blue-dark), var(--bf-primary-blue));
     @apply hover:shadow-2xl hover:scale-105 transition-all duration-300;
-    @apply focus:outline-none focus:ring-2 focus:ring-blue-600 focus:ring-offset-2;
+    @apply focus:outline-none focus:ring-2 focus:ring-offset-2;
+    --tw-ring-color: var(--bf-primary-blue);
   }
 
   .btn-secondary {
-    @apply px-8 py-4 border-2 border-blue-500 text-blue-500 font-medium tracking-wide;
-    @apply hover:bg-blue-500 hover:text-white transition-all duration-300;
+    @apply px-8 py-4 font-medium tracking-wide transition-all duration-300;
+    border: 2px solid var(--bf-primary-blue);
+    color: var(--bf-primary-blue);
+  }
+
+  .btn-secondary:hover {
+    background-color: var(--bf-primary-blue);
+    color: white;
+  }
+
+  .btn-accent {
+    @apply px-8 py-4 text-white font-medium tracking-wide;
+    background-color: var(--bf-accent-red);
+    @apply hover:shadow-2xl hover:scale-105 transition-all duration-300;
+  }
+
+  .btn-accent:hover {
+    background-color: var(--bf-accent-red-light);
   }
 
   .card-premium {
     @apply bg-card border border-border transition-all duration-500;
-    @apply hover:shadow-2xl hover:border-blue-500 hover:-translate-y-1;
+    @apply hover:shadow-2xl hover:-translate-y-1;
   }
 
-  .text-gradient-gold {
-    @apply bg-gradient-to-r from-blue-800 via-blue-600 to-blue-800 bg-clip-text text-transparent;
+  .card-premium:hover {
+    border-color: var(--bf-primary-blue);
   }
 
-  .text-gradient-teal {
-    @apply bg-gradient-to-r from-blue-700 via-blue-500 to-blue-700 bg-clip-text text-transparent;
+  .text-gradient-primary {
+    background: linear-gradient(to right, var(--bf-primary-blue-dark), var(--bf-primary-blue), var(--bf-primary-blue-dark));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  .text-gradient-accent {
+    background: linear-gradient(to right, var(--bf-accent-red), var(--bf-accent-red-light), var(--bf-accent-red));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
   }
 
   .divider-premium {
-    @apply w-24 h-1 bg-gradient-to-r from-transparent via-blue-600 to-transparent;
+    @apply w-24 h-1;
+    background: linear-gradient(to right, transparent, var(--bf-primary-blue), transparent);
   }
 
   .section-header {
@@ -281,7 +311,8 @@ html {
   }
 
   .section-label {
-    @apply text-blue-600 uppercase tracking-wider text-sm font-medium mb-4 block;
+    @apply uppercase tracking-wider text-sm font-medium mb-4 block;
+    color: var(--bf-primary-blue);
   }
 
   .section-title {
@@ -293,11 +324,22 @@ html {
   }
 
   .stat-number {
-    @apply text-4xl font-bold text-blue-600 mb-1;
+    @apply text-4xl font-bold mb-1;
+    color: var(--bf-primary-blue);
   }
 
   .stat-label {
     @apply text-sm text-muted-foreground uppercase tracking-wide;
+  }
+
+  .nav-active {
+    border-bottom: 3px solid var(--bf-accent-red);
+  }
+
+  .sidebar-item-active {
+    background-color: var(--bf-primary-blue);
+    color: white;
+    border-left: 4px solid var(--bf-accent-red);
   }
 }
 
@@ -380,7 +422,7 @@ html {
   }
 
   blockquote {
-    border-left: 3px solid var(--color-blue-600);
+    border-left: 3px solid var(--bf-primary-blue);
     background-color: hsl(var(--secondary) / 0.1);
     margin: 1.5rem 0;
     padding: 1rem;
@@ -422,7 +464,7 @@ html {
     }
 
     .selectedCell:after {
-      background: rgba(37, 99, 235, 0.2);
+      background: rgba(0, 61, 130, 0.2);
       content: "";
       left: 0;
       right: 0;
@@ -434,7 +476,7 @@ html {
     }
 
     .column-resize-handle {
-      background-color: var(--color-blue-600);
+      background-color: var(--bf-primary-blue);
       bottom: -2px;
       pointer-events: none;
       position: absolute;
