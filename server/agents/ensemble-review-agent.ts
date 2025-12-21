@@ -181,6 +181,7 @@ export class EnsembleReviewAgent extends BaseAgent {
       const model = new ChatGoogleGenerativeAI({
         model: 'gemini-2.5-flash-preview-05-20',
         temperature: 0.1,
+        apiKey: process.env.GOOGLE_GENERATIVE_AI_API_KEY || process.env.AI_INTEGRATIONS_GEMINI_API_KEY,
       });
 
       const response = await model.invoke([

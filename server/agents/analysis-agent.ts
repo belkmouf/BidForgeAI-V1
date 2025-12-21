@@ -61,6 +61,7 @@ export class AnalysisAgent extends BaseAgent {
         return new ChatGoogleGenerativeAI({
           model: 'gemini-2.5-flash',
           temperature: 0.1,
+          apiKey: process.env.GOOGLE_GENERATIVE_AI_API_KEY || process.env.AI_INTEGRATIONS_GEMINI_API_KEY,
         });
       case 'grok':
         if (!process.env.XAI_API_KEY) {
