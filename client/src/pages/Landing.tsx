@@ -160,7 +160,7 @@ export default function Landing() {
   const displayName = branding?.companyName || user?.companyName || 'BidForge AI';
   const displayTagline = branding?.tagline || 'INTELLIGENT BIDDING';
   const displayLogo = branding?.logoUrl || bidForgeLogo;
-  const primaryColor = branding?.primaryColor || '#0d9488';
+  const primaryColor = branding?.primaryColor || '#003D82';
   const aboutUs = branding?.aboutUs || `Strategic Craftsmanship at Scale — The RFP bottleneck respects no boundaries; it stalls the growth of agile startups and drains the high-value expertise of global enterprises alike. BidForge AI exists to democratize "Strategic Craftsmanship," ensuring that a lean team can compete with the resources of a giant, while large organizations can recapture the agility of a startup.
 
 We reject the choice between "fast and generic" or "slow and accurate." By leveraging our proprietary "Resonance Engine" and "Live Ingestion" technology, we transform your company's unique chaos—whether it's a founder's folder of PDFs or a global SharePoint library—into a precision revenue engine. We act as the "Iron Man Suit" for your revenue team, providing the velocity to clear backlogs instantly and the rigorous "Anchored Truth" required to withstand complex scrutiny. Whether you are fighting for your first major contract or defending market dominance, the Forge scales to your ambition.`;
@@ -188,7 +188,7 @@ Our "Sovereign Shield" architecture guarantees that your data is isolated in a p
             />
             <div>
               <div className={`font-display text-xl font-bold transition-colors duration-300 ${
-                scrolled ? 'text-charcoal-900' : 'text-white'
+                scrolled ? 'text-foreground' : 'text-white'
               }`}>
                 {displayName}
               </div>
@@ -205,7 +205,7 @@ Our "Sovereign Shield" architecture guarantees that your data is isolated in a p
             <a 
               href="#features" 
               className={`text-sm font-medium tracking-wide transition-colors ${
-                scrolled ? 'text-charcoal-800' : 'text-white/90'
+                scrolled ? 'text-foreground' : 'text-white/90'
               }`}
               onMouseEnter={(e) => e.currentTarget.style.color = primaryColor}
               onMouseLeave={(e) => e.currentTarget.style.color = ''}
@@ -215,7 +215,7 @@ Our "Sovereign Shield" architecture guarantees that your data is isolated in a p
             <a 
               href="#testimonial" 
               className={`text-sm font-medium tracking-wide transition-colors ${
-                scrolled ? 'text-charcoal-800' : 'text-white/90'
+                scrolled ? 'text-foreground' : 'text-white/90'
               }`}
               onMouseEnter={(e) => e.currentTarget.style.color = primaryColor}
               onMouseLeave={(e) => e.currentTarget.style.color = ''}
@@ -227,7 +227,7 @@ Our "Sovereign Shield" architecture guarantees that your data is isolated in a p
               className={`px-6 py-2.5 text-sm font-medium tracking-wide border-2 transition-all duration-300 ${
                 scrolled 
                   ? 'hover:text-white' 
-                  : 'border-white/80 text-white hover:bg-white hover:text-charcoal-900'
+                  : 'border-white/80 text-white hover:bg-white hover:text-foreground'
               }`}
               style={scrolled ? { borderColor: primaryColor, color: primaryColor } : undefined}
               onMouseEnter={(e) => { if (scrolled) { e.currentTarget.style.backgroundColor = primaryColor; e.currentTarget.style.color = 'white'; }}}
@@ -240,7 +240,7 @@ Our "Sovereign Shield" architecture guarantees that your data is isolated in a p
 
           <button 
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className={`md:hidden ${scrolled ? 'text-charcoal-900' : 'text-white'}`}
+            className={`md:hidden ${scrolled ? 'text-foreground' : 'text-white'}`}
             data-testid="button-mobile-menu"
           >
             {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
@@ -249,8 +249,8 @@ Our "Sovereign Shield" architecture guarantees that your data is isolated in a p
 
         {mobileMenuOpen && (
           <div className="md:hidden absolute top-full left-0 w-full bg-white shadow-xl py-6 px-6 space-y-4">
-            <a href="#features" className="block text-charcoal-800 font-medium py-2">Features</a>
-            <a href="#testimonial" className="block text-charcoal-800 font-medium py-2">Testimonials</a>
+            <a href="#features" className="block text-foreground font-medium py-2">Features</a>
+            <a href="#testimonial" className="block text-foreground font-medium py-2">Testimonials</a>
             <Link 
               href="/dashboard" 
               className="block text-white py-3 px-4 text-center font-medium"
@@ -277,7 +277,7 @@ Our "Sovereign Shield" architecture guarantees that your data is isolated in a p
           }}
         />
         
-        <div className="absolute inset-0 bg-gradient-to-t from-charcoal-800/80 via-transparent to-charcoal-800/50" />
+        <div className="absolute inset-0 bg-gradient-to-t from-[#1A1A1A]/80 via-transparent to-[#1A1A1A]/50" />
         
         <div className="absolute inset-0 opacity-[0.03]">
           <svg className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
@@ -355,7 +355,7 @@ Our "Sovereign Shield" architecture guarantees that your data is isolated in a p
           </div>
         </div>
       </section>
-      <section className="py-20 bg-charcoal-900 border-y border-charcoal-700">
+      <section className="py-20 bg-[#1A1A1A] border-y border-[#3D3D3D]">
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
             {stats.map((stat, index) => (
@@ -428,7 +428,7 @@ Our "Sovereign Shield" architecture guarantees that your data is isolated in a p
           ))}
         </div>
       </section>
-      <section id="testimonial" className="py-24 md:py-32 bg-charcoal-900 text-white relative overflow-hidden">
+      <section id="testimonial" className="py-24 md:py-32 bg-[#1A1A1A] text-white relative overflow-hidden">
         <div 
           className="absolute inset-0 opacity-5"
           style={{ background: `radial-gradient(circle at center, ${primaryColor}, transparent, transparent)` }}
@@ -448,7 +448,7 @@ Our "Sovereign Shield" architecture guarantees that your data is isolated in a p
             Our win rate increased by 40%.
           </blockquote>
           
-          <div className="pt-8 border-t border-charcoal-700 inline-block">
+          <div className="pt-8 border-t border-[#3D3D3D] inline-block">
             <div className="font-medium text-lg text-white mb-1">
               Sarah Mitchell
             </div>
@@ -492,7 +492,7 @@ Our "Sovereign Shield" architecture guarantees that your data is isolated in a p
         </div>
       </section>
 
-      <footer className="bg-charcoal-900 border-t border-charcoal-800 py-16">
+      <footer className="bg-[#1A1A1A] border-t border-[#2B2B2B] py-16">
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
           <div className="grid md:grid-cols-4 gap-12 mb-12">
             <div className="md:col-span-2">
@@ -525,7 +525,7 @@ Our "Sovereign Shield" architecture guarantees that your data is isolated in a p
               </ul>
             </div>
           </div>
-          <div className="pt-8 border-t border-charcoal-800 flex flex-col md:flex-row justify-between items-center gap-4">
+          <div className="pt-8 border-t border-[#2B2B2B] flex flex-col md:flex-row justify-between items-center gap-4">
             <p className="text-gray-500 text-sm">
               © {new Date().getFullYear()} {displayName}. All rights reserved.
             </p>
