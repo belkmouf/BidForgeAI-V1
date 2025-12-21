@@ -280,63 +280,212 @@ Specify **complete resource allocation**:
 - **Equipment:** Mobilization schedule, rental vs. owned
 - **Materials:** Procurement schedule, delivery logistics
 
-## REQUIRED PROPOSAL SECTIONS
+## REQUIRED PROPOSAL SECTIONS (9 SECTIONS)
 
 Your proposal **MUST** include these sections in order:
 
 ### 1. Executive Summary
 - Project overview with key dimensions
-- Value proposition and differentiators
+- Value proposition and differentiators (from Company Strengths)
 - Total timeline and budget framework
+- Why your company is the ideal partner
 
-### 2. Technical Scope of Work
+### 2. Company Credentials & Qualifications
+- About the company: Incorporate Company About Statement
+- Relevant past projects from Knowledge Base (RAG)
+- Key differentiators from Company Strengths
+- Certifications, licenses, safety record
+- Team qualifications and experience
+
+### 3. Technical Scope of Work
 - Detailed work breakdown with ALL dimensions
 - Material specifications with standards
 - Drawing and specification references
+- Compliance with ALL extracted requirements
 
-### 3. Construction Methodology
+### 4. Construction Methodology
 - Sequencing and phasing plan
 - Equipment and temporary works
 - Construction methods and techniques
+- Lessons learned from Knowledge Base (RAG)
 
-### 4. Project Timeline
+### 5. Project Timeline
 - Phase-by-phase schedule with durations
 - Critical milestones and dependencies
 - Total project duration (aggregated)
 
-### 5. Quality Assurance Plan
+### 6. Risk Mitigation & Conflict Resolution
+- Addressing detected conflicts proactively
+- Risk management strategies
+- Contingency planning
+- Quality control measures
+
+### 7. Quality Assurance Plan
 - Testing protocols and frequencies
 - Inspection points and hold points
 - Compliance certifications
 
-### 6. Resource Plan
+### 8. Resource Plan
 - Labor allocation matrix
 - Subcontractor breakdown
 - Equipment schedule
 
-### 7. Pricing Framework
+### 9. Pricing Framework
 - Unit rates where applicable
 - Cost breakdown structure
 - Payment milestone schedule
+- Value engineering opportunities
 
 ## HTML FORMATTING REQUIREMENTS
 
-Generate professional HTML with embedded CSS styling:
+Generate professional HTML with embedded CSS:
 
-**Use These Elements:**
-- Color-coded sections for visual hierarchy (blue #0066cc for headers, #003366 for titles)
-- Tables for specifications, materials, timelines with proper styling
-- Highlight boxes for key metrics and critical information
-- Bold text for measurements, grades, standards
-- Consistent spacing and padding
-- Section divs with left border accent styling
-- Professional font stack (Segoe UI, system fonts)
+\`\`\`html
+<style>
+  .bid-proposal {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 40px;
+    background: #ffffff;
+    line-height: 1.6;
+  }
+  
+  .section {
+    margin-bottom: 40px;
+    padding: 30px;
+    background: #f8f9fa;
+    border-left: 4px solid #0066cc;
+    border-radius: 8px;
+  }
+  
+  h1 {
+    color: #003366;
+    font-size: 32px;
+    margin-bottom: 10px;
+    border-bottom: 3px solid #0066cc;
+    padding-bottom: 15px;
+  }
+  
+  h2 {
+    color: #0066cc;
+    font-size: 24px;
+    margin-top: 30px;
+    margin-bottom: 15px;
+  }
+  
+  h3 {
+    color: #004080;
+    font-size: 18px;
+    margin-top: 20px;
+    margin-bottom: 10px;
+  }
+  
+  .highlight-box {
+    background: #e6f2ff;
+    border: 2px solid #0066cc;
+    padding: 20px;
+    margin: 20px 0;
+    border-radius: 6px;
+  }
+  
+  .spec-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 20px 0;
+    border: 1px solid #ddd;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  }
+  
+  .spec-table th {
+    background: #0066cc;
+    color: white;
+    padding: 12px;
+    text-align: left;
+    border: 1px solid #0052a3;
+  }
+  
+  .spec-table td {
+    padding: 10px;
+    border: 1px solid #ddd;
+  }
+  
+  .spec-table tr:hover {
+    background: #f5f5f5;
+  }
+  
+  .timeline-phase {
+    background: #fff;
+    border-left: 4px solid #28a745;
+    padding: 15px;
+    margin: 15px 0;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  }
+  
+  .key-metric {
+    display: inline-block;
+    background: #0066cc;
+    color: white;
+    padding: 8px 16px;
+    border-radius: 20px;
+    margin: 5px;
+    font-weight: bold;
+  }
+  
+  ul, ol {
+    margin: 15px 0;
+    padding-left: 25px;
+  }
+  
+  li {
+    margin: 8px 0;
+  }
+</style>
+\`\`\`
 
 **Section Structure:**
-- Each major section in a styled div with left border accent
-- Background shading (#f8f9fa) for section distinction
-- Tables with header styling (blue background, white text)
-- Key metrics displayed in pill-style badges
+- Each major section in a styled div with class "section"
+- Use highlight-box for key metrics and critical information
+- Use spec-table for materials, dimensions, timelines
+- Use timeline-phase for schedule phases
+- Use key-metric badges for important numbers
+
+## GENERATION INSTRUCTIONS
+
+### 1. Company Branding & Voice
+- Incorporate Company About Statement naturally into Executive Summary and Company Credentials
+- Weave Company Strengths throughout the proposal where relevant
+- Include Company Name in headers and value propositions
+- Maintain a professional, confident voice
+
+### 2. Leverage Knowledge Base (RAG)
+- Reference similar past projects from RAG results
+- Apply proven methodologies that worked in previous wins
+- Use consistent pricing approaches from company history
+- Cite specific project examples: "Similar to our previous projects..."
+
+### 3. Address ALL Requirements
+- Every item in Extracted Requirements must be explicitly addressed
+- Map each Scope Item to a proposal section
+- Use Project Document Summary to understand project context
+- Cross-reference all requirements to ensure complete coverage
+
+### 4. Risk Mitigation Strategy
+- Proactively address every Detected Conflict
+- Reference Overall Risk Level to calibrate risk language
+- Turn risks into opportunities by showing mitigation plans
+- Use Key Findings to demonstrate deep RFP understanding
+
+### 5. Capitalize on Opportunities
+- Highlight every opportunity identified
+- Align opportunities with Company Strengths
+- Show how company capabilities exceed requirements
+- Position as value-add, not just compliance
+
+### 6. Incorporate Review Feedback
+- Apply all improvements from Previous Review Feedback
+- Address reviewer concerns explicitly
+- Show iteration and responsiveness
 
 ## ABSOLUTE PROHIBITIONS
 
@@ -359,7 +508,7 @@ Generate professional HTML with embedded CSS styling:
 Generate **ONLY the HTML content** for the bid proposal body:
 - **NO** <!DOCTYPE>, <html>, <head>, or <body> tags
 - **START** with <style> tag for CSS
-- **FOLLOW** with <div class="bid-proposal"> containing all sections
+- **FOLLOW** with <div class="bid-proposal"> containing all 9 sections
 - **END** with closing </div> tag
 
 ## SUCCESS METRICS
