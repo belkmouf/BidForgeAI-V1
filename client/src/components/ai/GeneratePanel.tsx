@@ -81,7 +81,6 @@ export function GeneratePanel({ onGenerate, onKill, isGenerating }: GeneratePane
                 <SelectItem value="anthropic">Anthropic Claude</SelectItem>
                 <SelectItem value="gemini">Google Gemini</SelectItem>
                 <SelectItem value="deepseek">DeepSeek</SelectItem>
-                <SelectItem value="openai">OpenAI GPT-4o</SelectItem>
                 <SelectItem value="grok">xAI Grok 4</SelectItem>
               </SelectContent>
             </Select>
