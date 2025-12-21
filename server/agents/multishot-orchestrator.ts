@@ -400,11 +400,17 @@ export class MultishotWorkflowOrchestrator {
       // ═══════════════════════════════════════════════════════════════════════
       state.currentPhase = 'generation';
       state.currentStep++;
+      const modelDisplayName = selectedModel === 'grok' ? 'Grok 4' : 
+                              selectedModel === 'anthropic' ? 'Claude Sonnet 4' :
+                              selectedModel === 'gemini' ? 'Gemini 2.5 Flash' :
+                              selectedModel === 'deepseek' ? 'DeepSeek' :
+                              selectedModel === 'openai' ? 'GPT-4o' : selectedModel;
+      
       this.emitWithProject(projectId, {
         type: 'phase_start',
         agentName: 'generation',
         iteration: 0,
-        message: 'Phase 5: Bid Generation (DeepSeek optimized)',
+        message: `Phase 5: Bid Generation (${modelDisplayName})`,
         data: { model: selectedModel, timeout: '150s' },
       });
 
