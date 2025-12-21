@@ -4,6 +4,8 @@ import { DraftResultType, DocumentInfoType, AnalysisResultType } from './state';
 import { ChatOpenAI } from '@langchain/openai';
 import { ChatAnthropic } from '@langchain/anthropic';
 import { ChatGoogleGenerativeAI } from '@langchain/google-genai';
+import { getUserBrandingConfig } from '../lib/templates/bid-template-generator';
+import { searchService } from '../lib/search';
 
 export class GenerationAgent extends BaseAgent {
   name = 'generation';
@@ -102,9 +104,77 @@ export class GenerationAgent extends BaseAgent {
       const selectedModel = (input.data as { model?: string }).model || 'grok';
       const model = this.getModel(selectedModel);
 
+      // === FETCH COMPANY BRANDING INFO ===
+      let companyProfileSection = '';
+      try {
+        const brandingConfig = await getUserBrandingConfig(context.userId || null);
+        if (brandingConfig) {
+          companyProfileSection = `
+=== COMPANY PROFILE ===
+Company Name: ${brandingConfig.name}
+Website: ${brandingConfig.website || 'Not specified'}
+Tagline: ${brandingConfig.tagline || ''}
+
+Contact Information:
+- Representative: ${brandingConfig.defaultRep?.name || 'Not specified'}
+- Title: ${brandingConfig.defaultRep?.title || 'Not specified'}
+- Phone: ${brandingConfig.defaultRep?.phone || 'Not specified'}
+- Email: ${brandingConfig.defaultRep?.email || 'Not specified'}
+
+Address: ${brandingConfig.address || ''}, ${brandingConfig.city || ''}, ${brandingConfig.state || ''} ${brandingConfig.zip || ''}
+License Number: ${brandingConfig.licenseNumber || 'Not specified'}
+
+Use this company information to personalize the bid proposal and ensure consistent branding.
+`;
+          this.log('Company branding loaded successfully');
+        }
+      } catch (error) {
+        this.log('Could not load company branding, proceeding without it');
+      }
+
+      // === RAG SIMILARITY SEARCH FROM KNOWLEDGE BASE ===
+      let knowledgeBaseSection = '';
+      try {
+        const searchQuery = projectSummary || docs.slice(0, 2).map(d => d.content?.slice(0, 500)).join(' ') || '';
+        if (searchQuery.length > 50) {
+          const ragResults = await searchService.searchDocuments(
+            searchQuery.slice(0, 2000),
+            context.projectId,
+            { limit: 8, threshold: 0.6, useCache: true }
+          );
+          
+          if (ragResults && ragResults.length > 0) {
+            const relevantChunks = ragResults
+              .filter(r => r.score >= 0.6)
+              .slice(0, 6)
+              .map((r, idx) => `[${idx + 1}] Source: ${r.documentName} (Relevance: ${(r.score * 100).toFixed(0)}%)\n${r.content.slice(0, 800)}`)
+              .join('\n\n---\n\n');
+            
+            if (relevantChunks) {
+              knowledgeBaseSection = `
+=== KNOWLEDGE BASE CONTEXT (RAG Retrieved) ===
+The following relevant content has been retrieved from our company knowledge base of past projects and technical documentation:
+
+${relevantChunks}
+
+Use this knowledge base content to:
+- Reference similar past projects and proven methodologies
+- Apply winning strategies from previous successful bids
+- Ensure consistency with company standards and pricing approaches
+- Leverage technical solutions that have worked before
+`;
+              this.log(`RAG search returned ${ragResults.length} relevant chunks`);
+            }
+          }
+        }
+      } catch (error) {
+        this.log('RAG search failed, proceeding without knowledge base context');
+      }
+
       let analysisContext = '';
       if (analysis) {
         analysisContext = `
+=== RFP ANALYSIS ===
 Analysis Summary:
 - Quality Score: ${analysis.qualityScore}/100
 - Clarity Score: ${analysis.clarityScore}/100
@@ -120,7 +190,7 @@ ${analysis.opportunities.map(o => `- ${o}`).join('\n')}
       }
 
       const previousFeedback = state.review?.feedback?.length
-        ? `\n\nPrevious Review Feedback (attempt ${state.review.attempts}):\n${state.review.feedback.map(f => `- ${f}`).join('\n')}`
+        ? `\n\n=== PREVIOUS REVIEW FEEDBACK ===\nAttempt ${state.review.attempts}:\n${state.review.feedback.map(f => `- ${f}`).join('\n')}`
         : '';
 
       // Build document content from docs array
@@ -183,15 +253,29 @@ ALL technical details must be SPECIFIC and derived from the RFQ documents.
 Generate only the HTML content for the bid proposal body, not a full HTML document.`;
 
       const projectSummarySection = projectSummary 
-        ? `\n\nAI-GENERATED PROJECT SUMMARY:\n${projectSummary}\n`
+        ? `
+=== PROJECT DOCUMENT SUMMARY ===
+${projectSummary}
+`
         : '';
 
-      const userPrompt = `Generate a bid proposal for this RFQ:
+      const userPrompt = `Generate a comprehensive, winning bid proposal for this RFQ.
+${companyProfileSection}
+${knowledgeBaseSection}
 ${projectSummarySection}
 ${analysisContext}
 
-RFQ Documents:
-${documentContent.slice(0, 40000)}${previousFeedback}`;
+=== RFQ DOCUMENTS ===
+${documentContent.slice(0, 35000)}
+${previousFeedback}
+
+=== GENERATION INSTRUCTIONS ===
+1. Incorporate company branding and voice from the Company Profile section
+2. Reference relevant past projects from the knowledge base where applicable
+3. Address ALL requirements identified in the project document summary
+4. Mitigate any detected conflicts or risks proactively
+5. Align technical approach with company strengths and differentiators
+6. Generate a proposal that positions the company as the ideal partner for this project`;
 
       try {
         const response = await model.invoke([
