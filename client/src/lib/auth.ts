@@ -8,6 +8,7 @@ interface User {
   companyId: number | null;
   companyName: string | null;
   onboardingStatus?: string;
+  termsAcceptedAt?: string | null;
 }
 
 interface AuthState {

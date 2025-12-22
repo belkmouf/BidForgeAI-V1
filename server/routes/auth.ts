@@ -78,6 +78,7 @@ router.post('/register', async (req, res) => {
       .returning();
 
     // Create user as company_admin of the new company
+    // termsAcceptedAt is set during registration since they agree on signup
     const [newUser] = await db
       .insert(users)
       .values({
@@ -86,6 +87,7 @@ router.post('/register', async (req, res) => {
         name,
         role: 'company_admin', // First user is always company admin of their company
         companyId: newCompany.id,
+        termsAcceptedAt: new Date(), // User agreed to terms during signup
       })
       .returning();
 
@@ -126,6 +128,7 @@ router.post('/register', async (req, res) => {
         companyId: newUser.companyId,
         companyName: newCompany.name,
         onboardingStatus: newUser.onboardingStatus,
+        termsAcceptedAt: newUser.termsAcceptedAt?.toISOString() || null,
       },
       accessToken,
       // Note: refreshToken no longer returned in response for security
@@ -248,6 +251,7 @@ router.post('/login', async (req, res) => {
         role: user.role,
         companyId: user.companyId,
         onboardingStatus: user.onboardingStatus,
+        termsAcceptedAt: user.termsAcceptedAt?.toISOString() || null,
       },
       accessToken,
       // Note: refreshToken no longer returned in response for security
@@ -491,6 +495,44 @@ router.post('/logout', authenticateToken, async (req: AuthRequest, res) => {
   } catch (error: any) {
     console.error('Logout error:', error);
     res.status(500).json({ error: 'Logout failed' });
+  }
+});
+
+// Accept Terms of Service
+router.post('/accept-terms', authenticateToken, async (req: AuthRequest, res) => {
+  try {
+    if (!req.user?.userId) {
+      return res.status(401).json({ error: 'Not authenticated' });
+    }
+
+    const [updatedUser] = await db
+      .update(users)
+      .set({ 
+        termsAcceptedAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, req.user.userId))
+      .returning();
+
+    if (!updatedUser) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    logContext.audit('User accepted terms of service', {
+      userId: req.user.userId,
+      email: req.user.email,
+      action: 'accept_terms',
+      ip: req.ip,
+      userAgent: req.get('User-Agent')
+    });
+
+    res.json({ 
+      success: true,
+      termsAcceptedAt: updatedUser.termsAcceptedAt?.toISOString() || null,
+    });
+  } catch (error: any) {
+    console.error('Accept terms error:', error);
+    res.status(500).json({ error: 'Failed to accept terms' });
   }
 });
 

@@ -4,6 +4,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { DynamicBackground } from "@/components/ui/custom-cursor";
+import { TermsAcceptanceModal } from "@/components/TermsAcceptanceModal";
 import { useAuthStore } from "@/lib/auth";
 import { useEffect } from "react";
 import NotFound from "@/pages/not-found";
@@ -194,6 +195,7 @@ function App() {
         <DynamicBackground />
         <AppInit />
         <Toaster />
+        <TermsAcceptanceModal />
         <Router />
       </TooltipProvider>
     </QueryClientProvider>

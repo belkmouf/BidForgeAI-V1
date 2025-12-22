@@ -137,6 +137,7 @@ export const users = pgTable("users", {
   isActive: boolean("is_active").default(true).notNull(),
   onboardingStatus: varchar("onboarding_status", { length: 20 }).default("pending").notNull(),
   brandingProfile: jsonb("branding_profile").$type<BrandingProfile>().default({}),
+  termsAcceptedAt: timestamp("terms_accepted_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
   lastLoginAt: timestamp("last_login_at"),
