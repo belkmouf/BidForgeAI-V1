@@ -65,6 +65,7 @@ import { generateBidTemplate, wrapContentInTemplate, getCompanyConfig, getUserBr
 import { wrapContentInPremiumTemplate } from './lib/templates/gcc-premium-template';
 import { sanitizeModelHtml } from './lib/ai-output';
 import { pythonSketchClient } from './lib/pythonSketchClient';
+import { isRagReadyConfigured, searchRagReady, listRagReadyDocuments, getRagReadyDocument, getRagReadyDocumentChunks } from './lib/ragready';
 import multer from "multer";
 import { z } from "zod";
 
@@ -3163,6 +3164,89 @@ Mark any missing information as [TO BE PROVIDED].`,
     } catch (error: any) {
       console.error('Logo upload error:', error);
       res.status(500).json({ error: "Failed to upload logo" });
+    }
+  });
+
+  // ==================== RAGREADY INTEGRATION ROUTES ====================
+
+  // Check RagReady connection status
+  app.get("/api/ragready/status", authenticateToken, async (_req: AuthRequest, res) => {
+    try {
+      const configured = isRagReadyConfigured();
+      res.json({ 
+        configured,
+        message: configured 
+          ? 'RagReady integration is active' 
+          : 'RagReady API key not configured. Add RAGREADY_API_KEY to your secrets.'
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Search documents via RagReady
+  app.post("/api/ragready/search", authenticateToken, async (req: AuthRequest, res) => {
+    try {
+      const { query, topK, collectionId, metadataFilter } = req.body;
+
+      if (!query || typeof query !== 'string') {
+        return res.status(400).json({ error: 'Query is required' });
+      }
+
+      const results = await searchRagReady(query, {
+        topK: topK || 5,
+        collectionId,
+        metadataFilter
+      });
+
+      res.json(results);
+    } catch (error: any) {
+      console.error('[RagReady API] Search error:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // List documents from RagReady
+  app.get("/api/ragready/documents", authenticateToken, async (req: AuthRequest, res) => {
+    try {
+      const collectionId = req.query.collectionId as string | undefined;
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 50;
+      const offset = req.query.offset ? parseInt(req.query.offset as string) : 0;
+
+      const documents = await listRagReadyDocuments({
+        collectionId,
+        limit,
+        offset
+      });
+
+      res.json(documents);
+    } catch (error: any) {
+      console.error('[RagReady API] List documents error:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get specific document from RagReady
+  app.get("/api/ragready/documents/:documentId", authenticateToken, async (req: AuthRequest, res) => {
+    try {
+      const { documentId } = req.params;
+      const document = await getRagReadyDocument(documentId);
+      res.json(document);
+    } catch (error: any) {
+      console.error('[RagReady API] Get document error:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get document chunks from RagReady
+  app.get("/api/ragready/documents/:documentId/chunks", authenticateToken, async (req: AuthRequest, res) => {
+    try {
+      const { documentId } = req.params;
+      const chunks = await getRagReadyDocumentChunks(documentId);
+      res.json(chunks);
+    } catch (error: any) {
+      console.error('[RagReady API] Get chunks error:', error);
+      res.status(500).json({ error: error.message });
     }
   });
 
