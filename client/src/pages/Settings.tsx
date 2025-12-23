@@ -302,8 +302,8 @@ export default function Settings() {
           continue;
         }
 
-        if (file.size > 10 * 1024 * 1024) {
-          setKnowledgeError(`File too large: ${file.name}. Maximum size is 10MB.`);
+        if (file.size > 20 * 1024 * 1024) {
+          setKnowledgeError(`File too large: ${file.name}. Maximum size is 20MB.`);
           continue;
         }
 
@@ -1077,7 +1077,7 @@ export default function Settings() {
                       <div className="flex flex-col items-center gap-2">
                         <Upload className="h-6 w-6" />
                         <span>Click to upload documents</span>
-                        <span className="text-xs text-muted-foreground">CSV, DOCX, PDF, TXT, Excel (max 10MB each)</span>
+                        <span className="text-xs text-muted-foreground">CSV, DOCX, PDF, TXT, Excel (max 20MB each)</span>
                       </div>
                     )}
                   </Button>

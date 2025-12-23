@@ -2834,8 +2834,8 @@ Mark any missing information as [TO BE PROVIDED].`,
         return res.status(400).json({ error: "File type not supported. Use CSV, DOCX, PDF, TXT, or Excel files." });
       }
 
-      if (req.file.size > 10 * 1024 * 1024) {
-        return res.status(400).json({ error: "File too large. Maximum size is 10MB." });
+      if (req.file.size > 20 * 1024 * 1024) {
+        return res.status(400).json({ error: "File too large. Maximum size is 20MB." });
       }
 
       // Determine file type
