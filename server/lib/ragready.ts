@@ -3,7 +3,14 @@
  * 
  * This module provides integration with RagReady.io's RAG-as-a-Service API
  * for document intelligence and semantic search capabilities.
+ * 
+ * Security: API key is stored in environment variables (RAGREADY_API_KEY)
+ * Company isolation: Each company has their own collection ID stored in settings
  */
+
+import { db } from '../db';
+import { companies } from '@shared/schema';
+import { eq } from 'drizzle-orm';
 
 const RAGREADY_API_KEY = process.env.RAGREADY_API_KEY;
 const RAGREADY_BASE_URL = process.env.RAGREADY_BASE_URL || 'https://www.ragready.io';
@@ -41,7 +48,98 @@ interface RagReadyDocumentsResponse {
 }
 
 /**
- * Check if RagReady integration is configured
+ * Get RagReady collection ID for a specific company
+ * Collection IDs partition data in RagReady - no sensitive data stored
+ */
+export async function getCompanyCollectionId(companyId: number): Promise<string | null> {
+  try {
+    const [company] = await db
+      .select()
+      .from(companies)
+      .where(eq(companies.id, companyId))
+      .limit(1);
+
+    if (!company) return null;
+
+    const settings = company.settings as Record<string, any> | null;
+    return settings?.ragreadyCollectionId || null;
+  } catch (error) {
+    console.error('[RagReady] Error fetching company collection:', error);
+    return null;
+  }
+}
+
+/**
+ * Save RagReady collection ID for a company
+ * Only stores the collection ID (non-sensitive) - API key is in env vars
+ */
+export async function saveCompanyCollectionId(
+  companyId: number, 
+  collectionId: string
+): Promise<boolean> {
+  try {
+    const [company] = await db
+      .select()
+      .from(companies)
+      .where(eq(companies.id, companyId))
+      .limit(1);
+
+    if (!company) return false;
+
+    const currentSettings = (company.settings as Record<string, any>) || {};
+    const updatedSettings = {
+      ...currentSettings,
+      ragreadyCollectionId: collectionId,
+    };
+
+    await db
+      .update(companies)
+      .set({ 
+        settings: updatedSettings,
+        updatedAt: new Date()
+      })
+      .where(eq(companies.id, companyId));
+
+    return true;
+  } catch (error) {
+    console.error('[RagReady] Error saving company collection:', error);
+    return false;
+  }
+}
+
+/**
+ * Remove RagReady collection ID from a company
+ */
+export async function removeCompanyCollectionId(companyId: number): Promise<boolean> {
+  try {
+    const [company] = await db
+      .select()
+      .from(companies)
+      .where(eq(companies.id, companyId))
+      .limit(1);
+
+    if (!company) return false;
+
+    const currentSettings = (company.settings as Record<string, any>) || {};
+    const { ragreadyCollectionId, ...restSettings } = currentSettings;
+
+    await db
+      .update(companies)
+      .set({ 
+        settings: restSettings,
+        updatedAt: new Date()
+      })
+      .where(eq(companies.id, companyId));
+
+    return true;
+  } catch (error) {
+    console.error('[RagReady] Error removing company collection:', error);
+    return false;
+  }
+}
+
+/**
+ * Check if RagReady integration is configured (API key in env vars)
  */
 export function isRagReadyConfigured(): boolean {
   return !!RAGREADY_API_KEY;
@@ -52,7 +150,7 @@ export function isRagReadyConfigured(): boolean {
  */
 function getAuthHeaders(): HeadersInit {
   if (!RAGREADY_API_KEY) {
-    throw new Error('RAGREADY_API_KEY is not configured');
+    throw new Error('RAGREADY_API_KEY is not configured in environment variables');
   }
   
   return {
@@ -62,25 +160,39 @@ function getAuthHeaders(): HeadersInit {
 }
 
 /**
+ * Get collection ID for a company (for data isolation)
+ */
+async function getEffectiveCollectionId(companyId?: number, explicitCollectionId?: string): Promise<string | undefined> {
+  // Explicit collection ID takes priority
+  if (explicitCollectionId) return explicitCollectionId;
+  
+  // Try company-specific collection
+  if (companyId) {
+    const companyCollection = await getCompanyCollectionId(companyId);
+    if (companyCollection) return companyCollection;
+  }
+  
+  return undefined;
+}
+
+/**
  * Search documents using RagReady's semantic search
- * 
- * @param query - The search query
- * @param options - Search options
- * @returns Search results with relevance scores
  */
 export async function searchRagReady(
   query: string,
   options: {
+    companyId?: number;
     topK?: number;
     collectionId?: string;
     metadataFilter?: Record<string, unknown>;
   } = {}
 ): Promise<RagReadySearchResponse> {
   if (!isRagReadyConfigured()) {
-    throw new Error('RagReady integration is not configured. Please add RAGREADY_API_KEY.');
+    throw new Error('RagReady integration is not configured. Please add RAGREADY_API_KEY to your environment.');
   }
 
-  const { topK = 5, collectionId, metadataFilter } = options;
+  const { companyId, topK = 5, collectionId, metadataFilter } = options;
+  const effectiveCollectionId = await getEffectiveCollectionId(companyId, collectionId);
 
   try {
     const response = await fetch(`${RAGREADY_BASE_URL}/v1/search`, {
@@ -89,7 +201,7 @@ export async function searchRagReady(
       body: JSON.stringify({
         query,
         top_k: topK,
-        collection_id: collectionId,
+        collection_id: effectiveCollectionId,
         metadata_filter: metadataFilter,
       }),
     });
@@ -109,26 +221,25 @@ export async function searchRagReady(
 
 /**
  * List documents from RagReady
- * 
- * @param options - List options
- * @returns List of documents
  */
 export async function listRagReadyDocuments(
   options: {
+    companyId?: number;
     collectionId?: string;
     limit?: number;
     offset?: number;
   } = {}
 ): Promise<RagReadyDocumentsResponse> {
   if (!isRagReadyConfigured()) {
-    throw new Error('RagReady integration is not configured. Please add RAGREADY_API_KEY.');
+    throw new Error('RagReady integration is not configured. Please add RAGREADY_API_KEY to your environment.');
   }
 
-  const { collectionId, limit = 50, offset = 0 } = options;
+  const { companyId, collectionId, limit = 50, offset = 0 } = options;
+  const effectiveCollectionId = await getEffectiveCollectionId(companyId, collectionId);
 
   try {
     const params = new URLSearchParams();
-    if (collectionId) params.append('collection_id', collectionId);
+    if (effectiveCollectionId) params.append('collection_id', effectiveCollectionId);
     if (limit) params.append('limit', String(limit));
     if (offset) params.append('offset', String(offset));
 
@@ -154,13 +265,10 @@ export async function listRagReadyDocuments(
 
 /**
  * Get a specific document's details from RagReady
- * 
- * @param documentId - The document ID
- * @returns Document details
  */
 export async function getRagReadyDocument(documentId: string): Promise<RagReadyDocument> {
   if (!isRagReadyConfigured()) {
-    throw new Error('RagReady integration is not configured. Please add RAGREADY_API_KEY.');
+    throw new Error('RagReady integration is not configured. Please add RAGREADY_API_KEY to your environment.');
   }
 
   try {
@@ -184,15 +292,12 @@ export async function getRagReadyDocument(documentId: string): Promise<RagReadyD
 
 /**
  * Get document chunks/content from RagReady
- * 
- * @param documentId - The document ID
- * @returns Document chunks
  */
 export async function getRagReadyDocumentChunks(
   documentId: string
 ): Promise<{ chunks: Array<{ id: string; content: string; metadata?: Record<string, unknown> }> }> {
   if (!isRagReadyConfigured()) {
-    throw new Error('RagReady integration is not configured. Please add RAGREADY_API_KEY.');
+    throw new Error('RagReady integration is not configured. Please add RAGREADY_API_KEY to your environment.');
   }
 
   try {
@@ -216,25 +321,20 @@ export async function getRagReadyDocumentChunks(
 
 /**
  * Enhanced search that combines RagReady results with local context
- * 
- * @param query - The search query
- * @param options - Search options
- * @returns Combined search results
  */
 export async function hybridSearchWithRagReady(
   query: string,
   localResults: Array<{ content: string; score: number; source: string }>,
-  options: { topK?: number } = {}
+  options: { companyId?: number; topK?: number } = {}
 ): Promise<Array<{ content: string; score: number; source: string }>> {
-  const { topK = 10 } = options;
+  const { companyId, topK = 10 } = options;
 
-  // If RagReady is not configured, return local results only
   if (!isRagReadyConfigured()) {
     return localResults.slice(0, topK);
   }
 
   try {
-    const ragReadyResponse = await searchRagReady(query, { topK });
+    const ragReadyResponse = await searchRagReady(query, { companyId, topK });
     
     // Convert RagReady results to unified format
     const ragReadyResults = ragReadyResponse.results.map(r => ({
@@ -257,6 +357,9 @@ export async function hybridSearchWithRagReady(
 
 export default {
   isRagReadyConfigured,
+  getCompanyCollectionId,
+  saveCompanyCollectionId,
+  removeCompanyCollectionId,
   searchRagReady,
   listRagReadyDocuments,
   getRagReadyDocument,

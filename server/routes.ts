@@ -65,7 +65,16 @@ import { generateBidTemplate, wrapContentInTemplate, getCompanyConfig, getUserBr
 import { wrapContentInPremiumTemplate } from './lib/templates/gcc-premium-template';
 import { sanitizeModelHtml } from './lib/ai-output';
 import { pythonSketchClient } from './lib/pythonSketchClient';
-import { isRagReadyConfigured, searchRagReady, listRagReadyDocuments, getRagReadyDocument, getRagReadyDocumentChunks } from './lib/ragready';
+import { 
+  isRagReadyConfigured, 
+  searchRagReady, 
+  listRagReadyDocuments, 
+  getRagReadyDocument, 
+  getRagReadyDocumentChunks,
+  getCompanyCollectionId,
+  saveCompanyCollectionId,
+  removeCompanyCollectionId
+} from './lib/ragready';
 import multer from "multer";
 import { z } from "zod";
 
@@ -3169,31 +3178,93 @@ Mark any missing information as [TO BE PROVIDED].`,
 
   // ==================== RAGREADY INTEGRATION ROUTES ====================
 
-  // Check RagReady connection status
-  app.get("/api/ragready/status", authenticateToken, async (_req: AuthRequest, res) => {
+  // Check RagReady connection status for current company
+  app.get("/api/ragready/status", authenticateToken, async (req: AuthRequest, res) => {
     try {
       const configured = isRagReadyConfigured();
+      const companyId = req.user?.companyId;
+      let collectionId: string | null = null;
+
+      if (companyId) {
+        collectionId = await getCompanyCollectionId(companyId);
+      }
+
       res.json({ 
         configured,
+        companyId,
+        collectionId,
         message: configured 
-          ? 'RagReady integration is active' 
-          : 'RagReady API key not configured. Add RAGREADY_API_KEY to your secrets.'
+          ? collectionId 
+            ? `RagReady active with collection: ${collectionId}`
+            : 'RagReady active. Set a collection ID to isolate your company data.'
+          : 'RagReady API key not configured. Contact admin to add RAGREADY_API_KEY.'
       });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
   });
 
-  // Search documents via RagReady
+  // Configure RagReady collection ID for company (admin only)
+  app.post("/api/ragready/config", authenticateToken, async (req: AuthRequest, res) => {
+    try {
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ error: 'No company associated with user' });
+      }
+
+      const { collectionId } = req.body;
+      if (!collectionId || typeof collectionId !== 'string') {
+        return res.status(400).json({ error: 'Collection ID is required' });
+      }
+
+      const success = await saveCompanyCollectionId(companyId, collectionId);
+      if (!success) {
+        return res.status(500).json({ error: 'Failed to save configuration' });
+      }
+
+      res.json({ 
+        success: true, 
+        message: `Collection ID set to: ${collectionId}`,
+        collectionId 
+      });
+    } catch (error: any) {
+      console.error('[RagReady API] Config error:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Remove RagReady collection ID from company
+  app.delete("/api/ragready/config", authenticateToken, async (req: AuthRequest, res) => {
+    try {
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ error: 'No company associated with user' });
+      }
+
+      const success = await removeCompanyCollectionId(companyId);
+      if (!success) {
+        return res.status(500).json({ error: 'Failed to remove configuration' });
+      }
+
+      res.json({ success: true, message: 'Collection ID removed' });
+    } catch (error: any) {
+      console.error('[RagReady API] Remove config error:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Search documents via RagReady (uses company collection automatically)
   app.post("/api/ragready/search", authenticateToken, async (req: AuthRequest, res) => {
     try {
       const { query, topK, collectionId, metadataFilter } = req.body;
+      const companyId = req.user?.companyId;
 
       if (!query || typeof query !== 'string') {
         return res.status(400).json({ error: 'Query is required' });
       }
 
       const results = await searchRagReady(query, {
+        companyId,
         topK: topK || 5,
         collectionId,
         metadataFilter
@@ -3206,14 +3277,16 @@ Mark any missing information as [TO BE PROVIDED].`,
     }
   });
 
-  // List documents from RagReady
+  // List documents from RagReady (uses company collection automatically)
   app.get("/api/ragready/documents", authenticateToken, async (req: AuthRequest, res) => {
     try {
+      const companyId = req.user?.companyId;
       const collectionId = req.query.collectionId as string | undefined;
       const limit = req.query.limit ? parseInt(req.query.limit as string) : 50;
       const offset = req.query.offset ? parseInt(req.query.offset as string) : 0;
 
       const documents = await listRagReadyDocuments({
+        companyId,
         collectionId,
         limit,
         offset
