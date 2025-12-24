@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Settings as SettingsIcon, Bell, Palette, Shield, User, LogOut, Lock, Loader2, Building2, Globe, Phone, Mail, MapPin, Award, Upload, CheckCircle, FileText, Trash2, File, FileSpreadsheet, Sparkles, Plus, Edit2, Save, X } from 'lucide-react';
+import { Settings as SettingsIcon, Bell, Palette, Shield, User, LogOut, Lock, Loader2, Building2, Globe, Phone, Mail, MapPin, Award, Upload, CheckCircle, FileText, Trash2, File, FileSpreadsheet, Sparkles, Plus, Edit2, Save, X, Database, ExternalLink } from 'lucide-react';
 import { useAuthStore, logout, apiRequest } from '@/lib/auth';
 
 interface BrandingProfile {
@@ -107,6 +107,15 @@ export default function Settings() {
   const [savingInstructionId, setSavingInstructionId] = useState<number | null>(null);
   const [deletingInstructionId, setDeletingInstructionId] = useState<number | null>(null);
 
+  // RagReady Integration state
+  const [ragreadyCollectionId, setRagreadyCollectionId] = useState('');
+  const [ragreadyConfigured, setRagreadyConfigured] = useState(false);
+  const [ragreadyLoading, setRagreadyLoading] = useState(true);
+  const [ragreadySaving, setRagreadySaving] = useState(false);
+  const [ragreadyDeleting, setRagreadyDeleting] = useState(false);
+  const [ragreadySuccess, setRagreadySuccess] = useState('');
+  const [ragreadyError, setRagreadyError] = useState('');
+
   useEffect(() => {
     const fetchBranding = async () => {
       try {
@@ -181,6 +190,81 @@ export default function Settings() {
       fetchAiInstructions();
     }
   }, [isAuthenticated]);
+
+  // Fetch RagReady status
+  useEffect(() => {
+    const fetchRagReadyStatus = async () => {
+      try {
+        const response = await apiRequest('/api/ragready/status');
+        if (response.ok) {
+          const data = await response.json();
+          setRagreadyConfigured(data.configured);
+          setRagreadyCollectionId(data.collectionId || '');
+        }
+      } catch (error) {
+        console.error('Failed to fetch RagReady status:', error);
+      } finally {
+        setRagreadyLoading(false);
+      }
+    };
+
+    if (isAuthenticated) {
+      fetchRagReadyStatus();
+    }
+  }, [isAuthenticated]);
+
+  const handleSaveRagReadyConfig = async () => {
+    if (!ragreadyCollectionId.trim()) {
+      setRagreadyError('Collection ID is required');
+      return;
+    }
+
+    setRagreadySaving(true);
+    setRagreadyError('');
+    setRagreadySuccess('');
+
+    try {
+      const response = await apiRequest('/api/ragready/config', {
+        method: 'POST',
+        body: JSON.stringify({ collectionId: ragreadyCollectionId.trim() }),
+      });
+
+      if (response.ok) {
+        setRagreadySuccess('Collection ID saved successfully');
+      } else {
+        const error = await response.json();
+        setRagreadyError(error.error || 'Failed to save collection ID');
+      }
+    } catch {
+      setRagreadyError('Failed to save collection ID. Please try again.');
+    } finally {
+      setRagreadySaving(false);
+    }
+  };
+
+  const handleDeleteRagReadyConfig = async () => {
+    setRagreadyDeleting(true);
+    setRagreadyError('');
+    setRagreadySuccess('');
+
+    try {
+      const response = await apiRequest('/api/ragready/config', {
+        method: 'DELETE',
+      });
+
+      if (response.ok) {
+        setRagreadyCollectionId('');
+        setRagreadySuccess('Collection ID removed successfully');
+      } else {
+        const error = await response.json();
+        setRagreadyError(error.error || 'Failed to remove collection ID');
+      }
+    } catch {
+      setRagreadyError('Failed to remove collection ID. Please try again.');
+    } finally {
+      setRagreadyDeleting(false);
+    }
+  };
 
   const handleStartEdit = (instruction: AIInstructionType) => {
     setEditingInstructionId(instruction.id);
@@ -1324,6 +1408,99 @@ export default function Settings() {
                         Add New Instruction Preset
                       </Button>
                     )}
+                  </>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card data-testid="card-ragready-settings">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Database className="h-5 w-5" />
+                  RagReady Integration
+                </CardTitle>
+                <CardDescription>
+                  Connect to{" "}
+                  <a 
+                    href="https://www.ragready.io" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-primary hover:underline inline-flex items-center gap-1"
+                  >
+                    RagReady.io
+                    <ExternalLink className="h-3 w-3" />
+                  </a>
+                  {" "}for enhanced document intelligence and semantic search capabilities. Enter your Collection ID to link your company's document library.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {ragreadySuccess && (
+                  <Alert className="bg-green-900/20 border-green-500/50">
+                    <AlertDescription className="text-green-400">{ragreadySuccess}</AlertDescription>
+                  </Alert>
+                )}
+                {ragreadyError && (
+                  <Alert variant="destructive" className="bg-red-900/20 border-red-500/50">
+                    <AlertDescription>{ragreadyError}</AlertDescription>
+                  </Alert>
+                )}
+
+                {ragreadyLoading ? (
+                  <div className="flex items-center justify-center py-6">
+                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                  </div>
+                ) : (
+                  <>
+                    {!ragreadyConfigured && (
+                      <Alert className="bg-amber-900/20 border-amber-500/50">
+                        <AlertDescription className="text-amber-400">
+                          RagReady API is not configured. Contact your administrator to add the RAGREADY_API_KEY.
+                        </AlertDescription>
+                      </Alert>
+                    )}
+
+                    <div className="space-y-2">
+                      <Label htmlFor="ragreadyCollectionId">Collection ID</Label>
+                      <div className="flex gap-2">
+                        <Input
+                          id="ragreadyCollectionId"
+                          value={ragreadyCollectionId}
+                          onChange={(e) => setRagreadyCollectionId(e.target.value)}
+                          placeholder="Enter your RagReady collection ID"
+                          disabled={!ragreadyConfigured}
+                          data-testid="input-ragready-collection-id"
+                        />
+                        <Button
+                          onClick={handleSaveRagReadyConfig}
+                          disabled={!ragreadyConfigured || ragreadySaving || !ragreadyCollectionId.trim()}
+                          data-testid="button-save-ragready"
+                        >
+                          {ragreadySaving ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Save className="h-4 w-4" />
+                          )}
+                        </Button>
+                        {ragreadyCollectionId && (
+                          <Button
+                            variant="outline"
+                            onClick={handleDeleteRagReadyConfig}
+                            disabled={ragreadyDeleting}
+                            className="text-red-500 hover:text-red-600 hover:bg-red-500/10"
+                            data-testid="button-delete-ragready"
+                          >
+                            {ragreadyDeleting ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <Trash2 className="h-4 w-4" />
+                            )}
+                          </Button>
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        The Collection ID links your company to a specific RagReady document collection for bid intelligence.
+                      </p>
+                    </div>
                   </>
                 )}
               </CardContent>
