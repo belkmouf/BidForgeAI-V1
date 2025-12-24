@@ -14,18 +14,21 @@ Preferred communication style: Simple, everyday language.
 
 The frontend uses React 18 with TypeScript and Vite, featuring a single-page application architecture with Wouter for routing and TanStack Query for server state. The UI is built with Shadcn UI (New York style), Radix UI primitives, and Tailwind CSS v4, incorporating a custom design system inspired by "Somerstone" with a specific color palette (Charcoal, Deep Teal, Antique Gold) and font hierarchy (Syne, Inter, Fraunces). It includes GSAP for animations. Key features include a dashboard with Recharts, a project workspace with drag-and-drop file upload, resizable panels, and an AI generation panel with multi-model selection and chat-based refinement. A Tiptap editor is used for rich text bid document editing.
 
-**4-Step Guided Workflow:**
-The project workspace implements a sequential 4-step workflow with visual stepper navigation:
-1. **Documents** (`/projects/:id/documents`): Upload and verify RFP documents with drag-and-drop, processing status, and file management
-2. **RFP Analysis** (`/projects/:id/analysis`): AI-powered document analysis with quality scores, risk assessment, and recommendations
-3. **Conflicts** (`/projects/:id/conflicts`): Review detected conflicts and inconsistencies in the RFP documents
-4. **Bid Generation** (`/projects/:id`): Generate and refine bid proposals with multi-model AI comparison
+**5-Step Guided Workflow:**
+The project creation implements a sequential 5-step workflow with visual stepper navigation. When a new project is created, users are guided through each step in order:
+1. **Upload Documents** (`/projects/:id/documents`): Upload and verify RFP documents with drag-and-drop, processing status, and file management
+2. **Review Documents** (`/projects/:id/summary`): Review AI-generated document summaries before proceeding
+3. **Analysis** (`/projects/:id/analysis`): AI-powered document analysis with quality scores, risk assessment, and recommendations
+4. **Review Conflicts** (`/projects/:id/conflicts`): Review detected conflicts and inconsistencies in the RFP documents with bulk ignore capabilities
+5. **Bid Generation** (`/projects/:id`): Generate and refine bid proposals with multi-model AI comparison
 
 Key workflow features:
 - `ProjectWorkflowLayout` component provides consistent stepper UI and navigation
-- `useProjectProgress` hook tracks completion status across steps
+- `getWorkflowSteps` function defines the step order and accessibility rules
 - Step gating prevents skipping ahead without completing prerequisites
-- Back/Next navigation with conditional disabling based on completion status
+- Back/Next navigation follows the sequential flow (back button goes to previous step, not project workspace)
+- Header back button respects the workflow sequence
+- New projects redirect to Upload Documents page after creation (not Bid Generation)
 
 ### Technical Implementations
 
@@ -43,7 +46,7 @@ The backend is Express.js with TypeScript, using Drizzle ORM for type-safe datab
   - Each agent can iterate up to 3 times (configurable) until output meets acceptance threshold.
   - Real-time progress streaming via Server-Sent Events (SSE) at `/api/agent-progress/progress/:projectId`.
   - Frontend `AgentProgressPanel` component displays multi-shot conversation progress with evaluation scores and refinement feedback.
-- **Conflict Detection:** AI-powered semantic conflict detection using OpenAI embeddings and numeric conflict detection via regex, identifying contradictions in bid documents with severity scoring.
+- **Conflict Detection:** AI-powered semantic conflict detection using OpenAI embeddings and numeric conflict detection via regex, identifying contradictions in bid documents with severity scoring. Features bulk operations for ignoring multiple conflicts at once, with 7 color-coded statuses (detected, pending, reviewing, resolved, dismissed, ignored, disputed). Backend endpoint `POST /api/conflicts/:projectId/bulk-update` supports batch status updates.
 - **Win Probability ML System:** Extracts 8 predictive features from project data (e.g., Project Type, Client Relationship, Competitiveness) to calculate bid win probability using a weighted statistical scoring model, providing confidence scores and actionable recommendations.
 
 **Authentication & Authorization:**
