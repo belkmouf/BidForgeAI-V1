@@ -5,9 +5,10 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { AlertTriangle, CheckCircle, XCircle, Search, FileWarning, Clock, ArrowRight, RefreshCw } from 'lucide-react';
+import { AlertTriangle, CheckCircle, XCircle, Search, FileWarning, Clock, ArrowRight, RefreshCw, EyeOff } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
 import { useAuthStore } from '@/lib/auth';
 
@@ -82,6 +83,7 @@ export function ConflictDetection({ projectId }: ConflictDetectionProps) {
   const [resolveDialogOpen, setResolveDialogOpen] = useState(false);
   const [resolution, setResolution] = useState('');
   const [activeFilter, setActiveFilter] = useState<string>('all');
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
 
   const authHeaders = {
     'Content-Type': 'application/json',
@@ -206,7 +208,67 @@ export function ConflictDetection({ projectId }: ConflictDetectionProps) {
     },
   });
 
+  const ignoreConflictsMutation = useMutation({
+    mutationFn: async (conflictIds: number[]) => {
+      const response = await fetch(`/api/conflicts/${projectId}/bulk-update`, {
+        method: 'POST',
+        headers: authHeaders,
+        body: JSON.stringify({ conflictIds, status: 'ignored' }),
+      });
+      if (!response.ok) throw new Error('Failed to ignore conflicts');
+      return response.json();
+    },
+    onSuccess: (_, conflictIds) => {
+      toast({
+        title: 'Conflicts Ignored',
+        description: `${conflictIds.length} conflict(s) have been ignored.`,
+      });
+      setSelectedIds(new Set());
+      queryClient.invalidateQueries({ queryKey: ['conflicts', projectId] });
+    },
+    onError: () => {
+      toast({
+        title: 'Error',
+        description: 'Failed to ignore conflicts. Please try again.',
+        variant: 'destructive',
+      });
+    },
+  });
+
   const conflicts = conflictsData?.conflicts || [];
+  
+  const toggleSelectConflict = (id: number) => {
+    setSelectedIds(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(id)) {
+        newSet.delete(id);
+      } else {
+        newSet.add(id);
+      }
+      return newSet;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === conflicts.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(conflicts.map(c => c.id)));
+    }
+  };
+
+  const handleIgnoreSelected = () => {
+    if (selectedIds.size > 0) {
+      ignoreConflictsMutation.mutate(Array.from(selectedIds));
+    }
+  };
+
+  const handleIgnoreAll = () => {
+    const allIds = conflicts.filter(c => c.status !== 'ignored' && c.status !== 'resolved').map(c => c.id);
+    if (allIds.length > 0) {
+      ignoreConflictsMutation.mutate(allIds);
+    }
+  };
 
   return (
     <div className="space-y-6" data-testid="conflict-detection-panel">
@@ -215,23 +277,47 @@ export function ConflictDetection({ projectId }: ConflictDetectionProps) {
           <h2 className="text-2xl font-semibold text-foreground">Conflict Detection</h2>
           <p className="text-muted-foreground">Identify and resolve inconsistencies in your bid documents</p>
         </div>
-        <Button
-          onClick={() => runDetectionMutation.mutate()}
-          disabled={runDetectionMutation.isPending}
-          data-testid="button-run-detection"
-        >
-          {runDetectionMutation.isPending ? (
-            <>
-              <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-              Scanning...
-            </>
-          ) : (
-            <>
-              <Search className="h-4 w-4 mr-2" />
-              Run Detection
-            </>
+        <div className="flex items-center gap-2">
+          {selectedIds.size > 0 && (
+            <Button
+              variant="outline"
+              onClick={handleIgnoreSelected}
+              disabled={ignoreConflictsMutation.isPending}
+              data-testid="button-ignore-selected"
+            >
+              <EyeOff className="h-4 w-4 mr-2" />
+              Ignore Selected ({selectedIds.size})
+            </Button>
           )}
-        </Button>
+          {conflicts.length > 0 && (
+            <Button
+              variant="outline"
+              onClick={handleIgnoreAll}
+              disabled={ignoreConflictsMutation.isPending}
+              data-testid="button-ignore-all"
+            >
+              <EyeOff className="h-4 w-4 mr-2" />
+              Ignore All
+            </Button>
+          )}
+          <Button
+            onClick={() => runDetectionMutation.mutate()}
+            disabled={runDetectionMutation.isPending}
+            data-testid="button-run-detection"
+          >
+            {runDetectionMutation.isPending ? (
+              <>
+                <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                Scanning...
+              </>
+            ) : (
+              <>
+                <Search className="h-4 w-4 mr-2" />
+                Run Detection
+              </>
+            )}
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -294,14 +380,23 @@ export function ConflictDetection({ projectId }: ConflictDetectionProps) {
                 {conflicts.map((conflict) => (
                   <Card 
                     key={conflict.id} 
-                    className="cursor-pointer hover:border-primary/50 transition-colors"
-                    onClick={() => setSelectedConflict(conflict)}
+                    className={`hover:border-primary/50 transition-colors ${selectedIds.has(conflict.id) ? 'border-primary bg-primary/5' : ''}`}
                     data-testid={`card-conflict-${conflict.id}`}
                   >
                     <CardContent className="p-4">
                       <div className="flex items-start justify-between gap-4">
                         <div className="flex items-start gap-3 flex-1">
-                          <div className="mt-1">
+                          <Checkbox
+                            checked={selectedIds.has(conflict.id)}
+                            onCheckedChange={() => toggleSelectConflict(conflict.id)}
+                            onClick={(e) => e.stopPropagation()}
+                            className="mt-1"
+                            data-testid={`checkbox-conflict-${conflict.id}`}
+                          />
+                          <div 
+                            className="mt-1 cursor-pointer"
+                            onClick={() => setSelectedConflict(conflict)}
+                          >
                             {typeIcons[conflict.conflictType] || <AlertTriangle className="h-4 w-4" />}
                           </div>
                           <div className="flex-1 min-w-0">

@@ -240,4 +240,51 @@ router.post(
   }
 );
 
+const bulkUpdateSchema = z.object({
+  conflictIds: z.array(z.number()).min(1),
+  status: conflictStatusEnum,
+});
+
+router.post(
+  '/:projectId/bulk-update',
+  authenticateToken,
+  requirePermission(PERMISSIONS.ANALYSIS_RUN),
+  async (req: AuthRequest, res: Response) => {
+    try {
+      const { projectId } = req.params;
+      const companyId = req.user?.companyId ?? null;
+      
+      const project = await storage.getProject(projectId, companyId);
+      if (!project) {
+        return res.status(404).json({ error: 'Project not found' });
+      }
+      
+      const validatedBody = bulkUpdateSchema.parse(req.body);
+      const { conflictIds, status } = validatedBody;
+
+      let updatedCount = 0;
+      for (const conflictId of conflictIds) {
+        const updated = await conflictDetectionService.updateConflictStatus(
+          conflictId,
+          projectId,
+          status,
+          req.user?.userId
+        );
+        if (updated) updatedCount++;
+      }
+
+      res.json({ 
+        message: `${updatedCount} conflict(s) updated to ${status}`,
+        updatedCount 
+      });
+    } catch (error) {
+      console.error('[ConflictRoutes] Bulk update error:', error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: 'Invalid request body', details: error.errors });
+      }
+      res.status(500).json({ error: 'Failed to bulk update conflicts' });
+    }
+  }
+);
+
 export { router as conflictRouter };
