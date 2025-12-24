@@ -49,6 +49,8 @@ export function ProjectWorkflowLayout({
       onBack();
     } else if (currentStep > 0) {
       navigate(steps[currentStep - 1].path);
+    } else {
+      navigate('/projects');
     }
   };
 
@@ -66,11 +68,15 @@ export function ProjectWorkflowLayout({
         <div className="container mx-auto px-4 py-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <Link href={`/projects/${projectId}`}>
-                <Button variant="ghost" size="icon" className="h-8 w-8" data-testid="button-back-header">
-                  <ChevronLeft className="h-4 w-4" />
-                </Button>
-              </Link>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="h-8 w-8" 
+                data-testid="button-back-header"
+                onClick={handleBack}
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
               <div>
                 <h1 className="font-semibold text-lg" data-testid="text-project-name">{projectName}</h1>
                 {clientName && (

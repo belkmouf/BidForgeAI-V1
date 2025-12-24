@@ -335,10 +335,10 @@ export default function ProjectAnalysis() {
       projectId={projectId}
       projectName={project.name}
       clientName={project.clientName}
-      currentStep={3}
+      currentStep={2}
       steps={steps}
-      backLabel="Back to Project"
-      onBack={() => navigate(`/projects/${projectId}`)}
+      backLabel="Back to Review Documents"
+      onBack={() => navigate(`/projects/${projectId}/summary`)}
       nextLabel="Review Conflicts"
       nextDisabled={!canProceed}
       onNext={() => navigate(`/projects/${projectId}/conflicts`)}
@@ -377,7 +377,7 @@ export default function ProjectAnalysis() {
               <FileText className="h-12 w-12 mx-auto text-yellow-600 mb-3" />
               <h3 className="font-semibold text-yellow-800 mb-2">No Documents Uploaded</h3>
               <p className="text-yellow-700 mb-4">Upload RFP documents first to run an analysis.</p>
-              <Link href={`/projects/${projectId}`}>
+              <Link href={`/projects/${projectId}/documents`}>
                 <Button variant="outline" data-testid="button-upload-docs">Upload Documents</Button>
               </Link>
             </div>
