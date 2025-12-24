@@ -471,7 +471,7 @@ export const conflictSeverityEnum = z.enum(["low", "medium", "high", "critical"]
 export type ConflictSeverity = z.infer<typeof conflictSeverityEnum>;
 
 // Conflict Status Enum
-export const conflictStatusEnum = z.enum(["detected", "reviewing", "resolved", "dismissed"]);
+export const conflictStatusEnum = z.enum(["detected", "pending", "reviewing", "resolved", "dismissed", "ignored", "disputed"]);
 export type ConflictStatus = z.infer<typeof conflictStatusEnum>;
 
 // Document Conflicts Table
