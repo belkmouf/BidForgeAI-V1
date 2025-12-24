@@ -18,7 +18,9 @@ import {
   ShieldCheck,
   AlertTriangle,
   Sparkles,
-  FileSearch
+  FileSearch,
+  Database,
+  ExternalLink
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuthStore, apiRequest } from "@/lib/auth";
@@ -193,6 +195,28 @@ export function AppSidebar() {
             </Link>
           );
         })}
+
+        {/* RagReady External Link */}
+        <a 
+          href="https://www.ragready.io" 
+          target="_blank" 
+          rel="noopener noreferrer"
+          data-testid="link-ragready"
+          className={cn(
+            "flex items-center transition-all duration-300 group rounded-md",
+            isCollapsed ? "justify-center p-3" : "gap-3 px-3 py-3",
+            "text-white/80 hover:bg-white/10 hover:text-white"
+          )}
+          title={isCollapsed ? "RagReady.io" : undefined}
+        >
+          <Database className="h-5 w-5 transition-colors" />
+          {!isCollapsed && (
+            <>
+              <span className="text-sm font-medium flex-1">RagReady</span>
+              <ExternalLink className="h-3.5 w-3.5 text-white/50" />
+            </>
+          )}
+        </a>
 
         {/* Project-specific navigation */}
         {isProjectPage && (
