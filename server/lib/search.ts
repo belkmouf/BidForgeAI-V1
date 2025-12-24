@@ -4,6 +4,7 @@ import { eq, sql, desc } from 'drizzle-orm';
 import { OpenAI } from 'openai';
 import { cache } from './cache.js';
 import { logger, logContext } from './logger.js';
+import { searchRagReady, getCompanyCollectionId } from './ragready';
 import crypto from 'crypto';
 
 const openai = new OpenAI({
@@ -288,6 +289,100 @@ export class SearchService {
       
       throw error;
     }
+  }
+
+  /**
+   * Search with RagReady integration (hybrid: local + RagReady)
+   * Only calls RagReady if company has a collection ID configured
+   */
+  async searchWithRagReady(
+    query: string,
+    projectId: string,
+    companyId: number,
+    options: SearchOptions = {}
+  ): Promise<{ localResults: SearchResult[]; ragReadyResults: SearchResult[]; combined: SearchResult[] }> {
+    const {
+      limit = 10,
+      threshold = 0.7,
+      useCache = true,
+      cacheTTL = 600
+    } = options;
+
+    const startTime = Date.now();
+
+    try {
+      const collectionId = await getCompanyCollectionId(companyId);
+      
+      const localResultsPromise = this.searchDocuments(query, projectId, options);
+      
+      let ragReadyResultsPromise: Promise<SearchResult[]> = Promise.resolve([]);
+      
+      if (collectionId) {
+        logger.info('RagReady collection configured, performing hybrid search', { companyId, collectionId: collectionId.substring(0, 4) + '****' });
+        
+        ragReadyResultsPromise = searchRagReady(query, { collectionId, topK: limit }).then(response => 
+          response.results.map((r, idx) => ({
+            id: -1 - idx,
+            content: r.content,
+            score: r.score,
+            chunkIndex: idx,
+            documentName: r.metadata?.source as string || 'RagReady Document',
+            type: 'knowledge' as const
+          }))
+        ).catch(error => {
+          logger.warn('RagReady search failed, continuing with local only', { error: error.message });
+          return [];
+        });
+      } else {
+        logger.debug('No RagReady collection configured, using local search only', { companyId });
+      }
+
+      const [localResults, ragReadyResults] = await Promise.all([
+        localResultsPromise,
+        ragReadyResultsPromise
+      ]);
+
+      const combined = this.mergeAndRankResults(localResults, ragReadyResults, limit);
+
+      const duration = Date.now() - startTime;
+      logContext.performance('Hybrid RagReady search completed', {
+        operation: 'ragready_hybrid_search',
+        duration,
+        success: true,
+        metadata: {
+          projectId,
+          companyId,
+          localCount: localResults.length,
+          ragReadyCount: ragReadyResults.length,
+          combinedCount: combined.length,
+          hasRagReady: !!collectionId
+        }
+      });
+
+      return { localResults, ragReadyResults, combined };
+    } catch (error: any) {
+      logger.error('Hybrid RagReady search failed', {
+        error: error.message,
+        projectId,
+        companyId
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Merge and rank results from local and RagReady sources
+   */
+  private mergeAndRankResults(
+    localResults: SearchResult[],
+    ragReadyResults: SearchResult[],
+    limit: number
+  ): SearchResult[] {
+    const all = [...localResults, ...ragReadyResults];
+    
+    all.sort((a, b) => b.score - a.score);
+    
+    return all.slice(0, limit);
   }
 
   /**

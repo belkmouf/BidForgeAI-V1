@@ -27,6 +27,7 @@ import { sanitizeModelHtml } from './ai-output';
 import { calculateLMMCost } from './pricing';
 import { cache } from './cache';
 import { logger } from './logger';
+import { searchService } from './search';
 
 export interface BidGenerationParams {
   projectId: string;
@@ -41,6 +42,7 @@ export interface BidGenerationParams {
 export interface BidContext {
   projectContext: string;
   knowledgeBaseContext: string;
+  ragReadyContext: string;
   sketchAnalysisContext: string;
   companyProfileContext: string;
   totalChunks: number;
@@ -142,8 +144,8 @@ class BidGenerationService {
 
     streamProgress?.({ stage: 'rag_search', message: 'Searching relevant documents...', percentage: 25 });
 
-    // Parallel execution: RAG search, knowledge base search, and sketch analysis
-    const [relevantChunks, kbChunks, projectMetadata] = await Promise.all([
+    // Parallel execution: RAG search, knowledge base search, RagReady search, and sketch analysis
+    const [relevantChunks, kbChunks, ragReadySearchResult, projectMetadata] = await Promise.all([
       // RAG search with hybrid search
       storage.searchHybrid(
         instructions,
@@ -164,6 +166,14 @@ class BidGenerationService {
             return [];
           })
         : Promise.resolve([]),
+
+      // RagReady hybrid search (only if company has collection ID configured)
+      companyId
+        ? searchService.searchWithRagReady(instructions, projectId, companyId, { limit: 10 }).catch((error) => {
+            logger.warn('RagReady search failed', { error: error.message });
+            return { localResults: [], ragReadyResults: [], combined: [] };
+          })
+        : Promise.resolve({ localResults: [], ragReadyResults: [], combined: [] }),
 
       // Get project metadata (for sketch analysis)
       Promise.resolve(project.metadata as Record<string, any> | null),
@@ -201,6 +211,25 @@ class BidGenerationService {
           .join('\n\n');
     }
 
+    // Build RagReady context (external document intelligence)
+    let ragReadyContext = '';
+    const ragReadyResults = ragReadySearchResult.ragReadyResults || [];
+    if (ragReadyResults.length > 0) {
+      logger.info('RagReady context found', { 
+        resultCount: ragReadyResults.length,
+        projectId,
+        companyId 
+      });
+      ragReadyContext = '\n\n--- RAGREADY EXTERNAL DOCUMENT INTELLIGENCE ---\n' +
+        ragReadyResults
+          .map((result: { content: string; score: number; documentName?: string }, i: number) => {
+            const scoreInfo = `[Relevance: ${(result.score * 100).toFixed(1)}%]`;
+            const sourceName = result.documentName || 'External Document';
+            return `[RagReady ${i + 1}: ${sourceName}] ${scoreInfo}\n${result.content}`;
+          })
+          .join('\n\n');
+    }
+
     // Build sketch analysis context
     let sketchAnalysisContext = '';
     if (projectMetadata?.sketchAnalysis && Array.isArray(projectMetadata.sketchAnalysis)) {
@@ -213,13 +242,17 @@ class BidGenerationService {
     const companyConfig = userBranding || await getCompanyConfig(companyId);
     const companyProfileContext = this.formatCompanyProfile(companyConfig);
 
+    const hasRagReady = ragReadyResults.length > 0;
     const context: BidContext = {
       projectContext,
       knowledgeBaseContext,
+      ragReadyContext,
       sketchAnalysisContext,
       companyProfileContext,
-      totalChunks: relevantChunks.length + kbChunks.length,
-      searchMethod: relevantChunks.length > 0 ? 'hybrid_rag' : 'document_content_fallback',
+      totalChunks: relevantChunks.length + kbChunks.length + ragReadyResults.length,
+      searchMethod: hasRagReady 
+        ? 'hybrid_rag_with_ragready' 
+        : (relevantChunks.length > 0 ? 'hybrid_rag' : 'document_content_fallback'),
     };
 
     // Cache the context
@@ -433,10 +466,11 @@ or contact details from other sources.
 
       streamProgress?.({ stage: 'generation', message: `Generating bid with ${params.model || 'deepseek'}...`, percentage: 75 });
 
-      // Combine all context
+      // Combine all context (including RagReady external document intelligence if available)
       const fullContext = context.companyProfileContext + 
         (context.projectContext || 'No document content available. Please provide project details in your instructions.') +
         context.knowledgeBaseContext +
+        context.ragReadyContext +
         context.sketchAnalysisContext;
 
       // Generate bid
@@ -553,10 +587,11 @@ or contact details from other sources.
 
       streamProgress?.({ stage: 'generation', message: `Generating bids with ${params.models.length} models in parallel...`, percentage: 50 });
 
-      // Combine all context
+      // Combine all context (including RagReady external document intelligence if available)
       const fullContext = context.companyProfileContext + 
         (context.projectContext || 'No document content available.') +
         context.knowledgeBaseContext +
+        context.ragReadyContext +
         context.sketchAnalysisContext;
 
       const generationParams = {
