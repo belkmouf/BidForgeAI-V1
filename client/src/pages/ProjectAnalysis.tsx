@@ -346,9 +346,9 @@ export default function ProjectAnalysis() {
       <div className="max-w-6xl mx-auto">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h1 className="text-2xl font-bold">RFP Analysis</h1>
+            <h1 className="text-2xl font-bold">Analysis</h1>
             <p className="text-muted-foreground mt-1">
-              AI-powered analysis of your RFP documents for risks and opportunities
+              AI-powered analysis of your documents for risks and opportunities
             </p>
           </div>
           <Button 
