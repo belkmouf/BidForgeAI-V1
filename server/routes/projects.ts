@@ -133,6 +133,16 @@ router.post("/:id/accept-summaries", authenticateToken, async (req: AuthRequest,
       return res.status(404).json({ error: "Project not found" });
     }
 
+    // If already past summary_review, allow proceeding (idempotent)
+    const advancedStatuses = ['analyzing', 'analysis_review', 'conflict_check', 'generating', 'review', 'completed'];
+    if (advancedStatuses.includes(project.workflowStatus)) {
+      return res.json({
+        success: true,
+        message: "Already past summary review. Proceeding to next step.",
+        workflowStatus: project.workflowStatus
+      });
+    }
+
     // Verify project is in summary_review state
     if (project.workflowStatus !== 'summary_review') {
       return res.status(400).json({ 
