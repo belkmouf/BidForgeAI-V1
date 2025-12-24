@@ -91,6 +91,15 @@ The system is built for scalability and extensibility, with clear separation of 
 
 **Integrations:**
 - Meta WhatsApp Business API (for sending messages)
+- RagReady.io RAG-as-a-Service (for external document intelligence)
+
+**RagReady Integration:**
+- Hybrid search combines local document chunks with RagReady external collections
+- Company-specific Collection IDs stored in company settings (non-sensitive)
+- Conditional workflow: local search only when Collection ID is null, hybrid search when configured
+- Integration files: `server/lib/ragready.ts`, `server/lib/search.ts` (searchWithRagReady method)
+- Settings page allows Collection ID configuration with masking for security
+- Registration form includes optional Collection ID field
 
 **Development Tools:**
 - Vite (frontend build)
