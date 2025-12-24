@@ -66,8 +66,8 @@ export function ProjectWorkflowLayout({
         <div className="container mx-auto px-4 py-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <Link href="/projects">
-                <Button variant="ghost" size="icon" className="h-8 w-8" data-testid="button-back">
+              <Link href={`/projects/${projectId}`}>
+                <Button variant="ghost" size="icon" className="h-8 w-8" data-testid="button-back-header">
                   <ChevronLeft className="h-4 w-4" />
                 </Button>
               </Link>
