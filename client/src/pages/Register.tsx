@@ -129,7 +129,16 @@ export default function Register() {
                 />
               </div>
               <p className="text-xs text-slate-500">
-                Connect your RagReady.io document library for enhanced bid intelligence
+                Connect your{" "}
+                <a 
+                  href="https://www.ragready.io" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-primary hover:underline font-medium"
+                >
+                  RagReady.io
+                </a>
+                {" "}document library for enhanced bid intelligence
               </p>
             </div>
             
