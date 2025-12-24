@@ -623,6 +623,8 @@ export default function DocumentSummary() {
       clientName={project?.clientName}
       currentStep={1}
       steps={steps}
+      backLabel="Back to Project"
+      onBack={() => navigate(`/projects/${id}`)}
       nextLabel="Review Summaries"
       nextDisabled={!canProceed}
       onNext={() => navigate(`/projects/${id}/summary`)}
