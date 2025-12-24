@@ -116,7 +116,7 @@ export function AppSidebar() {
   // Project-specific navigation items
   const projectNavItems = currentProjectId ? [
     { href: `/projects/${currentProjectId}/documents`, icon: Upload, label: "Upload Files" },
-    { href: `/projects/${currentProjectId}/summary`, icon: FileSearch, label: "Summary Review" },
+    { href: `/projects/${currentProjectId}/summary`, icon: FileSearch, label: "Review Documents" },
     { href: `/projects/${currentProjectId}/analysis`, icon: ShieldCheck, label: "Analysis" },
     { href: `/projects/${currentProjectId}/conflicts`, icon: AlertTriangle, label: "Review Conflicts" },
     { href: `/projects/${currentProjectId}`, icon: Sparkles, label: "Bid Generation", exact: true },

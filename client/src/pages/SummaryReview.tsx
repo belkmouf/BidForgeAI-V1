@@ -224,8 +224,8 @@ export default function SummaryReview() {
       clientName={project.clientName}
       currentStep={2}
       steps={steps}
-      backLabel="Back to Documents"
-      onBack={() => navigate(`/projects/${id}/documents`)}
+      backLabel="Back to Project"
+      onBack={() => navigate(`/projects/${id}`)}
       nextLabel="Accept & Continue to Analysis"
       nextDisabled={!allHaveSummaries || acceptMutation.isPending}
       onNext={() => acceptMutation.mutate()}

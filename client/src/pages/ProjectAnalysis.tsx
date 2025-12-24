@@ -337,8 +337,8 @@ export default function ProjectAnalysis() {
       clientName={project.clientName}
       currentStep={3}
       steps={steps}
-      backLabel="Back to Summaries"
-      onBack={() => navigate(`/projects/${projectId}/summary`)}
+      backLabel="Back to Project"
+      onBack={() => navigate(`/projects/${projectId}`)}
       nextLabel="Review Conflicts"
       nextDisabled={!canProceed}
       onNext={() => navigate(`/projects/${projectId}/conflicts`)}

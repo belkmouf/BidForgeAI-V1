@@ -73,8 +73,8 @@ export default function ProjectConflicts() {
       clientName={project.clientName}
       currentStep={4}
       steps={steps}
-      backLabel="Back to Analysis"
-      onBack={() => navigate(`/projects/${projectId}/analysis`)}
+      backLabel="Back to Project"
+      onBack={() => navigate(`/projects/${projectId}`)}
       nextLabel="Generate Bid"
       nextDisabled={false}
       onNext={() => {
