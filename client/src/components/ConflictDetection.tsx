@@ -280,24 +280,42 @@ export function ConflictDetection({ projectId }: ConflictDetectionProps) {
         <div className="flex items-center gap-2">
           {selectedIds.size > 0 && (
             <Button
-              variant="outline"
+              variant="secondary"
               onClick={handleIgnoreSelected}
               disabled={ignoreConflictsMutation.isPending}
               data-testid="button-ignore-selected"
             >
-              <EyeOff className="h-4 w-4 mr-2" />
-              Ignore Selected ({selectedIds.size})
+              {ignoreConflictsMutation.isPending ? (
+                <>
+                  <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                  Ignoring...
+                </>
+              ) : (
+                <>
+                  <EyeOff className="h-4 w-4 mr-2" />
+                  Ignore Selected ({selectedIds.size})
+                </>
+              )}
             </Button>
           )}
           {conflicts.length > 0 && (
             <Button
-              variant="outline"
+              variant="secondary"
               onClick={handleIgnoreAll}
               disabled={ignoreConflictsMutation.isPending}
               data-testid="button-ignore-all"
             >
-              <EyeOff className="h-4 w-4 mr-2" />
-              Ignore All
+              {ignoreConflictsMutation.isPending ? (
+                <>
+                  <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                  Ignoring...
+                </>
+              ) : (
+                <>
+                  <EyeOff className="h-4 w-4 mr-2" />
+                  Ignore All
+                </>
+              )}
             </Button>
           )}
           <Button
