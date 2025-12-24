@@ -169,30 +169,99 @@ export function AppSidebar() {
         )}
         {navItems.map((item) => {
           const isActive = location === item.href || (item.href !== "/dashboard" && location.startsWith(item.href));
+          const isProjectsItem = item.href === "/projects";
+          
           return (
-            <Link 
-              key={item.href} 
-              href={item.href}
-              data-testid={`link-${item.label.toLowerCase()}`}
-              className={cn(
-                "flex items-center transition-all duration-300 group rounded-md",
-                isCollapsed ? "justify-center p-3" : "gap-3 px-3 py-3",
-                !isActive && "text-white/80 hover:bg-white/10 hover:text-white"
+            <div key={item.href}>
+              <Link 
+                href={item.href}
+                data-testid={`link-${item.label.toLowerCase()}`}
+                className={cn(
+                  "flex items-center transition-all duration-300 group rounded-md",
+                  isCollapsed ? "justify-center p-3" : "gap-3 px-3 py-3",
+                  !isActive && "text-white/80 hover:bg-white/10 hover:text-white"
+                )}
+                style={isActive ? { 
+                  backgroundColor: 'rgba(255,255,255,0.2)', 
+                  color: 'white',
+                  borderLeft: isCollapsed ? 'none' : '2px solid white',
+                  marginLeft: isCollapsed ? '0' : '-1px'
+                } : undefined}
+                title={isCollapsed ? item.label : undefined}
+              >
+                <item.icon 
+                  className="h-5 w-5 transition-colors"
+                  style={isActive ? { color: 'white' } : undefined}
+                />
+                {!isCollapsed && <span className="text-sm font-medium">{item.label}</span>}
+              </Link>
+              
+              {/* Project Steps nested under Projects */}
+              {isProjectsItem && isProjectPage && !isCollapsed && (
+                <div className="ml-4 mt-1 mb-2 pl-2 border-l border-white/20">
+                  {projectNavItems.map((stepItem) => {
+                    const isExact = 'exact' in stepItem && stepItem.exact;
+                    const stepIsActive = isExact 
+                      ? location === stepItem.href 
+                      : location === stepItem.href || location.startsWith(stepItem.href + '/');
+                    return (
+                      <Link 
+                        key={stepItem.href} 
+                        href={stepItem.href}
+                        data-testid={`link-project-${stepItem.label.toLowerCase().replace(/\s+/g, '-')}`}
+                        className={cn(
+                          "flex items-center transition-all duration-300 group rounded-md gap-2.5 px-2 py-1.5 text-sm",
+                          !stepIsActive && "text-white/70 hover:bg-white/10 hover:text-white"
+                        )}
+                        style={stepIsActive ? { 
+                          backgroundColor: 'rgba(255,255,255,0.15)', 
+                          color: 'white'
+                        } : undefined}
+                      >
+                        <stepItem.icon 
+                          className="h-3.5 w-3.5 transition-colors"
+                          style={stepIsActive ? { color: 'white' } : undefined}
+                        />
+                        <span className="font-medium">{stepItem.label}</span>
+                      </Link>
+                    );
+                  })}
+                </div>
               )}
-              style={isActive ? { 
-                backgroundColor: 'rgba(255,255,255,0.2)', 
-                color: 'white',
-                borderLeft: isCollapsed ? 'none' : '2px solid white',
-                marginLeft: isCollapsed ? '0' : '-1px'
-              } : undefined}
-              title={isCollapsed ? item.label : undefined}
-            >
-              <item.icon 
-                className="h-5 w-5 transition-colors"
-                style={isActive ? { color: 'white' } : undefined}
-              />
-              {!isCollapsed && <span className="text-sm font-medium">{item.label}</span>}
-            </Link>
+              
+              {/* Collapsed state: show project steps as separate icons after Projects */}
+              {isProjectsItem && isProjectPage && isCollapsed && (
+                <div className="mt-1 space-y-1">
+                  {projectNavItems.map((stepItem) => {
+                    const isExact = 'exact' in stepItem && stepItem.exact;
+                    const stepIsActive = isExact 
+                      ? location === stepItem.href 
+                      : location === stepItem.href || location.startsWith(stepItem.href + '/');
+                    return (
+                      <Link 
+                        key={stepItem.href} 
+                        href={stepItem.href}
+                        data-testid={`link-project-${stepItem.label.toLowerCase().replace(/\s+/g, '-')}`}
+                        className={cn(
+                          "flex items-center justify-center transition-all duration-300 group rounded-md p-2",
+                          !stepIsActive && "text-white/70 hover:bg-white/10 hover:text-white"
+                        )}
+                        style={stepIsActive ? { 
+                          backgroundColor: 'rgba(255,255,255,0.15)', 
+                          color: 'white'
+                        } : undefined}
+                        title={stepItem.label}
+                      >
+                        <stepItem.icon 
+                          className="h-4 w-4 transition-colors"
+                          style={stepIsActive ? { color: 'white' } : undefined}
+                        />
+                      </Link>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           );
         })}
 
@@ -217,54 +286,6 @@ export function AppSidebar() {
             </>
           )}
         </a>
-
-        {/* Project-specific navigation */}
-        {isProjectPage && (
-          <div 
-            className={cn(
-              "mt-4 rounded-lg",
-              isCollapsed ? "mx-1 p-1" : "mx-2 p-2"
-            )}
-            style={{ backgroundColor: 'rgba(255,255,255,0.1)' }}
-          >
-            {!isCollapsed && (
-              <div className="px-2 mb-3 pt-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-white/90">
-                Project Steps
-              </div>
-            )}
-            {projectNavItems.map((item) => {
-              const isExact = 'exact' in item && item.exact;
-              const isActive = isExact 
-                ? location === item.href 
-                : location === item.href || location.startsWith(item.href + '/');
-              return (
-                <Link 
-                  key={item.href} 
-                  href={item.href}
-                  data-testid={`link-project-${item.label.toLowerCase().replace(/\s+/g, '-')}`}
-                  className={cn(
-                    "flex items-center transition-all duration-300 group rounded-md",
-                    isCollapsed ? "justify-center p-2.5" : "gap-3 px-2 py-2",
-                    !isActive && "text-white/90 hover:bg-white/15 hover:text-white"
-                  )}
-                  style={isActive ? { 
-                    backgroundColor: 'rgba(255,255,255,0.25)', 
-                    color: 'white',
-                    borderLeft: isCollapsed ? 'none' : '2px solid white',
-                    marginLeft: isCollapsed ? '0' : '-1px'
-                  } : undefined}
-                  title={isCollapsed ? item.label : undefined}
-                >
-                  <item.icon 
-                    className="h-4 w-4 transition-colors"
-                    style={isActive ? { color: 'white' } : undefined}
-                  />
-                  {!isCollapsed && <span className="text-sm font-medium">{item.label}</span>}
-                </Link>
-              );
-            })}
-          </div>
-        )}
       </nav>
       <div className={cn("p-2", isCollapsed ? "p-2" : "p-4")}>
         <Link 
