@@ -150,9 +150,7 @@ export interface WorkflowStepsOptions {
 
 export function getWorkflowSteps(projectId: string, workflowStatus: WorkflowStatus = 'uploading', options: WorkflowStepsOptions = {}): WorkflowStep[] {
   const { 
-    checklistComplete = true,
     gate1Passed = true,
-    gate2Passed = true,
   } = options;
   const hasSummaryReview = hasReachedStatus(workflowStatus, 'summary_review');
   const hasAnalysis = hasReachedStatus(workflowStatus, 'analyzing');
@@ -161,32 +159,24 @@ export function getWorkflowSteps(projectId: string, workflowStatus: WorkflowStat
 
   return [
     {
-      id: 'checklist',
-      title: 'Checklist',
-      path: `/projects/${projectId}/checklist`,
-      icon: <ClipboardList className="w-4 h-4" />,
-      isCompleted: checklistComplete,
-      isAccessible: true,
-    },
-    {
       id: 'documents',
-      title: 'Documents',
+      title: 'Upload Documents',
       path: `/projects/${projectId}/documents`,
       icon: <FileText className="w-4 h-4" />,
       isCompleted: hasSummaryReview,
-      isAccessible: checklistComplete,
+      isAccessible: true,
     },
     {
       id: 'summary',
-      title: 'Summary Review',
+      title: 'Review Documents',
       path: `/projects/${projectId}/summary`,
       icon: <FileText className="w-4 h-4" />,
       isCompleted: hasAnalysis,
-      isAccessible: gate1Passed && (hasSummaryReview || workflowStatus === 'summarizing'),
+      isAccessible: hasSummaryReview || workflowStatus === 'summarizing',
     },
     {
       id: 'analysis',
-      title: 'RFP Analysis',
+      title: 'Analysis',
       path: `/projects/${projectId}/analysis`,
       icon: <ShieldCheck className="w-4 h-4" />,
       isCompleted: hasConflicts,
@@ -194,7 +184,7 @@ export function getWorkflowSteps(projectId: string, workflowStatus: WorkflowStat
     },
     {
       id: 'conflicts',
-      title: 'Conflicts',
+      title: 'Review Conflicts',
       path: `/projects/${projectId}/conflicts`,
       icon: <AlertTriangle className="w-4 h-4" />,
       isCompleted: hasGeneration,

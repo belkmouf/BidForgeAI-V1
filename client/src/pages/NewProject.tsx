@@ -36,7 +36,7 @@ export default function NewProject() {
         description: `${project.name} has been created successfully.`,
       });
       
-      setLocation(`/projects/${project.id}`);
+      setLocation(`/projects/${project.id}/documents`);
     } catch (error: any) {
       toast({
         title: "Creation Failed",
