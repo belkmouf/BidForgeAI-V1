@@ -109,12 +109,22 @@ export default function Settings() {
 
   // RagReady Integration state
   const [ragreadyCollectionId, setRagreadyCollectionId] = useState('');
+  const [ragreadyCollectionIdSaved, setRagreadyCollectionIdSaved] = useState('');
   const [ragreadyConfigured, setRagreadyConfigured] = useState(false);
   const [ragreadyLoading, setRagreadyLoading] = useState(true);
   const [ragreadySaving, setRagreadySaving] = useState(false);
   const [ragreadyDeleting, setRagreadyDeleting] = useState(false);
   const [ragreadySuccess, setRagreadySuccess] = useState('');
   const [ragreadyError, setRagreadyError] = useState('');
+  const [isEditingRagready, setIsEditingRagready] = useState(false);
+
+  const maskCollectionId = (id: string) => {
+    if (!id || id.length <= 8) return id;
+    const first4 = id.substring(0, 4);
+    const last4 = id.substring(id.length - 4);
+    const masked = '*'.repeat(Math.min(id.length - 8, 20));
+    return `${first4}${masked}${last4}`;
+  };
 
   useEffect(() => {
     const fetchBranding = async () => {
@@ -200,6 +210,7 @@ export default function Settings() {
           const data = await response.json();
           setRagreadyConfigured(data.configured);
           setRagreadyCollectionId(data.collectionId || '');
+          setRagreadyCollectionIdSaved(data.collectionId || '');
         }
       } catch (error) {
         console.error('Failed to fetch RagReady status:', error);
@@ -230,6 +241,8 @@ export default function Settings() {
       });
 
       if (response.ok) {
+        setRagreadyCollectionIdSaved(ragreadyCollectionId.trim());
+        setIsEditingRagready(false);
         setRagreadySuccess('Collection ID saved successfully');
       } else {
         const error = await response.json();
@@ -254,6 +267,8 @@ export default function Settings() {
 
       if (response.ok) {
         setRagreadyCollectionId('');
+        setRagreadyCollectionIdSaved('');
+        setIsEditingRagready(false);
         setRagreadySuccess('Collection ID removed successfully');
       } else {
         const error = await response.json();
@@ -1461,27 +1476,24 @@ export default function Settings() {
 
                     <div className="space-y-2">
                       <Label htmlFor="ragreadyCollectionId">Collection ID</Label>
-                      <div className="flex gap-2">
-                        <Input
-                          id="ragreadyCollectionId"
-                          value={ragreadyCollectionId}
-                          onChange={(e) => setRagreadyCollectionId(e.target.value)}
-                          placeholder="Enter your RagReady collection ID"
-                          disabled={!ragreadyConfigured}
-                          data-testid="input-ragready-collection-id"
-                        />
-                        <Button
-                          onClick={handleSaveRagReadyConfig}
-                          disabled={!ragreadyConfigured || ragreadySaving || !ragreadyCollectionId.trim()}
-                          data-testid="button-save-ragready"
-                        >
-                          {ragreadySaving ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : (
-                            <Save className="h-4 w-4" />
-                          )}
-                        </Button>
-                        {ragreadyCollectionId && (
+                      {ragreadyCollectionIdSaved && !isEditingRagready ? (
+                        <div className="flex gap-2">
+                          <Input
+                            value={maskCollectionId(ragreadyCollectionIdSaved)}
+                            disabled
+                            className="font-mono"
+                            data-testid="input-ragready-collection-id-masked"
+                          />
+                          <Button
+                            variant="outline"
+                            onClick={() => {
+                              setIsEditingRagready(true);
+                              setRagreadyCollectionId(ragreadyCollectionIdSaved);
+                            }}
+                            data-testid="button-edit-ragready"
+                          >
+                            <Edit2 className="h-4 w-4" />
+                          </Button>
                           <Button
                             variant="outline"
                             onClick={handleDeleteRagReadyConfig}
@@ -1495,8 +1507,42 @@ export default function Settings() {
                               <Trash2 className="h-4 w-4" />
                             )}
                           </Button>
-                        )}
-                      </div>
+                        </div>
+                      ) : (
+                        <div className="flex gap-2">
+                          <Input
+                            id="ragreadyCollectionId"
+                            value={ragreadyCollectionId}
+                            onChange={(e) => setRagreadyCollectionId(e.target.value)}
+                            placeholder="Enter your RagReady collection ID"
+                            disabled={!ragreadyConfigured}
+                            data-testid="input-ragready-collection-id"
+                          />
+                          <Button
+                            onClick={handleSaveRagReadyConfig}
+                            disabled={!ragreadyConfigured || ragreadySaving || !ragreadyCollectionId.trim()}
+                            data-testid="button-save-ragready"
+                          >
+                            {ragreadySaving ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <Save className="h-4 w-4" />
+                            )}
+                          </Button>
+                          {isEditingRagready && (
+                            <Button
+                              variant="outline"
+                              onClick={() => {
+                                setIsEditingRagready(false);
+                                setRagreadyCollectionId(ragreadyCollectionIdSaved);
+                              }}
+                              data-testid="button-cancel-ragready"
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
+                      )}
                       <p className="text-xs text-muted-foreground">
                         The Collection ID links your company to a specific RagReady document collection for bid intelligence.
                       </p>
