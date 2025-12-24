@@ -30,7 +30,7 @@ router.post('/register', async (req, res) => {
       });
     }
 
-    const { email, password, name, companyName } = validationResult.data;
+    const { email, password, name, companyName, ragreadyCollectionId } = validationResult.data as any;
 
     if (!validateEmail(email)) {
       return res.status(400).json({ error: 'Invalid email format' });
@@ -69,11 +69,17 @@ router.post('/register', async (req, res) => {
     const uniqueSlug = `${baseSlug}-${Date.now().toString(36)}`;
 
     // Create a new company for the registering user
+    const companySettings: Record<string, any> = {};
+    if (ragreadyCollectionId && typeof ragreadyCollectionId === 'string' && ragreadyCollectionId.trim()) {
+      companySettings.ragreadyCollectionId = ragreadyCollectionId.trim();
+    }
+
     const [newCompany] = await db
       .insert(companies)
       .values({
         name: companyFullName,
         slug: uniqueSlug,
+        settings: Object.keys(companySettings).length > 0 ? companySettings : undefined,
       })
       .returning();
 

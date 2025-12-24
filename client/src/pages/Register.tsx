@@ -8,7 +8,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Loader2, Mail, Lock, User, UserPlus, Building2, FileText } from "lucide-react";
+import { Loader2, Mail, Lock, User, UserPlus, Building2, FileText, Database } from "lucide-react";
 import { register } from "@/lib/auth";
 import bidForgeLogo from "@assets/Gemini_Generated_Image_mb26x1mb26x1mb26_1765805920806.png";
 
@@ -16,6 +16,7 @@ export default function Register() {
   const [, setLocation] = useLocation();
   const [name, setName] = useState("");
   const [companyName, setCompanyName] = useState("");
+  const [ragreadyCollectionId, setRagreadyCollectionId] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -44,7 +45,7 @@ export default function Register() {
 
     setIsLoading(true);
 
-    const result = await register(email, password, name, companyName);
+    const result = await register(email, password, name, companyName, ragreadyCollectionId || undefined);
     
     if (result.success) {
       setLocation("/dashboard");
@@ -109,6 +110,27 @@ export default function Register() {
                   data-testid="input-company-name"
                 />
               </div>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="ragreadyCollectionId" className="text-slate-700">
+                RagReady Collection ID <span className="text-slate-400 text-xs">(optional)</span>
+              </Label>
+              <div className="relative">
+                <Database className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
+                <Input
+                  id="ragreadyCollectionId"
+                  type="text"
+                  placeholder="Your RagReady collection ID"
+                  value={ragreadyCollectionId}
+                  onChange={(e) => setRagreadyCollectionId(e.target.value)}
+                  className="pl-10 bg-slate-50 border-slate-300 text-slate-900 placeholder:text-slate-400"
+                  data-testid="input-ragready-collection-id"
+                />
+              </div>
+              <p className="text-xs text-slate-500">
+                Connect your RagReady.io document library for enhanced bid intelligence
+              </p>
             </div>
             
             <div className="space-y-2">
