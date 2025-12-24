@@ -117,7 +117,7 @@ export function AppSidebar() {
   const projectNavItems = currentProjectId ? [
     { href: `/projects/${currentProjectId}/documents`, icon: Upload, label: "Upload Files" },
     { href: `/projects/${currentProjectId}/summary`, icon: FileSearch, label: "Summary Review" },
-    { href: `/projects/${currentProjectId}/analysis`, icon: ShieldCheck, label: "Risk Assessment" },
+    { href: `/projects/${currentProjectId}/analysis`, icon: ShieldCheck, label: "Analysis" },
     { href: `/projects/${currentProjectId}/conflicts`, icon: AlertTriangle, label: "Review Issues" },
     { href: `/projects/${currentProjectId}`, icon: Sparkles, label: "Bid Generation", exact: true },
   ] : [];
