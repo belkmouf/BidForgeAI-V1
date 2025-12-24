@@ -57,6 +57,16 @@ const severityColors: Record<string, string> = {
   critical: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
 };
 
+const statusColors: Record<string, string> = {
+  detected: 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200',
+  pending: 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200',
+  reviewing: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
+  resolved: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
+  dismissed: 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200',
+  ignored: 'bg-slate-100 text-slate-800 dark:bg-slate-900 dark:text-slate-200',
+  disputed: 'bg-rose-100 text-rose-800 dark:bg-rose-900 dark:text-rose-200',
+};
+
 const typeIcons: Record<string, React.ReactNode> = {
   semantic: <FileWarning className="h-4 w-4" />,
   numeric: <AlertTriangle className="h-4 w-4" />,
@@ -302,14 +312,9 @@ export function ConflictDetection({ projectId }: ConflictDetectionProps) {
                               <Badge className={severityColors[conflict.severity]}>
                                 {conflict.severity}
                               </Badge>
-                              {conflict.status === 'resolved' && (
-                                <Badge variant="secondary" className="bg-green-100 text-green-800">
-                                  Resolved
-                                </Badge>
-                              )}
-                              {conflict.status === 'dismissed' && (
-                                <Badge variant="secondary">Dismissed</Badge>
-                              )}
+                              <Badge className={statusColors[conflict.status] || 'bg-gray-100 text-gray-800'}>
+                                {conflict.status.charAt(0).toUpperCase() + conflict.status.slice(1)}
+                              </Badge>
                             </div>
                             <p className="text-sm font-medium line-clamp-2">{conflict.description}</p>
                             {conflict.confidenceScore && (
