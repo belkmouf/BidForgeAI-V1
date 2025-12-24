@@ -86,7 +86,7 @@ export default function ProjectConflicts() {
         <div className="mb-6">
           <h1 className="text-2xl font-bold">Review Conflicts</h1>
           <p className="text-muted-foreground mt-1">
-            Review any detected conflicts or inconsistencies in your RFP documents
+            Review any detected conflicts or inconsistencies in your documents
           </p>
         </div>
         <ConflictDetection projectId={projectId} />
