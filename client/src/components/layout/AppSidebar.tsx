@@ -20,8 +20,7 @@ import {
   Sparkles,
   FileSearch,
   Database,
-  ExternalLink,
-  CreditCard
+  ExternalLink
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuthStore, apiRequest } from "@/lib/auth";
@@ -107,7 +106,6 @@ export function AppSidebar() {
     { href: "/whatsapp", icon: MessageSquare, label: "WhatsApp" },
     { href: "/admin", icon: Shield, label: "Admin" },
     { href: "/settings", icon: Settings, label: "Settings" },
-    { href: "/billing", icon: CreditCard, label: "Billing" },
   ];
 
   // Extract project ID from URL if on a project page

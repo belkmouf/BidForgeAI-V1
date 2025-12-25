@@ -5,7 +5,6 @@ import { storage } from '../storage';
 import { ingestionService } from '../lib/ingestion';
 import { pythonSketchClient } from '../lib/pythonSketchClient';
 import { authenticateToken, AuthRequest } from '../middleware/auth';
-import { usageTracking } from '../lib/usage-tracking.js';
 
 const router = Router();
 
@@ -216,47 +215,6 @@ router.post("/projects/:id/upload", authenticateToken, upload.any(), async (req:
 
     // Update workflow status to 'summary_review' - user must review summaries
     await storage.updateWorkflowStatus(projectId, 'summary_review', companyId);
-
-    // Track usage for billing
-    if (companyId) {
-      try {
-        // Track document pages processed
-        const totalPages = processedFiles.reduce((sum, f) => sum + (f.pageCount || 1), 0);
-        await usageTracking.trackUsage({
-          companyId,
-          projectId,
-          userId: req.user?.id,
-          eventType: 'document_processed',
-          eventCategory: 'processing',
-          quantity: totalPages,
-          unit: 'pages',
-          metadata: {
-            documentCount: processedFiles.length,
-            sketchCount: sketches.length,
-            totalChunks,
-            workflow,
-          },
-        });
-
-        // Track sketch analysis if any
-        if (sketches.length > 0 && sketchResults.length > 0) {
-          await usageTracking.trackUsage({
-            companyId,
-            projectId,
-            userId: req.user?.id,
-            eventType: 'blueprint_analyzed',
-            eventCategory: 'analysis',
-            quantity: sketchResults.length,
-            unit: 'blueprints',
-            metadata: {
-              sketchFilenames: sketches.map(s => s.originalname),
-            },
-          });
-        }
-      } catch (usageError) {
-        console.warn('Failed to track document processing usage:', usageError);
-      }
-    }
 
     res.json({
       success: true,

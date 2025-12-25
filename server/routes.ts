@@ -49,7 +49,6 @@ import documentSummaryRoutes from "./routes/document-summary";
 import projectsRoutes from "./routes/projects";
 import documentsRoutes from "./routes/documents";
 import bidsRoutes from "./routes/bids";
-import billingRoutes from "./routes/billing";
 import { fetchWebsiteInfo, batchFetchWebsiteInfo, getWebsiteInfoCache, saveWebsiteInfo, fetchAndSaveWebsiteInfo } from "./routes/website-info.js";
 import { apiVersioning, API_VERSIONS, trackVersionUsage, VersionedRequest } from "./middleware/versioning";
 import { authenticateToken, optionalAuth, AuthRequest } from "./middleware/auth";
@@ -76,7 +75,6 @@ import {
   saveCompanyCollectionId,
   removeCompanyCollectionId
 } from './lib/ragready';
-import { usageTracking } from './lib/usage-tracking.js';
 import multer from "multer";
 import { z } from "zod";
 
@@ -415,9 +413,6 @@ export async function registerRoutes(
   
   // ==================== ADMIN ====================
   app.use('/api/admin', adminRoutes);
-  
-  // ==================== BILLING ====================
-  app.use('/api/billing', authenticateToken, billingRoutes);
   
   // ==================== WEBSITE INFORMATION ====================
   app.post('/api/website-info/fetch', authenticateToken, fetchWebsiteInfo);
@@ -1734,28 +1729,6 @@ or contact details from other sources.
 
       const analysisResult = await analyzeRFP(projectId);
       const savedAnalysis = await saveAnalysis(projectId, analysisResult);
-
-      // Track usage for billing
-      if (companyId) {
-        try {
-          await usageTracking.trackUsage({
-            companyId,
-            projectId,
-            userId: req.user?.id,
-            eventType: 'rfp_analysis',
-            eventCategory: 'analysis',
-            quantity: 1,
-            unit: 'analyses',
-            metadata: {
-              analysisId: savedAnalysis.id,
-              riskLevel: savedAnalysis.overallRiskLevel,
-              documentCount: documents.length,
-            },
-          });
-        } catch (usageError) {
-          console.warn('Failed to track analysis usage:', usageError);
-        }
-      }
 
       res.json({
         success: true,
