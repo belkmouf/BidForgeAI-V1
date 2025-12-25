@@ -47,6 +47,15 @@ router.post("/projects/:id/upload", authenticateToken, upload.any(), async (req:
           current: limitCheck.current
         });
       }
+      if (files.length > limitCheck.remaining) {
+        return res.status(403).json({ 
+          error: `Cannot upload ${files.length} files. Only ${limitCheck.remaining} document slots remaining.`,
+          code: 'DOCUMENT_LIMIT_EXCEEDED',
+          limit: limitCheck.limit,
+          current: limitCheck.current,
+          remaining: limitCheck.remaining
+        });
+      }
     }
 
     // Update workflow status to 'summarizing' as we start processing
@@ -228,6 +237,11 @@ router.post("/projects/:id/upload", authenticateToken, upload.any(), async (req:
 
     // Update workflow status to 'summary_review' - user must review summaries
     await storage.updateWorkflowStatus(projectId, 'summary_review', companyId);
+
+    // Increment document usage count
+    if (companyId && processedFiles.length > 0) {
+      await limitChecker.incrementUsage(companyId, 'documents', processedFiles.length);
+    }
 
     res.json({
       success: true,
