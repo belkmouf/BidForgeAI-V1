@@ -1,5 +1,5 @@
 import { db } from '../db';
-import { documents, documentSummaries, documentChunks } from '@shared/schema';
+import { documents, documentSummaries, documentChunks, projects } from '@shared/schema';
 import { openai } from './openai.js';
 import { generateEmbedding } from './openai.js';
 import { eq, and, sql } from 'drizzle-orm';
@@ -41,10 +41,23 @@ export class DocumentSummarizationService {
       };
     }
 
+    // Fetch project description for context
+    const [project] = await db
+      .select({ description: projects.description, name: projects.name })
+      .from(projects)
+      .where(eq(projects.id, doc.projectId))
+      .limit(1);
+
+    const projectContext = project ? {
+      name: project.name,
+      description: project.description || '',
+    } : null;
+
     // Generate comprehensive summary using LLM
     const summaryData = await this.extractComprehensiveInfo(
       doc.content,
-      doc.filename
+      doc.filename,
+      projectContext
     );
 
     // Store summary in database
@@ -84,6 +97,7 @@ export class DocumentSummarizationService {
   private async extractComprehensiveInfo(
     content: string,
     filename: string,
+    projectContext: { name: string; description: string } | null,
     retries = 2
   ): Promise<{
     summaryContent: string;
@@ -94,14 +108,27 @@ export class DocumentSummarizationService {
     const truncatedContent = content.substring(0, 20000);
     const isTruncated = content.length > 20000;
 
+    // Build project context section
+    const projectContextSection = projectContext && projectContext.description
+      ? `## Project Context (Use this to understand the bid we are preparing)
+Project Name: ${projectContext.name}
+Project Description: ${projectContext.description}
+
+Use this project context to better understand the purpose of this document and how it relates to the overall bid. Extract information that is most relevant to preparing a winning bid proposal.
+
+---
+
+`
+      : '';
+
     const prompt = `You are an expert at analyzing construction/tender documents. Extract comprehensive information from this document.
 
-Document: ${filename}
+${projectContextSection}Document: ${filename}
 ${isTruncated ? '[Content truncated to 20,000 characters]' : ''}
 Content:
 ${truncatedContent}
 
-Extract and structure the following information:
+Extract and structure the following information, keeping the project context in mind:
 
 1. **Requirements**: All project requirements (technical, legal, administrative)
 2. **Specifications**: Technical specifications, standards, codes
@@ -120,7 +147,7 @@ Create a comprehensive Markdown-formatted summary with clear structure:
 - Use **bold** for emphasis on key values
 
 The summary MUST include these sections with proper Markdown:
-1. ## Project Overview - Brief introduction paragraph
+1. ## Project Overview - Brief introduction paragraph that aligns with the project context
 2. ## Scope of Work - Bulleted list of key deliverables
 3. ## Key Requirements - Technical, legal, administrative requirements as bullets
 4. ## Materials & Quantities - Table format if quantities exist, otherwise bullets
@@ -148,6 +175,7 @@ IMPORTANT:
 - Only extract information explicitly stated in the document
 - Use professional construction industry terminology
 - Be comprehensive but accurate
+- Align the summary with the project context when available
 - Set confidence based on clarity of information (0.0-1.0)`;
 
     for (let attempt = 0; attempt <= retries; attempt++) {
