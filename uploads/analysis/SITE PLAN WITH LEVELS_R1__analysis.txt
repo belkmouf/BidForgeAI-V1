@@ -1,0 +1,216 @@
+{
+  "sketch_id": "sketch_1766627389712_SITE PLAN WITH LEVELS(R1)",
+  "context_layer": {
+    "document_type": "Site Plan",
+    "description": "This drawing shows the proposed site plan with levels for a building at Al Mudhaibi. It includes the layout of the building, parking areas, roads, and surrounding infrastructure. The drawing indicates existing and proposed levels, utilities, and landscaping.",
+    "inferred_capacity": {
+      "value": 0,
+      "unit": "vehicles",
+      "reasoning": "The drawing shows parking spaces, but the exact number is not clear enough to determine the capacity."
+    },
+    "compliance_note": "All external works/drawings shall be read with relevant site development/infrastructure/landscape drawings.",
+    "purpose": "Site layout and level planning for a building project.",
+    "key_features": [
+      "Building Layout",
+      "Parking Areas",
+      "Road Network",
+      "Utility Locations",
+      "Landscaping"
+    ]
+  },
+  "project_metadata": {
+    "project_title": "PROPOSED DIRECTORATE BUILDING AT AL MUDHAIBI",
+    "project_number": "174-2023-A3-1002",
+    "revision": "01",
+    "status": "ISSUED FOR CONSTRUCTION",
+    "date": "27-11-23",
+    "scale": "1:500",
+    "personnel": {
+      "drawn_by": "ONE",
+      "checked_by": "SHIFFT",
+      "approved_by": "AI",
+      "client": "SLJ. SULTANATE OF OMAN MINISTRY OF HOUSING & URBAN PLANNING DIRECTORATE GENERAL OF SPECIAL HOUSING AND PROJECTS",
+      "consultant": "AL MANARAH",
+      "contractor": null
+    },
+    "drawing_number": "DRAWING 501",
+    "sheet_of": null
+  },
+  "technical_data": {
+    "dimensions": [
+      {
+        "label": "Proposed Road Width",
+        "value": 30,
+        "unit": "m",
+        "views": [
+          "Site Plan"
+        ],
+        "derived_from": null,
+        "location": "Along the proposed road",
+        "confidence": 0.9
+      },
+      {
+        "label": "6.0M Wide Asphalt Road",
+        "value": 6,
+        "unit": "m",
+        "views": [
+          "Site Plan"
+        ],
+        "derived_from": null,
+        "location": "Around the building",
+        "confidence": 0.9
+      },
+      {
+        "label": "4.0M Wide Asphalt Road",
+        "value": 4,
+        "unit": "m",
+        "views": [
+          "Site Plan"
+        ],
+        "derived_from": null,
+        "location": "Parking area",
+        "confidence": 0.9
+      }
+    ],
+    "materials": [
+      {
+        "component": "Asphalt Road",
+        "spec": "300MM THICK",
+        "location": "Road surface",
+        "grade": null,
+        "standard": null,
+        "quantity": 0,
+        "unit": null,
+        "finish": null,
+        "color": null
+      },
+      {
+        "component": "Interlock Paving",
+        "spec": "60MM THICK",
+        "location": "Paved areas",
+        "grade": null,
+        "standard": null,
+        "quantity": 0,
+        "unit": null,
+        "finish": null,
+        "color": null
+      }
+    ],
+    "components": [
+      {
+        "type": "Building",
+        "description": "Directorate Building",
+        "size": null,
+        "count": 1,
+        "location": "Center of the site",
+        "material": null,
+        "connection_type": null
+      },
+      {
+        "type": "Road",
+        "description": "Asphalt road",
+        "size": "6m wide",
+        "count": 0,
+        "location": "Surrounding the building",
+        "material": "Asphalt",
+        "connection_type": null
+      },
+      {
+        "type": "Road",
+        "description": "Asphalt road",
+        "size": "4m wide",
+        "count": 0,
+        "location": "Parking area",
+        "material": "Asphalt",
+        "connection_type": null
+      },
+      {
+        "type": "Retaining Wall",
+        "description": "300mm thick retaining wall",
+        "size": "300mm",
+        "count": 0,
+        "location": "Around the site",
+        "material": "Concrete",
+        "connection_type": null
+      }
+    ],
+    "quantities": {
+      "concrete_volume_m3": 0,
+      "steel_weight_kg": 0,
+      "fabric_area_m2": 0,
+      "paint_area_m2": 0,
+      "foundation_count": 0
+    }
+  },
+  "specifications": [
+    "ALL EXTERNAL WORKS/DRAWINGS SHALL BE READ WITH RELEVANT SITE DEVELOPMENT/INFRASTRUCTURE/LANDSCAPE DRAWINGS.",
+    "NOTES:",
+    "1. ALL DIMENSIONS ARE IN MM UNLESS OTHERWISE STATED.",
+    "2. DO NOT SCALE THE DRAWING FOLLOW THE WRITTEN DIMENSIONS ONLY.",
+    "3. ANY DISCREPANCIES SHALL BE IMMEDIATELY REPORTED TO THE ENGINEER.",
+    "4. ALL MATERIALS/FINISHES SHALL BE AS PER SPECIFICATION APPROVED BY THE CLIENT/CONSULTANT.",
+    "5. BEFORE COMMENCING CONSTRUCTION, THE CONTRACTOR MUST VERIFY THE ROAD LEVEL WITH THE LOCAL AUTHORITY. IF ANY DEVIATION FROM THE ROAD LEVEL WILL BE THE CONTRACTOR REQUIRED TO NOTIFY THE SUPERVISION ENGINEER AND MAKE CORRECTIONS AS PER ENGINEER'S INSTRUCTIONS.",
+    "6. CONSULT WITH FIRE SAFETY REGULATIONS.",
+    "7. ALL EXTERNAL WORKS/DRAWINGS SHALL BE READ WITH ALL RELEVANT SITE DEVELOPMENT/INFRASTRUCTURE/LANDSCAPE DRAWINGS."
+  ],
+  "standards": [],
+  "regional_codes": [],
+  "annotations": [
+    "PROPOSED ROAD (30m WIDE)",
+    "132 KV OHL",
+    "ELRC. TOWER",
+    "6.0M WIDE ASPHALT ROAD",
+    "4.0 M WIDE ASPHALT ROAD",
+    "COMPRISING WALL TYPE 300MM THK. REINFORCED BLACK WORK",
+    "EXISTING EAL AJ",
+    "FOR FUTURE",
+    "Asphalt Road Level=412.00",
+    "Asphalt Road Level=411.81",
+    "Asphalt Road Level=411.52",
+    "Asphalt Road Level=411.24",
+    "Asphalt Road Level=411.51",
+    "Asphalt Road Level=411.29",
+    "Asphalt Road Level=411.85",
+    "Asphalt Road Level=412.55",
+    "Asphalt Road Level=412.75",
+    "Asphalt Road Level=412.84",
+    "Asphalt Road Level=412.94",
+    "Asphalt Road Level=410.63",
+    "PROPOSED DIRECTORATE BUILDING",
+    "LAWN",
+    "300MM THK. FOR RETAINING WALL",
+    "CUSTOMERS COVERED CAR PARKING",
+    "STAFF COVERED CAR PARKING",
+    "CUSTOMERS OPEN CAR PARKING",
+    "STAFF OPEN CAR PARKING",
+    "PROPOSED UNDERGROUND BLOCK",
+    "PROPOSED EXTERNAL ROAD",
+    "UGC OMAN BROADBAND-LINE",
+    "UEC NAVRAS LINE",
+    "OVERHEAD ELECTRIC LINE",
+    "NEW OWSC WATER LINE",
+    "OLD OWSC WATER LINE",
+    "ELECTRIC POLE",
+    "WATER MARKER POST",
+    "NAWRAS MARKER POST",
+    "MOH KROOME LINE",
+    "BENCH MARK"
+  ],
+  "views_included": [
+    "Site Plan"
+  ],
+  "revisions": [
+    {
+      "revision": "01",
+      "date": "05-11-23",
+      "description": "REVISED AS PER COMMENTS ISH & A"
+    }
+  ],
+  "confidence_score": 0.88,
+  "processing_time": 16.253275394439697,
+  "notes": "The drawing provides a general overview of the site layout. More detailed drawings will be needed for accurate cost estimation.",
+  "warnings": [
+    "The drawing is a scan of a physical document, so some details may be unclear.",
+    "Scale is small, making it difficult to extract precise dimensions."
+  ]
+}

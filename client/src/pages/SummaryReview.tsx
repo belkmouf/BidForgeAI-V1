@@ -19,6 +19,12 @@ import { Alert, AlertDescription } from '../components/ui/alert';
 import { ProjectWorkflowLayout, getWorkflowSteps, type WorkflowStatus } from '../components/workflow/ProjectWorkflowLayout';
 import { Separator } from '../components/ui/separator';
 
+function isImageFile(filename: string): boolean {
+  const imageExtensions = ['.png', '.jpg', '.jpeg', '.gif', '.tiff', '.bmp', '.webp'];
+  const ext = filename.toLowerCase().match(/\.[^.]*$/)?.[0] || '';
+  return imageExtensions.includes(ext);
+}
+
 function DocumentSummaryCard({ 
   document, 
   onSave,
@@ -215,7 +221,10 @@ export default function SummaryReview() {
 
   const documents = summaryData?.documents || [];
   const hasSummaries = documents.some(d => d.summary);
-  const allHaveSummaries = documents.length > 0 && documents.every(d => d.summary);
+  // Image files don't generate text summaries, so exclude them from this check
+  const nonImageDocs = documents.filter(d => !isImageFile(d.filename));
+  const allHaveSummaries = documents.length > 0 && 
+    (nonImageDocs.length === 0 || nonImageDocs.every(d => d.summary));
 
   return (
     <ProjectWorkflowLayout
@@ -263,7 +272,12 @@ export default function SummaryReview() {
           <>
             <div className="flex items-center justify-between mb-4">
               <Badge variant="outline" className="text-sm">
-                {documents.filter(d => d.summary).length} / {documents.length} documents summarized
+                {nonImageDocs.filter(d => d.summary).length} / {nonImageDocs.length} documents summarized
+                {documents.length > nonImageDocs.length && (
+                  <span className="ml-1 text-muted-foreground">
+                    (+{documents.length - nonImageDocs.length} image{documents.length - nonImageDocs.length > 1 ? 's' : ''})
+                  </span>
+                )}
               </Badge>
             </div>
 
