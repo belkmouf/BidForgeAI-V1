@@ -1217,156 +1217,647 @@ expireTrials().catch(console.error);
 
 ## Phase 6: Frontend Components
 
-### Step 6.1: Create Billing Page
+### Step 6.1: Add Billing Route to App
+
+**File:** `client/src/App.tsx`
+
+**Action:** Add billing route. Find the routes section and add:
+
+**FIND:**
+```typescript
+      <Route path="/settings">
+        {() => <ProtectedRoute component={Settings} />}
+      </Route>
+```
+
+**ADD AFTER:**
+```typescript
+      <Route path="/billing">
+        {() => <ProtectedRoute component={Billing} />}
+      </Route>
+```
+
+**Action:** Add import at the top:
+
+**FIND:**
+```typescript
+import Settings from "@/pages/Settings";
+```
+
+**ADD AFTER:**
+```typescript
+import Billing from "@/pages/Billing";
+```
+
+---
+
+### Step 6.2: Add Billing Button to Sidebar
+
+**File:** `client/src/components/layout/AppSidebar.tsx`
+
+**Action:** Add billing icon import and navigation item.
+
+**FIND:** The imports section with icons:
+```typescript
+import { 
+  LayoutDashboard, 
+  FolderKanban, 
+  Settings, 
+  FileText,
+  LogOut,
+  Home,
+  MessageSquare,
+  BarChart3,
+  Shield,
+  ChevronLeft,
+  ChevronRight,
+  Pin,
+  PinOff,
+  Upload,
+  ShieldCheck,
+  AlertTriangle,
+  Sparkles,
+  FileSearch,
+  Database,
+  ExternalLink
+} from "lucide-react";
+```
+
+**ADD:** `CreditCard` to the imports:
+```typescript
+import { 
+  LayoutDashboard, 
+  FolderKanban, 
+  Settings, 
+  FileText,
+  LogOut,
+  Home,
+  MessageSquare,
+  BarChart3,
+  Shield,
+  ChevronLeft,
+  ChevronRight,
+  Pin,
+  PinOff,
+  Upload,
+  ShieldCheck,
+  AlertTriangle,
+  Sparkles,
+  FileSearch,
+  Database,
+  ExternalLink,
+  CreditCard  // Add this
+} from "lucide-react";
+```
+
+**FIND:** The `navItems` array:
+```typescript
+  const navItems = [
+    { href: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
+    { href: "/projects", icon: FolderKanban, label: "Projects" },
+    { href: "/analytics", icon: BarChart3, label: "Analytics" },
+    { href: "/templates", icon: FileText, label: "Templates" },
+    { href: "/whatsapp", icon: MessageSquare, label: "WhatsApp" },
+    { href: "/admin", icon: Shield, label: "Admin" },
+    { href: "/settings", icon: Settings, label: "Settings" },
+  ];
+```
+
+**REPLACE WITH:** (Add billing after settings)
+```typescript
+  const navItems = [
+    { href: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
+    { href: "/projects", icon: FolderKanban, label: "Projects" },
+    { href: "/analytics", icon: BarChart3, label: "Analytics" },
+    { href: "/templates", icon: FileText, label: "Templates" },
+    { href: "/whatsapp", icon: MessageSquare, label: "WhatsApp" },
+    { href: "/admin", icon: Shield, label: "Admin" },
+    { href: "/settings", icon: Settings, label: "Settings" },
+    { href: "/billing", icon: CreditCard, label: "Billing" },
+  ];
+```
+
+---
+
+### Step 6.3: Create Billing Page
 
 **File:** `client/src/pages/Billing.tsx`
 
-**Action:** Create billing page component (basic structure):
+**Action:** Create comprehensive billing page component:
 
 ```typescript
-import { useQuery, useMutation } from '@tanstack/react-query';
-import { api } from '../lib/api';
-import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
-import { Button } from '../components/ui/button';
-import { Progress } from '../components/ui/progress';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useLocation } from 'wouter';
+import { AppSidebar } from '@/components/layout/AppSidebar';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Progress } from '@/components/ui/progress';
+import { Badge } from '@/components/ui/badge';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { 
+  CreditCard, 
+  CheckCircle2, 
+  XCircle, 
+  AlertTriangle, 
+  Loader2,
+  Plus,
+  Calendar,
+  TrendingUp,
+  Zap,
+  FolderKanban,
+  FileText
+} from 'lucide-react';
+import { apiRequest } from '@/lib/auth';
+import { useToast } from '@/hooks/use-toast';
+
+interface SubscriptionData {
+  subscription: {
+    id: number;
+    status: string;
+    billingCycle: string;
+    currentPeriodStart: string;
+    currentPeriodEnd: string;
+    finalPrice: number;
+    extraProjectsPurchased: number;
+    plan: {
+      id: number;
+      name: string;
+      displayName: string;
+      tier: number;
+      monthlyPrice: number;
+      annualPrice: number | null;
+      extraProjectFee: number | null;
+      extraProjectDocBonus: number | null;
+    };
+  };
+  usage: {
+    period: {
+      start: string;
+      end: string;
+    };
+    projects: {
+      used: number;
+      limit: number;
+      remaining: number;
+    };
+    documents: {
+      used: number;
+      limit: number;
+      remaining: number;
+    };
+    bids: {
+      used: number;
+      limit: number;
+      remaining: number;
+    };
+  } | null;
+}
 
 export default function Billing() {
-  const { data, isLoading } = useQuery({
-    queryKey: ['billing', 'subscription'],
-    queryFn: () => api.get('/billing/subscription').then(res => res.data),
-  });
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
   
-  const purchaseExtraProjects = useMutation({
-    mutationFn: (quantity: number) => 
-      api.post('/billing/extra-projects', { quantity }),
-    onSuccess: () => {
-      // Refetch subscription data
+  const { data, isLoading, error } = useQuery<SubscriptionData>({
+    queryKey: ['billing', 'subscription'],
+    queryFn: async () => {
+      const response = await apiRequest('/api/billing/subscription');
+      if (!response.ok) {
+        throw new Error('Failed to fetch subscription');
+      }
+      return response.json();
     },
   });
   
-  if (isLoading) return <div>Loading...</div>;
+  const purchaseExtraProjects = useMutation({
+    mutationFn: async (quantity: number) => {
+      const response = await apiRequest('/api/billing/extra-projects', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ quantity }),
+      });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to purchase extra projects');
+      }
+      return response.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['billing', 'subscription'] });
+      toast({
+        title: 'Success',
+        description: `Added ${data.quantity} extra project(s) with ${data.bonusDocuments} bonus documents`,
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Error',
+        description: error.message,
+        variant: 'destructive',
+      });
+    },
+  });
+  
+  const cancelSubscription = useMutation({
+    mutationFn: async (cancelAtPeriodEnd: boolean) => {
+      const response = await apiRequest('/api/billing/cancel', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cancel_at_period_end: cancelAtPeriodEnd }),
+      });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to cancel subscription');
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['billing', 'subscription'] });
+      toast({
+        title: 'Success',
+        description: 'Subscription cancellation scheduled',
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Error',
+        description: error.message,
+        variant: 'destructive',
+      });
+    },
+  });
+  
+  if (isLoading) {
+    return (
+      <div className="flex h-screen">
+        <AppSidebar />
+        <div className="flex-1 flex items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      </div>
+    );
+  }
+  
+  if (error) {
+    return (
+      <div className="flex h-screen">
+        <AppSidebar />
+        <div className="flex-1 p-6">
+          <Alert variant="destructive">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertTitle>Error</AlertTitle>
+            <AlertDescription>
+              Failed to load billing information. Please try again.
+            </AlertDescription>
+          </Alert>
+        </div>
+      </div>
+    );
+  }
   
   const { subscription, usage } = data || {};
+  const isTrial = subscription?.plan.tier === 0;
+  const isExpired = subscription?.status === 'expired';
   
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      <h1 className="text-3xl font-bold">Billing & Subscription</h1>
-      
-      {/* Current Subscription */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Current Subscription</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {subscription ? (
+    <div className="flex h-screen bg-background">
+      <AppSidebar />
+      <div className="flex-1 overflow-y-auto">
+        <div className="container mx-auto p-6 space-y-6 max-w-6xl">
+          {/* Header */}
+          <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-2xl font-semibold">
-                {subscription.plan.displayName}
-              </h2>
-              <p className="text-muted-foreground">
-                ${subscription.finalPrice}/{subscription.billingCycle === 'annual' ? 'year' : 'month'}
-              </p>
-              <p>
-                {subscription.plan.tier === 0 
-                  ? `Trial expires: ${new Date(subscription.currentPeriodEnd).toLocaleDateString()}`
-                  : `Active until ${new Date(subscription.currentPeriodEnd).toLocaleDateString()}`
-                }
+              <h1 className="text-3xl font-bold">Billing & Subscription</h1>
+              <p className="text-muted-foreground mt-1">
+                Manage your subscription and view usage limits
               </p>
             </div>
-          ) : (
-            <div>
-              <p>No active subscription</p>
-              <Button>Subscribe</Button>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-      
-      {/* Usage & Limits */}
-      {usage && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Usage & Limits</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {/* Projects */}
-            <div>
-              <div className="flex justify-between mb-2">
-                <span>Projects</span>
-                <span>
-                  {usage.projects.used} / {usage.projects.limit === 999999999 ? 'Unlimited' : usage.projects.limit}
-                </span>
-              </div>
-              <Progress 
-                value={(usage.projects.used / usage.projects.limit) * 100} 
-              />
-              <p className="text-sm text-muted-foreground mt-1">
-                {usage.projects.remaining} remaining
-              </p>
-            </div>
-            
-            {/* Documents */}
-            <div>
-              <div className="flex justify-between mb-2">
-                <span>Documents</span>
-                <span>
-                  {usage.documents.used} / {usage.documents.limit === 999999999 ? 'Unlimited' : usage.documents.limit}
-                </span>
-              </div>
-              <Progress 
-                value={(usage.documents.used / usage.documents.limit) * 100} 
-              />
-              <p className="text-sm text-muted-foreground mt-1">
-                {usage.documents.remaining} remaining
-              </p>
-            </div>
-            
-            {/* Bids */}
-            <div>
-              <div className="flex justify-between mb-2">
-                <span>Bid Generations</span>
-                <span>
-                  {usage.bids.used} / {usage.bids.limit === 999999999 ? 'Unlimited' : usage.bids.limit}
-                </span>
-              </div>
-              <Progress 
-                value={usage.bids.limit === 999999999 
-                  ? 0 
-                  : (usage.bids.used / usage.bids.limit) * 100
-                } 
-              />
-              <p className="text-sm text-muted-foreground mt-1">
-                {usage.bids.remaining === 999999999 
-                  ? 'Unlimited' 
-                  : `${usage.bids.remaining} remaining`
-                }
-              </p>
-            </div>
-            
-            {/* Extra Project Purchase (Tier 1 & 2 only) */}
-            {subscription && 
-             (subscription.plan.tier === 1 || subscription.plan.tier === 2) &&
-             subscription.plan.extraProjectFee && (
-              <div className="mt-4 p-4 border rounded-lg">
-                <h3 className="font-semibold mb-2">Need More Projects?</h3>
-                <p className="text-sm text-muted-foreground mb-3">
-                  Add extra projects for ${subscription.plan.extraProjectFee} each
-                  (+{subscription.plan.extraProjectDocBonus} documents per project)
-                </p>
-                <Button 
-                  onClick={() => purchaseExtraProjects.mutate(1)}
-                  disabled={purchaseExtraProjects.isPending}
-                >
-                  Add 1 Extra Project
-                </Button>
-              </div>
+            {subscription && !isTrial && (
+              <Badge 
+                variant={subscription.status === 'active' ? 'default' : 'secondary'}
+                className="text-sm px-3 py-1"
+              >
+                {subscription.status === 'active' ? (
+                  <>
+                    <CheckCircle2 className="h-3 w-3 mr-1" />
+                    Active
+                  </>
+                ) : (
+                  <>
+                    <XCircle className="h-3 w-3 mr-1" />
+                    {subscription.status}
+                  </>
+                )}
+              </Badge>
             )}
-          </CardContent>
-        </Card>
-      )}
+          </div>
+          
+          {/* Trial Expiration Warning */}
+          {isTrial && subscription && (
+            <Alert>
+              <AlertTriangle className="h-4 w-4" />
+              <AlertTitle>Trial Period</AlertTitle>
+              <AlertDescription>
+                Your free trial expires on {new Date(subscription.currentPeriodEnd).toLocaleDateString()}. 
+                Subscribe to continue using BidForge AI.
+              </AlertDescription>
+            </Alert>
+          )}
+          
+          {/* Expired Subscription Warning */}
+          {isExpired && (
+            <Alert variant="destructive">
+              <XCircle className="h-4 w-4" />
+              <AlertTitle>Subscription Expired</AlertTitle>
+              <AlertDescription>
+                Your subscription has expired. Please subscribe to continue using BidForge AI.
+              </AlertDescription>
+            </Alert>
+          )}
+          
+          {/* Current Subscription Card */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>Current Subscription</CardTitle>
+                  <CardDescription>
+                    {subscription 
+                      ? `You're on the ${subscription.plan.displayName} plan`
+                      : 'No active subscription'
+                    }
+                  </CardDescription>
+                </div>
+                {subscription && (
+                  <Badge variant="outline" className="text-lg px-4 py-2">
+                    Tier {subscription.plan.tier}
+                  </Badge>
+                )}
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {subscription ? (
+                <>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <p className="text-sm text-muted-foreground">Plan</p>
+                      <p className="text-2xl font-semibold">{subscription.plan.displayName}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Price</p>
+                      <p className="text-2xl font-semibold">
+                        ${subscription.finalPrice.toFixed(2)}
+                        <span className="text-sm font-normal text-muted-foreground">
+                          /{subscription.billingCycle === 'annual' ? 'year' : 'month'}
+                        </span>
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">
+                        {isTrial ? 'Expires' : 'Renews'}
+                      </p>
+                      <p className="text-2xl font-semibold">
+                        {new Date(subscription.currentPeriodEnd).toLocaleDateString()}
+                      </p>
+                    </div>
+                  </div>
+                  
+                  {subscription.extraProjectsPurchased > 0 && (
+                    <div className="pt-4 border-t">
+                      <p className="text-sm text-muted-foreground mb-1">Extra Projects</p>
+                      <p className="text-lg font-semibold">
+                        {subscription.extraProjectsPurchased} extra project(s) purchased
+                      </p>
+                    </div>
+                  )}
+                  
+                  {!isTrial && subscription.status === 'active' && (
+                    <div className="flex gap-2 pt-4 border-t">
+                      <Button 
+                        variant="outline"
+                        onClick={() => {
+                          if (confirm('Are you sure you want to cancel your subscription?')) {
+                            cancelSubscription.mutate(true);
+                          }
+                        }}
+                        disabled={cancelSubscription.isPending}
+                      >
+                        {cancelSubscription.isPending ? (
+                          <>
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            Cancelling...
+                          </>
+                        ) : (
+                          'Cancel Subscription'
+                        )}
+                      </Button>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="text-center py-8">
+                  <p className="text-muted-foreground mb-4">No active subscription</p>
+                  <Button>View Plans & Subscribe</Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+          
+          {/* Usage & Limits Card */}
+          {usage && (
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle>Usage & Limits</CardTitle>
+                    <CardDescription>
+                      Current billing period: {new Date(usage.period.start).toLocaleDateString()} - {new Date(usage.period.end).toLocaleDateString()}
+                    </CardDescription>
+                  </div>
+                  <Calendar className="h-5 w-5 text-muted-foreground" />
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {/* Projects Usage */}
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <FolderKanban className="h-4 w-4 text-muted-foreground" />
+                      <span className="font-medium">Projects</span>
+                    </div>
+                    <div className="text-right">
+                      <span className="font-semibold">
+                        {usage.projects.used} / {usage.projects.limit === 999999999 ? 'Unlimited' : usage.projects.limit}
+                      </span>
+                      <span className="text-sm text-muted-foreground ml-2">
+                        ({usage.projects.remaining} remaining)
+                      </span>
+                    </div>
+                  </div>
+                  <Progress 
+                    value={usage.projects.limit === 999999999 
+                      ? 0 
+                      : Math.min(100, (usage.projects.used / usage.projects.limit) * 100)
+                    } 
+                    className="h-2"
+                  />
+                  {usage.projects.used >= usage.projects.limit * 0.8 && usage.projects.limit !== 999999999 && (
+                    <Alert className="mt-2">
+                      <AlertTriangle className="h-4 w-4" />
+                      <AlertDescription className="text-xs">
+                        You're approaching your project limit
+                      </AlertDescription>
+                    </Alert>
+                  )}
+                </div>
+                
+                {/* Documents Usage */}
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <FileText className="h-4 w-4 text-muted-foreground" />
+                      <span className="font-medium">Documents</span>
+                    </div>
+                    <div className="text-right">
+                      <span className="font-semibold">
+                        {usage.documents.used} / {usage.documents.limit === 999999999 ? 'Unlimited' : usage.documents.limit}
+                      </span>
+                      <span className="text-sm text-muted-foreground ml-2">
+                        ({usage.documents.remaining} remaining)
+                      </span>
+                    </div>
+                  </div>
+                  <Progress 
+                    value={usage.documents.limit === 999999999 
+                      ? 0 
+                      : Math.min(100, (usage.documents.used / usage.documents.limit) * 100)
+                    } 
+                    className="h-2"
+                  />
+                  {usage.documents.used >= usage.documents.limit * 0.8 && usage.documents.limit !== 999999999 && (
+                    <Alert className="mt-2">
+                      <AlertTriangle className="h-4 w-4" />
+                      <AlertDescription className="text-xs">
+                        You're approaching your document limit
+                      </AlertDescription>
+                    </Alert>
+                  )}
+                </div>
+                
+                {/* Bid Generations Usage */}
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <Zap className="h-4 w-4 text-muted-foreground" />
+                      <span className="font-medium">Bid Generations</span>
+                    </div>
+                    <div className="text-right">
+                      <span className="font-semibold">
+                        {usage.bids.used} / {usage.bids.limit === 999999999 ? 'Unlimited' : usage.bids.limit}
+                      </span>
+                      {usage.bids.limit !== 999999999 && (
+                        <span className="text-sm text-muted-foreground ml-2">
+                          ({usage.bids.remaining} remaining)
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <Progress 
+                    value={usage.bids.limit === 999999999 
+                      ? 0 
+                      : Math.min(100, (usage.bids.used / usage.bids.limit) * 100)
+                    } 
+                    className="h-2"
+                  />
+                  {usage.bids.used >= (usage.bids.limit || 0) * 0.8 && usage.bids.limit !== 999999999 && (
+                    <Alert className="mt-2">
+                      <AlertTriangle className="h-4 w-4" />
+                      <AlertDescription className="text-xs">
+                        You're approaching your bid generation limit
+                      </AlertDescription>
+                    </Alert>
+                  )}
+                </div>
+                
+                {/* Extra Project Purchase (Tier 1 & 2 only) */}
+                {subscription && 
+                 (subscription.plan.tier === 1 || subscription.plan.tier === 2) &&
+                 subscription.plan.extraProjectFee && (
+                  <div className="mt-6 p-4 border-2 border-dashed rounded-lg bg-muted/50">
+                    <div className="flex items-start justify-between mb-3">
+                      <div>
+                        <h3 className="font-semibold mb-1 flex items-center gap-2">
+                          <Plus className="h-4 w-4" />
+                          Need More Projects?
+                        </h3>
+                        <p className="text-sm text-muted-foreground">
+                          Add extra projects for ${subscription.plan.extraProjectFee.toFixed(2)} each
+                          <br />
+                          <span className="text-xs">
+                            Each purchase includes +{subscription.plan.extraProjectDocBonus} bonus documents
+                          </span>
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button 
+                        onClick={() => purchaseExtraProjects.mutate(1)}
+                        disabled={purchaseExtraProjects.isPending}
+                        size="sm"
+                      >
+                        {purchaseExtraProjects.isPending ? (
+                          <>
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            Processing...
+                          </>
+                        ) : (
+                          <>
+                            <Plus className="h-4 w-4 mr-2" />
+                            Add 1 Extra Project
+                          </>
+                        )}
+                      </Button>
+                      <Button 
+                        variant="outline"
+                        onClick={() => purchaseExtraProjects.mutate(3)}
+                        disabled={purchaseExtraProjects.isPending}
+                        size="sm"
+                      >
+                        Add 3 Extra Projects
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+          
+          {/* Plan Comparison / Upgrade Card */}
+          {subscription && subscription.plan.tier < 3 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Upgrade Your Plan</CardTitle>
+                <CardDescription>
+                  Get more projects, documents, and bid generations
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Button variant="outline" className="w-full">
+                  <TrendingUp className="h-4 w-4 mr-2" />
+                  View Available Plans
+                </Button>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
+```
+
+**Note:** Add missing imports:
+```typescript
+import { FolderKanban, FileText } from 'lucide-react';
 ```
 
 ---
