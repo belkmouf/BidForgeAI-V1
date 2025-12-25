@@ -1506,3 +1506,255 @@ export const verificationGatesRelations = relations(verificationGates, ({ one })
     references: [users.id],
   }),
 }));
+
+// ==================== BILLING MODULE ====================
+
+// Subscription Plans Table
+export const subscriptionPlans = pgTable("subscription_plans", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  name: varchar("name", { length: 100 }).notNull().unique(),
+  displayName: varchar("display_name", { length: 255 }).notNull(),
+  tier: integer("tier").notNull(),
+  basePrice: real("base_price").notNull(),
+  currency: varchar("currency", { length: 3 }).default("USD"),
+  
+  features: jsonb("features").$type<Record<string, any>>().default(sql`'{}'::jsonb`),
+  limits: jsonb("limits").$type<Record<string, any>>().default(sql`'{}'::jsonb`),
+  includedCredits: jsonb("included_credits").$type<Record<string, number>>().default(sql`'{}'::jsonb`),
+  overagePricing: jsonb("overage_pricing").$type<Record<string, number>>().default(sql`'{}'::jsonb`),
+  
+  stripePriceId: varchar("stripe_price_id", { length: 255 }),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export type SubscriptionPlan = typeof subscriptionPlans.$inferSelect;
+export type InsertSubscriptionPlan = typeof subscriptionPlans.$inferInsert;
+export const subscriptionPlanSchema = createInsertSchema(subscriptionPlans);
+
+// Company Subscriptions Table
+export const companySubscriptions = pgTable("company_subscriptions", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  companyId: integer("company_id")
+    .notNull()
+    .references(() => companies.id, { onDelete: "cascade" }),
+  planId: integer("plan_id")
+    .notNull()
+    .references(() => subscriptionPlans.id),
+  
+  status: varchar("status", { length: 50 }).notNull().default("active"),
+  billingCycle: varchar("billing_cycle", { length: 20 }).default("monthly"),
+  currentPeriodStart: timestamp("current_period_start").notNull(),
+  currentPeriodEnd: timestamp("current_period_end").notNull(),
+  
+  basePrice: real("base_price").notNull(),
+  discountPercent: real("discount_percent").default(0),
+  finalPrice: real("final_price").notNull(),
+  
+  paymentMethodId: varchar("payment_method_id", { length: 255 }),
+  stripeSubscriptionId: varchar("stripe_subscription_id", { length: 255 }),
+  stripeCustomerId: varchar("stripe_customer_id", { length: 255 }),
+  autoRenew: boolean("auto_renew").default(true),
+  
+  cancelledAt: timestamp("cancelled_at"),
+  cancelReason: text("cancel_reason"),
+  cancelAtPeriodEnd: boolean("cancel_at_period_end").default(false),
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export type CompanySubscription = typeof companySubscriptions.$inferSelect;
+export type InsertCompanySubscription = typeof companySubscriptions.$inferInsert;
+
+// Usage Events Table
+export const usageEvents = pgTable("usage_events", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  companyId: integer("company_id")
+    .notNull()
+    .references(() => companies.id, { onDelete: "cascade" }),
+  projectId: varchar("project_id").references(() => projects.id, { onDelete: "set null" }),
+  userId: integer("user_id").references(() => users.id, { onDelete: "set null" }),
+  
+  eventType: varchar("event_type", { length: 100 }).notNull(),
+  eventCategory: varchar("event_category", { length: 50 }).notNull(),
+  
+  quantity: real("quantity").notNull(),
+  unit: varchar("unit", { length: 50 }).notNull(),
+  
+  unitCost: real("unit_cost").notNull(),
+  totalCost: real("total_cost").notNull(),
+  
+  metadata: jsonb("metadata").$type<Record<string, any>>().default(sql`'{}'::jsonb`),
+  
+  billingPeriodStart: timestamp("billing_period_start").notNull(),
+  billingPeriodEnd: timestamp("billing_period_end").notNull(),
+  
+  isIncluded: boolean("is_included").default(false),
+  isBilled: boolean("is_billed").default(false),
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export type UsageEvent = typeof usageEvents.$inferSelect;
+export type InsertUsageEvent = typeof usageEvents.$inferInsert;
+
+// Usage Credits Table
+export const usageCredits = pgTable("usage_credits", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  companyId: integer("company_id")
+    .notNull()
+    .references(() => companies.id, { onDelete: "cascade" }),
+  subscriptionId: integer("subscription_id")
+    .references(() => companySubscriptions.id, { onDelete: "cascade" }),
+  
+  creditType: varchar("credit_type", { length: 100 }).notNull(),
+  quantity: real("quantity").notNull(),
+  usedQuantity: real("used_quantity").default(0),
+  
+  validFrom: timestamp("valid_from").notNull(),
+  validUntil: timestamp("valid_until").notNull(),
+  
+  source: varchar("source", { length: 50 }).notNull(),
+  sourceReference: varchar("source_reference", { length: 255 }),
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export type UsageCredit = typeof usageCredits.$inferSelect;
+export type InsertUsageCredit = typeof usageCredits.$inferInsert;
+
+// Invoices Table
+export const invoices = pgTable("invoices", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  companyId: integer("company_id")
+    .notNull()
+    .references(() => companies.id, { onDelete: "cascade" }),
+  subscriptionId: integer("subscription_id")
+    .references(() => companySubscriptions.id, { onDelete: "set null" }),
+  
+  invoiceNumber: varchar("invoice_number", { length: 50 }).notNull().unique(),
+  status: varchar("status", { length: 50 }).notNull().default("draft"),
+  
+  periodStart: timestamp("period_start").notNull(),
+  periodEnd: timestamp("period_end").notNull(),
+  
+  baseAmount: real("base_amount").notNull(),
+  usageAmount: real("usage_amount").default(0),
+  discountAmount: real("discount_amount").default(0),
+  taxAmount: real("tax_amount").default(0),
+  totalAmount: real("total_amount").notNull(),
+  currency: varchar("currency", { length: 3 }).default("USD"),
+  
+  paidAt: timestamp("paid_at"),
+  paymentMethod: varchar("payment_method", { length: 100 }),
+  paymentReference: varchar("payment_reference", { length: 255 }),
+  stripeInvoiceId: varchar("stripe_invoice_id", { length: 255 }),
+  
+  lineItems: jsonb("line_items").$type<Array<{
+    description: string;
+    quantity: number;
+    unit_price: number;
+    total: number;
+  }>>().default(sql`'[]'::jsonb`),
+  
+  pdfUrl: text("pdf_url"),
+  pdfGeneratedAt: timestamp("pdf_generated_at"),
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export type Invoice = typeof invoices.$inferSelect;
+export type InsertInvoice = typeof invoices.$inferInsert;
+
+// Payment Methods Table
+export const paymentMethods = pgTable("payment_methods", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  companyId: integer("company_id")
+    .notNull()
+    .references(() => companies.id, { onDelete: "cascade" }),
+  
+  provider: varchar("provider", { length: 50 }).notNull(),
+  providerCustomerId: varchar("provider_customer_id", { length: 255 }),
+  providerPaymentMethodId: varchar("provider_payment_method_id", { length: 255 }),
+  
+  cardType: varchar("card_type", { length: 50 }),
+  last4: varchar("last4", { length: 4 }),
+  expiryMonth: integer("expiry_month"),
+  expiryYear: integer("expiry_year"),
+  cardholderName: varchar("cardholder_name", { length: 255 }),
+  
+  isDefault: boolean("is_default").default(false),
+  isActive: boolean("is_active").default(true),
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export type PaymentMethod = typeof paymentMethods.$inferSelect;
+export type InsertPaymentMethod = typeof paymentMethods.$inferInsert;
+
+// Billing Relations
+export const subscriptionPlansRelations = relations(subscriptionPlans, ({ many }) => ({
+  subscriptions: many(companySubscriptions),
+}));
+
+export const companySubscriptionsRelations = relations(companySubscriptions, ({ one, many }) => ({
+  company: one(companies, {
+    fields: [companySubscriptions.companyId],
+    references: [companies.id],
+  }),
+  plan: one(subscriptionPlans, {
+    fields: [companySubscriptions.planId],
+    references: [subscriptionPlans.id],
+  }),
+  credits: many(usageCredits),
+  invoices: many(invoices),
+}));
+
+export const usageEventsRelations = relations(usageEvents, ({ one }) => ({
+  company: one(companies, {
+    fields: [usageEvents.companyId],
+    references: [companies.id],
+  }),
+  project: one(projects, {
+    fields: [usageEvents.projectId],
+    references: [projects.id],
+  }),
+  user: one(users, {
+    fields: [usageEvents.userId],
+    references: [users.id],
+  }),
+}));
+
+export const usageCreditsRelations = relations(usageCredits, ({ one }) => ({
+  company: one(companies, {
+    fields: [usageCredits.companyId],
+    references: [companies.id],
+  }),
+  subscription: one(companySubscriptions, {
+    fields: [usageCredits.subscriptionId],
+    references: [companySubscriptions.id],
+  }),
+}));
+
+export const invoicesRelations = relations(invoices, ({ one }) => ({
+  company: one(companies, {
+    fields: [invoices.companyId],
+    references: [companies.id],
+  }),
+  subscription: one(companySubscriptions, {
+    fields: [invoices.subscriptionId],
+    references: [companySubscriptions.id],
+  }),
+}));
+
+export const paymentMethodsRelations = relations(paymentMethods, ({ one }) => ({
+  company: one(companies, {
+    fields: [paymentMethods.companyId],
+    references: [companies.id],
+  }),
+}));

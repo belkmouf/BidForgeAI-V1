@@ -28,6 +28,7 @@ import { calculateLMMCost } from './pricing';
 import { cache } from './cache';
 import { logger } from './logger';
 import { searchService } from './search';
+import { usageTracking } from './usage-tracking.js';
 
 export interface BidGenerationParams {
   projectId: string;
@@ -530,6 +531,29 @@ or contact details from other sources.
         });
         bidId = savedBid.id;
         version = savedBid.version;
+
+        // Track usage for billing
+        if (params.companyId) {
+          try {
+            await usageTracking.trackUsage({
+              companyId: params.companyId,
+              projectId: params.projectId,
+              userId: params.userId || undefined,
+              eventType: 'bid_generated',
+              eventCategory: 'generation',
+              quantity: 1,
+              unit: 'generations',
+              metadata: {
+                model: selectedModel,
+                inputTokens: result.inputTokens,
+                outputTokens: result.outputTokens,
+                bidId: savedBid.id,
+              },
+            });
+          } catch (usageError) {
+            logger.warn('Failed to track bid generation usage', { error: usageError });
+          }
+        }
       }
 
       streamProgress?.({ stage: 'complete', message: 'Bid generation complete!', percentage: 100 });
@@ -669,6 +693,30 @@ or contact details from other sources.
               generationTimeSeconds,
             });
             results.push({ ...genResult, bidId: savedBid.id, version: savedBid.version });
+
+            // Track usage for billing
+            if (params.companyId) {
+              try {
+                await usageTracking.trackUsage({
+                  companyId: params.companyId,
+                  projectId: params.projectId,
+                  userId: params.userId || undefined,
+                  eventType: 'bid_generated',
+                  eventCategory: 'generation',
+                  quantity: 1,
+                  unit: 'generations',
+                  metadata: {
+                    model: genResult.model,
+                    inputTokens: genResult.inputTokens,
+                    outputTokens: genResult.outputTokens,
+                    bidId: savedBid.id,
+                    comparison: true,
+                  },
+                });
+              } catch (usageError) {
+                logger.warn('Failed to track bid generation usage', { error: usageError });
+              }
+            }
           } catch (saveError: any) {
             logger.error(`Failed to save bid for model ${genResult.model}`, { error: saveError.message });
             results.push({ ...genResult, saveError: saveError.message });
