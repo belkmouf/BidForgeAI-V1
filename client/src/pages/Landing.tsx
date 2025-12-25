@@ -182,14 +182,23 @@ Our "Sovereign Shield" architecture guarantees that your data is isolated in a p
             <a href="#" className="text-sm font-medium text-gray-600 hover:text-gray-900">Contact</a>
           </div>
           
-          <Link 
-            href="/register" 
-            className="hidden md:block px-5 py-2.5 text-sm font-medium text-white rounded-full transition-all duration-300 hover:opacity-90"
-            style={{ backgroundColor: '#22C55E' }}
-            data-testid="button-get-started"
-          >
-            Get Started
-          </Link>
+          <div className="hidden md:flex items-center gap-3">
+            <Link 
+              href="/login" 
+              className="px-5 py-2.5 text-sm font-medium text-gray-700 border border-gray-300 rounded-full transition-all duration-300 hover:bg-gray-50"
+              data-testid="button-login"
+            >
+              Login
+            </Link>
+            <Link 
+              href="/register" 
+              className="px-5 py-2.5 text-sm font-medium text-white rounded-full transition-all duration-300 hover:opacity-90"
+              style={{ backgroundColor: '#22C55E' }}
+              data-testid="button-get-started"
+            >
+              Get Started
+            </Link>
+          </div>
           
           <button 
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
@@ -208,6 +217,12 @@ Our "Sovereign Shield" architecture guarantees that your data is isolated in a p
             <a href="#" className="block text-foreground font-medium py-2">Resources</a>
             <button onClick={() => setAboutOpen(true)} className="block text-foreground font-medium py-2 w-full text-left">About</button>
             <a href="#" className="block text-foreground font-medium py-2">Contact</a>
+            <Link 
+              href="/login" 
+              className="block text-gray-700 py-3 px-4 text-center font-medium rounded-full border border-gray-300"
+            >
+              Login
+            </Link>
             <Link 
               href="/register" 
               className="block text-white py-3 px-4 text-center font-medium rounded-full"
