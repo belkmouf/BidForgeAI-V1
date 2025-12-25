@@ -206,6 +206,129 @@ export class SubscriptionService {
       .where(eq(subscriptionPlans.isActive, true))
       .orderBy(subscriptionPlans.tier);
   }
+  
+  async getTrialPlan() {
+    const [plan] = await db
+      .select()
+      .from(subscriptionPlans)
+      .where(
+        and(
+          eq(subscriptionPlans.tier, 0),
+          eq(subscriptionPlans.isActive, true)
+        )
+      )
+      .limit(1);
+    return plan;
+  }
+  
+  async changePlan(
+    companyId: number,
+    newPlanId: number,
+    billingCycle: 'monthly' | 'annual' = 'monthly'
+  ) {
+    const currentSub = await this.getCompanySubscription(companyId);
+    
+    const [newPlan] = await db
+      .select()
+      .from(subscriptionPlans)
+      .where(
+        and(
+          eq(subscriptionPlans.id, newPlanId),
+          eq(subscriptionPlans.isActive, true)
+        )
+      )
+      .limit(1);
+    
+    if (!newPlan) {
+      throw new Error('Plan not found');
+    }
+    
+    // Check if downgrading and usage exceeds new limits
+    if (currentSub) {
+      const [currentUsage] = await db
+        .select()
+        .from(companyUsageLimits)
+        .where(eq(companyUsageLimits.companyId, companyId))
+        .limit(1);
+      
+      if (currentUsage) {
+        const newProjectLimit = newPlan.monthlyProjectLimit || 999999999;
+        const newDocLimit = newPlan.monthlyDocumentLimit || 999999999;
+        const newBidLimit = newPlan.monthlyBidLimit || 999999999;
+        
+        if (currentUsage.projectsUsed > newProjectLimit) {
+          throw new Error(`Cannot downgrade: you have ${currentUsage.projectsUsed} projects but new plan allows ${newProjectLimit}`);
+        }
+        if (currentUsage.documentsUsed > newDocLimit) {
+          throw new Error(`Cannot downgrade: you have ${currentUsage.documentsUsed} documents but new plan allows ${newDocLimit}`);
+        }
+        if (newBidLimit !== 999999999 && currentUsage.bidsUsed > newBidLimit) {
+          throw new Error(`Cannot downgrade: you have ${currentUsage.bidsUsed} bids but new plan allows ${newBidLimit}`);
+        }
+      }
+    }
+    
+    const now = new Date();
+    let periodEnd: Date;
+    let finalPrice: number;
+    
+    if (newPlan.tier === 0) {
+      periodEnd = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+      finalPrice = 0;
+    } else if (billingCycle === 'annual') {
+      periodEnd = new Date(now);
+      periodEnd.setFullYear(periodEnd.getFullYear() + 1);
+      finalPrice = newPlan.annualPrice || (newPlan.monthlyPrice || 0) * 12;
+    } else {
+      periodEnd = new Date(now);
+      periodEnd.setMonth(periodEnd.getMonth() + 1);
+      finalPrice = newPlan.monthlyPrice || 0;
+    }
+    
+    return await db.transaction(async (tx) => {
+      // Deactivate current subscription if exists
+      if (currentSub) {
+        await tx
+          .update(companySubscriptions)
+          .set({
+            status: 'cancelled',
+            cancelledAt: now,
+            cancelReason: 'Plan changed',
+            updatedAt: now,
+          })
+          .where(eq(companySubscriptions.id, currentSub.subscription.id));
+      }
+      
+      // Create new subscription
+      const [newSubscription] = await tx
+        .insert(companySubscriptions)
+        .values({
+          companyId,
+          planId: newPlanId,
+          status: newPlan.tier === 0 ? 'active' : 'pending_payment',
+          billingCycle: newPlan.tier === 0 ? 'trial' : billingCycle,
+          currentPeriodStart: now,
+          currentPeriodEnd: periodEnd,
+          monthlyPrice: newPlan.monthlyPrice || 0,
+          annualPrice: newPlan.annualPrice,
+          finalPrice,
+          autoRenew: newPlan.tier !== 0,
+          extraProjectsPurchased: 0,
+        })
+        .returning();
+      
+      // Only initialize usage limits if active (trial or already paid)
+      if (newPlan.tier === 0) {
+        await this.initializeUsageLimits(companyId, newSubscription, newPlan, tx);
+      }
+      
+      return {
+        subscription: newSubscription,
+        plan: newPlan,
+        requiresPayment: newPlan.tier > 0,
+      };
+    });
+  }
 }
 
 export const subscriptionService = new SubscriptionService();

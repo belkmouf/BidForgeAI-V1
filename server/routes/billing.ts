@@ -72,6 +72,43 @@ router.get('/plans', authenticateToken, async (req, res) => {
   }
 });
 
+router.get('/public-plans', async (req, res) => {
+  try {
+    const plans = await subscriptionService.getAllPlans();
+    return res.json({ plans });
+  } catch (error: any) {
+    console.error('Error fetching public plans:', error);
+    return res.status(500).json({ error: error.message });
+  }
+});
+
+router.patch('/subscription', authenticateToken, async (req, res) => {
+  try {
+    const authReq = req as AuthRequest;
+    const companyId = authReq.user?.companyId;
+    const { planId, billingCycle } = req.body;
+    
+    if (!companyId) {
+      return res.status(400).json({ error: 'Company ID required' });
+    }
+    
+    if (!planId) {
+      return res.status(400).json({ error: 'Plan ID required' });
+    }
+    
+    const result = await subscriptionService.changePlan(
+      companyId,
+      planId,
+      billingCycle || 'monthly'
+    );
+    
+    return res.json({ success: true, ...result });
+  } catch (error: any) {
+    console.error('Error changing subscription:', error);
+    return res.status(400).json({ error: error.message });
+  }
+});
+
 router.post('/add-projects', authenticateToken, async (req, res) => {
   try {
     const authReq = req as AuthRequest;

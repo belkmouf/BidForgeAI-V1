@@ -17,6 +17,7 @@ import {
 import { authenticateToken, AuthRequest } from '../middleware/auth';
 import { logContext } from '../lib/logger.js';
 import { trialService } from '../lib/trial-service.js';
+import { subscriptionService } from '../lib/subscription-service.js';
 
 const router = Router();
 
@@ -31,7 +32,7 @@ router.post('/register', async (req, res) => {
       });
     }
 
-    const { email, password, name, companyName, ragreadyCollectionId } = validationResult.data as any;
+    const { email, password, name, companyName, ragreadyCollectionId, planId } = validationResult.data as any;
 
     if (!validateEmail(email)) {
       return res.status(400).json({ error: 'Invalid email format' });
@@ -98,11 +99,23 @@ router.post('/register', async (req, res) => {
       })
       .returning();
     
-    // Auto-create trial subscription for new company
+    // Create subscription based on selected plan (or default to trial)
     try {
-      await trialService.createTrial(newCompany.id);
-    } catch (trialError) {
-      console.error('Failed to create trial subscription:', trialError);
+      if (planId && planId > 0) {
+        // User selected a specific plan
+        await subscriptionService.createSubscription(newCompany.id, planId, 'monthly');
+      } else {
+        // Default to free trial
+        await trialService.createTrial(newCompany.id);
+      }
+    } catch (subError) {
+      console.error('Failed to create subscription:', subError);
+      // Still create trial as fallback
+      try {
+        await trialService.createTrial(newCompany.id);
+      } catch (trialError) {
+        console.error('Failed to create trial subscription:', trialError);
+      }
     }
 
     const tokenPayload = {
