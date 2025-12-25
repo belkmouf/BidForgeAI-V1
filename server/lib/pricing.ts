@@ -8,6 +8,25 @@ const MODEL_PRICING = {
   'multishot-agent': { input: 0.005, output: 0.015 }, // Agent workflow (uses multiple models, estimate based on GPT-4o)
 };
 
+// Embedding pricing per 1M tokens (OpenAI text-embedding-3-small)
+const EMBEDDING_PRICING = {
+  'text-embedding-3-small': 0.02, // $0.02 per 1M tokens
+  'text-embedding-3-large': 0.13, // $0.13 per 1M tokens
+  'text-embedding-ada-002': 0.10, // $0.10 per 1M tokens (legacy)
+};
+
+// Calculate embedding cost based on token count
+export function calculateEmbeddingCost(tokens: number, model: string = 'text-embedding-3-small'): number {
+  const pricePerMillion = EMBEDDING_PRICING[model as keyof typeof EMBEDDING_PRICING] || EMBEDDING_PRICING['text-embedding-3-small'];
+  const cost = (tokens / 1_000_000) * pricePerMillion;
+  return Math.round(cost * 1000000) / 1000000; // Round to 6 decimals for precision
+}
+
+// Estimate tokens from text (rough approximation: ~4 chars per token)
+export function estimateTokensFromText(text: string): number {
+  return Math.ceil(text.length / 4);
+}
+
 export function calculateLMMCost(model: string, inputTokens: number, outputTokens: number): number {
   const pricing = MODEL_PRICING[model as keyof typeof MODEL_PRICING] || MODEL_PRICING.openai;
   const inputCost = (inputTokens / 1000) * pricing.input;

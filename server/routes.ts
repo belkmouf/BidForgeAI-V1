@@ -1675,21 +1675,29 @@ or contact details from other sources.
     try {
       const companyId = req.user?.companyId ?? null;
       
-      // Get total LLM cost per project from bids table
+      // Get total LLM cost per project from bids table + embedding costs from projects table
       const result = await db.execute(sql`
         SELECT 
-          b.project_id,
-          COALESCE(SUM(b.lmm_cost), 0) as total_cost
-        FROM bids b
-        JOIN projects p ON b.project_id = p.id
+          p.id as project_id,
+          COALESCE(SUM(b.lmm_cost), 0) as llm_cost,
+          COALESCE(p.embedding_cost, 0) as embedding_cost
+        FROM projects p
+        LEFT JOIN bids b ON b.project_id = p.id
         WHERE ${companyId !== null ? sql`p.company_id = ${companyId}` : sql`p.company_id IS NULL`}
-        GROUP BY b.project_id
+          AND p.deleted_at IS NULL
+        GROUP BY p.id, p.embedding_cost
       `);
       
-      // Convert to a map for easy lookup
-      const costs: Record<string, number> = {};
+      // Convert to a map for easy lookup with combined costs
+      const costs: Record<string, { llm: number; embedding: number; total: number }> = {};
       for (const row of result.rows as any[]) {
-        costs[row.project_id] = parseFloat(row.total_cost) || 0;
+        const llm = parseFloat(row.llm_cost) || 0;
+        const embedding = parseFloat(row.embedding_cost) || 0;
+        costs[row.project_id] = {
+          llm,
+          embedding,
+          total: llm + embedding
+        };
       }
       
       res.json(costs);

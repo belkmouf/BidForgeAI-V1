@@ -9,6 +9,7 @@ import { pool } from '../db';
 import { generateEmbedding } from './openai.js';
 import { RecursiveCharacterTextSplitter } from '@langchain/textsplitters';
 import { documentSummarizationService } from './document-summarization.js';
+import { calculateEmbeddingCost, estimateTokensFromText } from './pricing.js';
 
 // PDF parsing - use pdf-parse with PDFParse class
 async function parsePdf(buffer: Buffer): Promise<{ text: string }> {
@@ -348,11 +349,17 @@ export class IngestionService {
         message: `Creating embeddings (0/${chunks.length})...` 
       });
       
+      let totalEmbeddingTokens = 0;
+      
       for (let i = 0; i < chunks.length; i++) {
         // Ensure each chunk is also sanitized (remove any null bytes)
         const sanitizedChunk = chunks[i].replace(/\x00/g, '');
         
         try {
+          // Track tokens for cost calculation
+          const chunkTokens = estimateTokensFromText(sanitizedChunk);
+          totalEmbeddingTokens += chunkTokens;
+          
           // Generate embedding for this chunk
           const embedding = await generateEmbedding(sanitizedChunk);
           
@@ -389,6 +396,18 @@ export class IngestionService {
             [documentId, sanitizedChunk, i]
           );
         }
+      }
+      
+      // Calculate and update embedding cost for the project
+      if (totalEmbeddingTokens > 0) {
+        const embeddingCost = calculateEmbeddingCost(totalEmbeddingTokens);
+        await client.query(
+          `UPDATE projects 
+           SET embedding_cost = COALESCE(embedding_cost, 0) + $1 
+           WHERE id = $2`,
+          [embeddingCost, projectId]
+        );
+        console.log(`  Embedding cost for ${filename}: $${embeddingCost.toFixed(6)} (${totalEmbeddingTokens} tokens)`);
       }
 
       // Mark document as processed

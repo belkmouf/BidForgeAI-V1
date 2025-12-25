@@ -27,6 +27,12 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
   MoreHorizontal,
   Plus,
   ArrowUpRight,
@@ -35,6 +41,10 @@ import {
   Search,
   Filter,
   DollarSign,
+  Download,
+  ChevronUp,
+  ChevronDown,
+  ChevronsUpDown,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import {
@@ -50,6 +60,10 @@ import { listProjects, getDashboardStats, getProjectCosts, listBids } from "@/li
 import { useAuthStore } from "@/lib/auth";
 import type { Project, Bid } from "@shared/schema";
 
+type ProjectCost = { llm: number; embedding: number; total: number };
+type SortField = "name" | "status" | "cost" | "date";
+type SortDirection = "asc" | "desc";
+
 export default function Dashboard() {
   const user = useAuthStore((state) => state.user);
   const isCollapsed = useSidebarStore((state) => state.isCollapsed);
@@ -60,12 +74,24 @@ export default function Dashboard() {
     winRate: number;
     totalProjects: number;
   } | null>(null);
-  const [projectCosts, setProjectCosts] = useState<Record<string, number>>({});
+  const [projectCosts, setProjectCosts] = useState<Record<string, ProjectCost | number>>({});
   const [isLoading, setIsLoading] = useState(true);
   const [costModalOpen, setCostModalOpen] = useState(false);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [projectBids, setProjectBids] = useState<Bid[]>([]);
   const [loadingBids, setLoadingBids] = useState(false);
+  
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string | null>(null);
+  const [sortField, setSortField] = useState<SortField>("date");
+  const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
+
+  const getProjectCost = (projectId: string): ProjectCost => {
+    const cost = projectCosts[projectId];
+    if (!cost) return { llm: 0, embedding: 0, total: 0 };
+    if (typeof cost === 'number') return { llm: cost, embedding: 0, total: cost };
+    return cost;
+  };
 
   const handleCostClick = async (project: Project, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -95,6 +121,49 @@ export default function Dashboard() {
     return names[model] || model;
   };
 
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+    } else {
+      setSortField(field);
+      setSortDirection("asc");
+    }
+  };
+
+  const getSortIcon = (field: SortField) => {
+    if (sortField !== field) return <ChevronsUpDown className="h-3 w-3 ml-1" />;
+    return sortDirection === "asc" ? 
+      <ChevronUp className="h-3 w-3 ml-1" /> : 
+      <ChevronDown className="h-3 w-3 ml-1" />;
+  };
+
+  const exportToCSV = () => {
+    const headers = ["Project Name", "Client", "Status", "LLM Cost", "Embedding Cost", "Total Cost", "Created Date"];
+    const rows = filteredAndSortedProjects.map(project => {
+      const cost = getProjectCost(project.id);
+      return [
+        project.name,
+        project.clientName,
+        project.status,
+        cost.llm.toFixed(4),
+        cost.embedding.toFixed(6),
+        cost.total.toFixed(4),
+        new Date(project.createdAt).toLocaleDateString()
+      ];
+    });
+    
+    const csvContent = [headers, ...rows].map(row => 
+      row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(",")
+    ).join("\n");
+    
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = `projects_export_${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
+    URL.revokeObjectURL(link.href);
+  };
+
   useEffect(() => {
     async function loadData() {
       try {
@@ -114,6 +183,43 @@ export default function Dashboard() {
     }
     loadData();
   }, []);
+
+  const filteredAndSortedProjects = useMemo(() => {
+    let result = [...projects];
+    
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      result = result.filter(p => 
+        p.name.toLowerCase().includes(query) || 
+        (p.clientName || '').toLowerCase().includes(query)
+      );
+    }
+    
+    if (statusFilter) {
+      result = result.filter(p => p.status === statusFilter);
+    }
+    
+    result.sort((a, b) => {
+      let comparison = 0;
+      switch (sortField) {
+        case "name":
+          comparison = a.name.localeCompare(b.name);
+          break;
+        case "status":
+          comparison = a.status.localeCompare(b.status);
+          break;
+        case "cost":
+          comparison = getProjectCost(a.id).total - getProjectCost(b.id).total;
+          break;
+        case "date":
+          comparison = new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+          break;
+      }
+      return sortDirection === "asc" ? comparison : -comparison;
+    });
+    
+    return result;
+  }, [projects, searchQuery, statusFilter, sortField, sortDirection, projectCosts]);
 
   const pipelineData = useMemo(() => {
     if (!stats) return [];
@@ -191,12 +297,39 @@ export default function Dashboard() {
               </p>
             </div>
             <div className="flex gap-3">
-              <Button variant="outline" className="gap-2">
-                <Filter className="h-4 w-4" />
-                Filter
-              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" className="gap-2" data-testid="button-filter">
+                    <Filter className="h-4 w-4" />
+                    {statusFilter || "All Status"}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => setStatusFilter(null)} data-testid="filter-all">
+                    All Status
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setStatusFilter("Active")} data-testid="filter-active">
+                    Active
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setStatusFilter("Submitted")} data-testid="filter-submitted">
+                    Submitted
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setStatusFilter("Closed-Won")} data-testid="filter-won">
+                    Closed-Won
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setStatusFilter("Closed-Lost")} data-testid="filter-lost">
+                    Closed-Lost
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              {isSystemAdmin && (
+                <Button variant="outline" className="gap-2" onClick={exportToCSV} data-testid="button-export-csv">
+                  <Download className="h-4 w-4" />
+                  Export CSV
+                </Button>
+              )}
               <Link href="/projects/new">
-                <Button className="gap-2 shadow-lg shadow-primary/20">
+                <Button className="gap-2 shadow-lg shadow-primary/20" data-testid="button-new-project">
                   <Plus className="h-4 w-4" />
                   New Project
                 </Button>
@@ -262,6 +395,9 @@ export default function Dashboard() {
                     <Input
                       placeholder="Search projects..."
                       className="pl-9 bg-muted/50 border-0"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      data-testid="input-search-projects"
                     />
                   </div>
                 </CardHeader>
@@ -269,101 +405,158 @@ export default function Dashboard() {
                   <Table>
                     <TableHeader>
                       <TableRow className="hover:bg-transparent">
-                        <TableHead>Project Name</TableHead>
+                        <TableHead>
+                          <button 
+                            onClick={() => handleSort("name")} 
+                            className="flex items-center hover:text-foreground transition-colors"
+                            data-testid="sort-name"
+                          >
+                            Project Name
+                            {getSortIcon("name")}
+                          </button>
+                        </TableHead>
                         {isSystemAdmin && <TableHead>Company</TableHead>}
                         {isSystemAdmin && <TableHead>User</TableHead>}
-                        <TableHead>Status</TableHead>
-                        {isSystemAdmin && <TableHead>LLM Cost</TableHead>}
-                        <TableHead>Due Date</TableHead>
+                        <TableHead>
+                          <button 
+                            onClick={() => handleSort("status")} 
+                            className="flex items-center hover:text-foreground transition-colors"
+                            data-testid="sort-status"
+                          >
+                            Status
+                            {getSortIcon("status")}
+                          </button>
+                        </TableHead>
+                        {isSystemAdmin && (
+                          <TableHead>
+                            <button 
+                              onClick={() => handleSort("cost")} 
+                              className="flex items-center hover:text-foreground transition-colors"
+                              data-testid="sort-cost"
+                            >
+                              Total Cost
+                              {getSortIcon("cost")}
+                            </button>
+                          </TableHead>
+                        )}
+                        <TableHead>
+                          <button 
+                            onClick={() => handleSort("date")} 
+                            className="flex items-center hover:text-foreground transition-colors"
+                            data-testid="sort-date"
+                          >
+                            Created
+                            {getSortIcon("date")}
+                          </button>
+                        </TableHead>
                         <TableHead className="text-right">Action</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {projects.map((project) => (
-                        <TableRow
-                          key={project.id}
-                          className="group cursor-pointer hover:bg-muted/40"
-                        >
-                          <TableCell className="font-medium">
-                            <div className="flex flex-col">
-                              <span className="font-semibold text-foreground group-hover:text-primary transition-colors">
-                                {project.name}
-                              </span>
-                              <span className="text-xs text-muted-foreground">
-                                {project.clientName}
-                              </span>
-                            </div>
-                          </TableCell>
-                          {isSystemAdmin && (
-                            <TableCell>
-                              <span className="text-sm text-muted-foreground">
-                                {(project as any).companyName || "—"}
-                              </span>
-                            </TableCell>
-                          )}
-                          {isSystemAdmin && (
-                            <TableCell>
-                              <span className="text-sm text-muted-foreground">
-                                {(project as any).userName || "—"}
-                              </span>
-                            </TableCell>
-                          )}
-                          <TableCell>
-                            <Badge
-                              variant={
-                                project.status === "Active"
-                                  ? "default"
-                                  : project.status === "Closed-Won"
-                                    ? "secondary"
-                                    : project.status === "Submitted"
-                                      ? "outline"
-                                      : "destructive"
-                              }
-                              className={
-                                project.status === "Active"
-                                  ? "bg-primary hover:bg-primary/90"
-                                  : project.status === "Closed-Won"
-                                    ? "bg-green-100 text-green-800 hover:bg-green-200 border-green-200"
-                                    : project.status === "Closed-Lost"
-                                      ? "bg-red-100 text-red-800 hover:bg-red-200 border-red-200"
-                                      : ""
-                              }
-                            >
-                              {project.status}
-                            </Badge>
-                          </TableCell>
-                          {isSystemAdmin && (
-                            <TableCell>
-                              <button
-                                onClick={(e) => handleCostClick(project, e)}
-                                className="font-mono text-sm text-primary hover:text-primary/80 hover:underline cursor-pointer flex items-center gap-1"
-                                data-testid={`link-llm-cost-${project.id}`}
-                              >
-                                <DollarSign className="h-3 w-3" />
-                                {(projectCosts[project.id] || 0).toFixed(4)}
-                              </button>
-                            </TableCell>
-                          )}
-                          <TableCell>
-                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                              <Calendar className="h-3 w-3" />
-                              {new Date(project.createdAt).toLocaleDateString()}
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <Link href={`/projects/${project.id}`}>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-8 w-8 p-0"
-                                data-testid={`button-open-project-${project.id}`}
-                              >
-                                <ArrowUpRight className="h-4 w-4" />
-                              </Button>
-                            </Link>
+                      {filteredAndSortedProjects.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={isSystemAdmin ? 7 : 4} className="text-center py-8 text-muted-foreground">
+                            {searchQuery || statusFilter ? "No projects match your filters" : "No projects yet"}
                           </TableCell>
                         </TableRow>
-                      ))}
+                      ) : (
+                        filteredAndSortedProjects.map((project) => {
+                          const cost = getProjectCost(project.id);
+                          return (
+                            <TableRow
+                              key={project.id}
+                              className="group cursor-pointer hover:bg-muted/40"
+                              data-testid={`row-project-${project.id}`}
+                            >
+                              <TableCell className="font-medium">
+                                <div className="flex flex-col">
+                                  <span className="font-semibold text-foreground group-hover:text-primary transition-colors">
+                                    {project.name}
+                                  </span>
+                                  <span className="text-xs text-muted-foreground">
+                                    {project.clientName}
+                                  </span>
+                                </div>
+                              </TableCell>
+                              {isSystemAdmin && (
+                                <TableCell>
+                                  <span className="text-sm text-muted-foreground">
+                                    {(project as any).companyName || "—"}
+                                  </span>
+                                </TableCell>
+                              )}
+                              {isSystemAdmin && (
+                                <TableCell>
+                                  <span className="text-sm text-muted-foreground">
+                                    {(project as any).userName || "—"}
+                                  </span>
+                                </TableCell>
+                              )}
+                              <TableCell>
+                                <Badge
+                                  variant={
+                                    project.status === "Active"
+                                      ? "default"
+                                      : project.status === "Closed-Won"
+                                        ? "secondary"
+                                        : project.status === "Submitted"
+                                          ? "outline"
+                                          : "destructive"
+                                  }
+                                  className={
+                                    project.status === "Active"
+                                      ? "bg-primary hover:bg-primary/90"
+                                      : project.status === "Closed-Won"
+                                        ? "bg-green-100 text-green-800 hover:bg-green-200 border-green-200"
+                                        : project.status === "Closed-Lost"
+                                          ? "bg-red-100 text-red-800 hover:bg-red-200 border-red-200"
+                                          : ""
+                                  }
+                                >
+                                  {project.status}
+                                </Badge>
+                              </TableCell>
+                              {isSystemAdmin && (
+                                <TableCell>
+                                  <button
+                                    onClick={(e) => handleCostClick(project, e)}
+                                    className="font-mono text-sm text-primary hover:text-primary/80 hover:underline cursor-pointer flex flex-col items-start"
+                                    data-testid={`link-total-cost-${project.id}`}
+                                  >
+                                    <span className="flex items-center gap-1">
+                                      <DollarSign className="h-3 w-3" />
+                                      {cost.total.toFixed(4)}
+                                    </span>
+                                    {cost.embedding > 0 && (
+                                      <span className="text-[10px] text-muted-foreground font-normal">
+                                        LLM: ${cost.llm.toFixed(4)} | Embed: ${cost.embedding.toFixed(6)}
+                                      </span>
+                                    )}
+                                  </button>
+                                </TableCell>
+                              )}
+                              <TableCell>
+                                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                  <Calendar className="h-3 w-3" />
+                                  {new Date(project.createdAt).toLocaleDateString()}
+                                </div>
+                              </TableCell>
+                              <TableCell className="text-right">
+                                <Link href={`/projects/${project.id}`}>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-8 w-8 p-0"
+                                    data-testid={`button-open-project-${project.id}`}
+                                  >
+                                    <ArrowUpRight className="h-4 w-4" />
+                                  </Button>
+                                </Link>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })
+                      )}
                     </TableBody>
                   </Table>
                 </CardContent>
@@ -447,10 +640,30 @@ export default function Dashboard() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <DollarSign className="h-5 w-5 text-primary" />
-              LLM Costs - {selectedProject?.name}
+              Cost Breakdown - {selectedProject?.name}
             </DialogTitle>
           </DialogHeader>
           <div className="mt-4">
+            {selectedProject && (
+              <div className="mb-4 p-4 bg-muted/50 rounded-lg">
+                <div className="grid grid-cols-3 gap-4 text-center">
+                  <div>
+                    <div className="text-xs text-muted-foreground mb-1">LLM Cost</div>
+                    <div className="font-mono font-semibold">${getProjectCost(selectedProject.id).llm.toFixed(4)}</div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-muted-foreground mb-1">Embedding Cost</div>
+                    <div className="font-mono font-semibold">${getProjectCost(selectedProject.id).embedding.toFixed(6)}</div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-muted-foreground mb-1">Total Cost</div>
+                    <div className="font-mono font-semibold text-primary">${getProjectCost(selectedProject.id).total.toFixed(4)}</div>
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            <h4 className="text-sm font-medium mb-2">Bid Generation Costs</h4>
             {loadingBids ? (
               <div className="flex items-center justify-center py-8">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
@@ -501,7 +714,7 @@ export default function Dashboard() {
                 Total Bids: {projectBids.length}
               </div>
               <div className="text-sm font-semibold">
-                Total Cost: $
+                LLM Total: $
                 {projectBids
                   .reduce((sum, bid) => sum + (bid.lmmCost || 0), 0)
                   .toFixed(4)}

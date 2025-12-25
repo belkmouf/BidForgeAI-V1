@@ -223,6 +223,7 @@ export const projects = pgTable("projects", {
   intakeStatus: varchar("intake_status", { length: 50 }).notNull().default("pending"),
   isArchived: boolean("is_archived").default(false).notNull(),
   metadata: jsonb("metadata").default(sql`'{}'::jsonb`),
+  embeddingCost: real("embedding_cost").default(0),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   deletedAt: timestamp("deleted_at"),
 });
