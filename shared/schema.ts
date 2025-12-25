@@ -1506,3 +1506,128 @@ export const verificationGatesRelations = relations(verificationGates, ({ one })
     references: [users.id],
   }),
 }));
+
+// ==================== BILLING & SUBSCRIPTIONS ====================
+
+// Subscription Plans Table
+export const subscriptionPlans = pgTable("subscription_plans", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  name: varchar("name", { length: 100 }).notNull().unique(),
+  displayName: varchar("display_name", { length: 255 }).notNull(),
+  tier: integer("tier").notNull(),
+  
+  // Legacy pricing fields
+  basePrice: real("base_price"),
+  currency: varchar("currency", { length: 10 }).default("USD"),
+  features: jsonb("features").$type<Record<string, boolean>>(),
+  limits: jsonb("limits").$type<Record<string, number>>(),
+  includedCredits: jsonb("included_credits").$type<Record<string, number>>(),
+  overagePricing: jsonb("overage_pricing").$type<Record<string, number>>(),
+  stripePriceId: varchar("stripe_price_id", { length: 255 }),
+  
+  // New simplified pricing fields
+  monthlyPrice: real("monthly_price"),
+  annualPrice: real("annual_price"),
+  
+  monthlyProjectLimit: integer("monthly_project_limit"),
+  monthlyDocumentLimit: integer("monthly_document_limit"),
+  monthlyBidLimit: integer("monthly_bid_limit"),
+  
+  extraProjectFee: real("extra_project_fee"),
+  extraProjectDocBonus: integer("extra_project_doc_bonus"),
+  
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export type SubscriptionPlan = typeof subscriptionPlans.$inferSelect;
+export type InsertSubscriptionPlan = typeof subscriptionPlans.$inferInsert;
+
+// Company Subscriptions Table
+export const companySubscriptions = pgTable("company_subscriptions", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  companyId: integer("company_id")
+    .notNull()
+    .references(() => companies.id, { onDelete: "cascade" }),
+  planId: integer("plan_id")
+    .notNull()
+    .references(() => subscriptionPlans.id),
+  
+  status: varchar("status", { length: 50 }).notNull().default("active"),
+  billingCycle: varchar("billing_cycle", { length: 20 }).default("monthly"),
+  
+  currentPeriodStart: timestamp("current_period_start").notNull(),
+  currentPeriodEnd: timestamp("current_period_end").notNull(),
+  
+  monthlyPrice: real("monthly_price").notNull(),
+  annualPrice: real("annual_price"),
+  finalPrice: real("final_price").notNull(),
+  
+  extraProjectsPurchased: integer("extra_projects_purchased").default(0),
+  
+  stripeSubscriptionId: varchar("stripe_subscription_id", { length: 255 }),
+  stripeCustomerId: varchar("stripe_customer_id", { length: 255 }),
+  paymentMethodId: varchar("payment_method_id", { length: 255 }),
+  
+  autoRenew: boolean("auto_renew").default(true),
+  
+  cancelledAt: timestamp("cancelled_at"),
+  cancelReason: text("cancel_reason"),
+  cancelAtPeriodEnd: boolean("cancel_at_period_end").default(false),
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export type CompanySubscription = typeof companySubscriptions.$inferSelect;
+export type InsertCompanySubscription = typeof companySubscriptions.$inferInsert;
+
+// Company Usage Limits Table
+export const companyUsageLimits = pgTable("company_usage_limits", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  companyId: integer("company_id")
+    .notNull()
+    .references(() => companies.id, { onDelete: "cascade" })
+    .unique(),
+  
+  currentPeriodStart: timestamp("current_period_start").notNull(),
+  currentPeriodEnd: timestamp("current_period_end").notNull(),
+  
+  projectsUsed: integer("projects_used").default(0),
+  documentsUsed: integer("documents_used").default(0),
+  bidsUsed: integer("bids_used").default(0),
+  
+  projectLimit: integer("project_limit").notNull(),
+  documentLimit: integer("document_limit").notNull(),
+  bidLimit: integer("bid_limit"),
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export type CompanyUsageLimits = typeof companyUsageLimits.$inferSelect;
+export type InsertCompanyUsageLimits = typeof companyUsageLimits.$inferInsert;
+
+// Billing Relations
+export const subscriptionPlansRelations = relations(subscriptionPlans, ({ many }) => ({
+  subscriptions: many(companySubscriptions),
+}));
+
+export const companySubscriptionsRelations = relations(companySubscriptions, ({ one }) => ({
+  company: one(companies, {
+    fields: [companySubscriptions.companyId],
+    references: [companies.id],
+  }),
+  plan: one(subscriptionPlans, {
+    fields: [companySubscriptions.planId],
+    references: [subscriptionPlans.id],
+  }),
+}));
+
+export const companyUsageLimitsRelations = relations(companyUsageLimits, ({ one }) => ({
+  company: one(companies, {
+    fields: [companyUsageLimits.companyId],
+    references: [companies.id],
+  }),
+}));
