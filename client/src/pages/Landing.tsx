@@ -1,9 +1,8 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'wouter';
-import { FileText, Brain, Zap, Shield, Menu, X, ChevronRight, ArrowRight, Search, AlertTriangle, TrendingUp, Users, Sparkles, BookOpen, CheckCircle, BarChart3, Cpu, Database, Lock, FileSearch } from 'lucide-react';
-import gsap from 'gsap';
-import constructionBg from '@assets/stock_images/construction_site_bu_f0afb754.jpg';
+import { FileText, Brain, Zap, Shield, Menu, X, ChevronRight, ArrowRight, Search, AlertTriangle, TrendingUp, Users, Sparkles, BookOpen, CheckCircle, BarChart3, Cpu, Database, Lock, FileSearch, Play } from 'lucide-react';
 import bidForgeLogo from '@assets/Gemini_Generated_Image_mb26x1mb26x1mb26_1765805920806.png';
+import dashboardScreenshot from '@assets/stock_images/computer_desktop_das_b391f789.jpg';
 import { useAuthStore, apiRequest } from '@/lib/auth';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
@@ -111,7 +110,6 @@ const stats = [
 ];
 
 export default function Landing() {
-  const heroRef = useRef<HTMLDivElement>(null);
   const [scrolled, setScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [branding, setBranding] = useState<CompanyBranding | null>(null);
@@ -144,18 +142,6 @@ export default function Landing() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  useEffect(() => {
-    if (heroRef.current) {
-      const elements = heroRef.current.querySelectorAll('.animate-in');
-      gsap.from(elements, {
-        y: 60,
-        opacity: 0,
-        duration: 1.2,
-        stagger: 0.15,
-        ease: 'power3.out'
-      });
-    }
-  }, []);
 
   const displayName = branding?.companyName || user?.companyName || 'BidForge AI';
   const displayTagline = branding?.tagline || 'INTELLIGENT BIDDING';
@@ -172,85 +158,40 @@ Our "Sovereign Shield" architecture guarantees that your data is isolated in a p
   return (
     <div className="min-h-screen bg-background" data-testid="landing-page">
       <nav 
-        className={`fixed w-full top-0 z-50 transition-all duration-500 ${
-          scrolled 
-            ? 'bg-white/95 backdrop-blur-md shadow-lg py-4' 
-            : 'bg-transparent py-6'
-        }`}
+        className="fixed w-full top-0 z-50 bg-white shadow-sm py-4"
         data-testid="navigation"
       >
         <div className="max-w-7xl mx-auto px-6 lg:px-8 flex justify-between items-center">
-          <Link href="/" className="flex items-center gap-3 group" data-testid="link-home">
-            <img 
-              src={displayLogo} 
-              alt={`${displayName} Logo`} 
-              className="h-10 w-10 object-contain"
-            />
-            <div>
-              <div className={`font-display text-xl font-bold transition-colors duration-300 ${
-                scrolled ? 'text-foreground' : 'text-white'
-              }`}>
-                {displayName}
-              </div>
-              <div 
-                className="text-xs tracking-[0.2em] transition-colors duration-300"
-                style={{ color: primaryColor }}
-              >
-                {displayTagline}
-              </div>
+          <Link href="/" className="flex items-center gap-2 group" data-testid="link-home">
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white font-bold text-sm" style={{ backgroundColor: '#3B82F6' }}>
+              B
             </div>
+            <span className="font-display text-xl font-bold text-foreground">
+              BidForgeAI
+            </span>
           </Link>
           
           <div className="hidden md:flex items-center gap-8">
-            <a 
-              href="#features" 
-              className={`text-sm font-medium tracking-wide transition-colors ${
-                scrolled ? 'text-foreground' : 'text-white/90'
-              }`}
-              onMouseEnter={(e) => e.currentTarget.style.color = primaryColor}
-              onMouseLeave={(e) => e.currentTarget.style.color = ''}
-            >
-              Features
-            </a>
-            <a 
-              href="#pricing" 
-              className={`text-sm font-medium tracking-wide transition-colors ${
-                scrolled ? 'text-foreground' : 'text-white/90'
-              }`}
-              onMouseEnter={(e) => e.currentTarget.style.color = primaryColor}
-              onMouseLeave={(e) => e.currentTarget.style.color = ''}
-            >
-              Pricing
-            </a>
-            <a 
-              href="#testimonial" 
-              className={`text-sm font-medium tracking-wide transition-colors ${
-                scrolled ? 'text-foreground' : 'text-white/90'
-              }`}
-              onMouseEnter={(e) => e.currentTarget.style.color = primaryColor}
-              onMouseLeave={(e) => e.currentTarget.style.color = ''}
-            >
-              Testimonials
-            </a>
-            <Link 
-              href="/dashboard" 
-              className={`px-6 py-2.5 text-sm font-medium tracking-wide border-2 transition-all duration-300 ${
-                scrolled 
-                  ? 'hover:text-white' 
-                  : 'border-white/80 text-white hover:bg-white hover:text-foreground'
-              }`}
-              style={scrolled ? { borderColor: primaryColor, color: primaryColor } : undefined}
-              onMouseEnter={(e) => { if (scrolled) { e.currentTarget.style.backgroundColor = primaryColor; e.currentTarget.style.color = 'white'; }}}
-              onMouseLeave={(e) => { if (scrolled) { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = primaryColor; }}}
-              data-testid="link-dashboard"
-            >
-              Enter Platform
-            </Link>
+            <a href="#" className="text-sm font-medium text-blue-600 hover:text-blue-700">Home</a>
+            <a href="#features" className="text-sm font-medium text-gray-600 hover:text-gray-900">Features</a>
+            <a href="#pricing" className="text-sm font-medium text-gray-600 hover:text-gray-900">Pricing</a>
+            <a href="#" className="text-sm font-medium text-gray-600 hover:text-gray-900">Resources</a>
+            <button onClick={() => setAboutOpen(true)} className="text-sm font-medium text-gray-600 hover:text-gray-900">About</button>
+            <a href="#" className="text-sm font-medium text-gray-600 hover:text-gray-900">Contact</a>
           </div>
-
+          
+          <Link 
+            href="/register" 
+            className="hidden md:block px-5 py-2.5 text-sm font-medium text-white rounded-full transition-all duration-300 hover:opacity-90"
+            style={{ backgroundColor: '#22C55E' }}
+            data-testid="button-get-started"
+          >
+            Get Started
+          </Link>
+          
           <button 
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className={`md:hidden ${scrolled ? 'text-foreground' : 'text-white'}`}
+            className="md:hidden text-foreground"
             data-testid="button-mobile-menu"
           >
             {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
@@ -259,125 +200,77 @@ Our "Sovereign Shield" architecture guarantees that your data is isolated in a p
 
         {mobileMenuOpen && (
           <div className="md:hidden absolute top-full left-0 w-full bg-white shadow-xl py-6 px-6 space-y-4">
+            <a href="#" className="block text-blue-600 font-medium py-2">Home</a>
             <a href="#features" className="block text-foreground font-medium py-2">Features</a>
             <a href="#pricing" className="block text-foreground font-medium py-2">Pricing</a>
-            <a href="#testimonial" className="block text-foreground font-medium py-2">Testimonials</a>
+            <a href="#" className="block text-foreground font-medium py-2">Resources</a>
+            <button onClick={() => setAboutOpen(true)} className="block text-foreground font-medium py-2 w-full text-left">About</button>
+            <a href="#" className="block text-foreground font-medium py-2">Contact</a>
             <Link 
-              href="/dashboard" 
-              className="block text-white py-3 px-4 text-center font-medium"
-              style={{ backgroundColor: primaryColor }}
+              href="/register" 
+              className="block text-white py-3 px-4 text-center font-medium rounded-full"
+              style={{ backgroundColor: '#22C55E' }}
             >
-              Enter Platform
+              Get Started
             </Link>
           </div>
         )}
       </nav>
-      <section ref={heroRef} className="min-h-screen flex items-center justify-center relative overflow-hidden pt-20">
-        <div 
-          className="absolute inset-0"
-          style={{ background: `linear-gradient(to bottom right, #1f2937, ${primaryColor}, #374151)` }}
-        />
-        
-        <div 
-          className="absolute inset-0 opacity-[0.08] mix-blend-luminosity"
-          style={{
-            backgroundImage: `url(${constructionBg})`,
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
-            filter: 'grayscale(100%) contrast(1.1)'
-          }}
-        />
-        
-        <div className="absolute inset-0 bg-gradient-to-t from-[#1A1A1A]/80 via-transparent to-[#1A1A1A]/50" />
-        
-        <div className="absolute inset-0 opacity-[0.03]">
-          <svg className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
-            <defs>
-              <pattern id="grid" width="60" height="60" patternUnits="userSpaceOnUse">
-                <path d="M 60 0 L 0 0 0 60" fill="none" stroke="white" strokeWidth="0.5"/>
-              </pattern>
-            </defs>
-            <rect width="100%" height="100%" fill="url(#grid)" />
-          </svg>
-        </div>
-        
-        <div 
-          className="absolute top-1/4 -left-20 w-96 h-96 rounded-full blur-3xl"
-          style={{ backgroundColor: `${primaryColor}20` }}
-        />
-        <div 
-          className="absolute bottom-1/4 -right-20 w-96 h-96 rounded-full blur-3xl"
-          style={{ backgroundColor: `${primaryColor}15` }}
-        />
-        
-        <div className="relative z-10 max-w-6xl mx-auto px-6 lg:px-8 text-center">
-          <h1 className="animate-in font-display text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold text-white mb-6 leading-[1.1] tracking-tight">
-            The Forge of Winning Proposals.
+      <section className="bg-white pt-32 pb-16">
+        <div className="max-w-4xl mx-auto px-6 lg:px-8 text-center">
+          <h1 className="font-display text-4xl sm:text-5xl md:text-6xl font-bold text-gray-900 mb-6 leading-[1.1]">
+            Win More Bids with{' '}
+            <span className="text-blue-600">AI-Powered Precision</span>
           </h1>
           
-          <p className="animate-in text-xl md:text-2xl lg:text-3xl text-gray-200 mb-8 max-w-4xl mx-auto leading-relaxed font-medium">
-            Transform your company's collective intelligence into persuasive, compliant, and winning bids—instantly.
+          <p className="text-lg md:text-xl text-gray-600 mb-10 max-w-2xl mx-auto leading-relaxed">
+            Create accurate, competitive bids in minutes. BidForgeAI helps contractors maximize win rates and profits with intelligent cost estimation and market insights.
           </p>
           
-          <div className="animate-in text-base md:text-lg text-gray-300 mb-12 max-w-4xl mx-auto leading-relaxed font-light space-y-4 text-left">
-            <p>
-              In the high-stakes world of B2B sales, the RFP is the gatekeeper. Yet, for too long, navigating this gate has been a soul-crushing exercise in manual labor that forces you to compromise. It has forced growth teams to choose between speed and quality, and it has buried the competitive edge of enterprises under a mountain of spreadsheets.
-            </p>
-            <p className="font-semibold text-white text-center">
-              The era of manual bidding is over. The era of the Forge has begun.
-            </p>
-            <p>
-              BidForge AI is the "Iron Man Suit" for the ambitious challenger and the "Revenue Engine" for the global incumbent. We combine the generative power of advanced Artificial Intelligence with the rigorous precision of enterprise search to automate the proposal process. We don't just fill out forms; we construct winning arguments, anchored in the truth of your organization's expertise.
-            </p>
-          </div>
-          
-          <div className="animate-in flex flex-col sm:flex-row gap-4 justify-center">
+          <div className="flex flex-col sm:flex-row gap-4 justify-center mb-8">
             <Link 
-              href="/dashboard" 
-              className="group px-10 py-5 text-white font-semibold text-lg hover:shadow-2xl transition-all duration-300 hover:scale-105 inline-flex items-center justify-center gap-2"
-              style={{ background: primaryColor }}
-              data-testid="button-start"
+              href="/register" 
+              className="px-8 py-3.5 text-white font-medium rounded-lg transition-all duration-300 hover:opacity-90"
+              style={{ backgroundColor: '#3B82F6' }}
+              data-testid="button-start-trial"
             >
-              Start Building Bids
-              <ArrowRight className="group-hover:translate-x-1 transition-transform" size={20} />
+              Start Free Trial
             </Link>
             
-            <a 
-              href="#features" 
-              className="px-10 py-5 border-2 font-semibold text-lg transition-all duration-300"
-              style={{ borderColor: `${primaryColor}80`, color: primaryColor }}
-              onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = `${primaryColor}15`; e.currentTarget.style.borderColor = primaryColor; }}
-              onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.borderColor = `${primaryColor}80`; }}
+            <button 
+              className="px-8 py-3.5 border border-gray-300 font-medium rounded-lg transition-all duration-300 hover:bg-gray-50 inline-flex items-center justify-center gap-2 text-gray-700"
             >
-              Explore Features
-            </a>
+              <Play size={18} className="fill-current" />
+              Watch Demo
+            </button>
+          </div>
+          
+          <div className="flex items-center justify-center gap-2 text-gray-500 text-sm mb-12">
+            <CheckCircle size={18} className="text-blue-600" />
+            <span>Trusted by 500+ contractors nationwide</span>
           </div>
         </div>
         
-        <div className="absolute bottom-10 left-1/2 -translate-x-1/2 animate-bounce">
-          <div 
-            className="w-6 h-10 border-2 rounded-full flex justify-center pt-2"
-            style={{ borderColor: `${primaryColor}80` }}
-          >
-            <div 
-              className="w-1 h-3 rounded-full"
-              style={{ backgroundColor: primaryColor }}
+        <div className="max-w-5xl mx-auto px-6 lg:px-8">
+          <div className="rounded-xl overflow-hidden shadow-2xl">
+            <img 
+              src={dashboardScreenshot} 
+              alt="BidForgeAI Dashboard" 
+              className="w-full h-auto"
             />
           </div>
         </div>
       </section>
-      <section className="py-20 bg-[#1A1A1A] border-y border-[#3D3D3D]">
+      
+      <section className="py-16 bg-gray-50 border-y border-gray-200">
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
             {stats.map((stat, index) => (
               <div key={index} className="text-center">
-                <div 
-                  className="text-4xl md:text-5xl font-display font-bold mb-2"
-                  style={{ color: primaryColor }}
-                >
+                <div className="text-4xl md:text-5xl font-display font-bold mb-2 text-blue-600">
                   {stat.value}
                 </div>
-                <div className="text-gray-400 text-sm uppercase tracking-wider">
+                <div className="text-gray-600 text-sm uppercase tracking-wider">
                   {stat.label}
                 </div>
               </div>
