@@ -362,6 +362,9 @@ Respond in JSON format:
     const valuesByContext = this.groupValuesByContext(extractedValues);
 
     for (const [context, values] of Object.entries(valuesByContext)) {
+      // SKIP the "general" context - too noisy and causes false positives
+      if (context === 'general') continue;
+      
       if (values.length < 2) continue;
 
       for (let i = 0; i < values.length; i++) {
@@ -371,6 +374,9 @@ Respond in JSON format:
 
           if (val1.documentId === val2.documentId) continue;
           if (val1.type !== val2.type) continue;
+          
+          // Units must match for quantity comparisons
+          if (val1.unit && val2.unit && val1.unit.toLowerCase() !== val2.unit.toLowerCase()) continue;
 
           if (this.valuesConflict(val1, val2)) {
             const sourceChunk = chunks.find(c => c.id === val1.chunkId);
@@ -402,8 +408,16 @@ Respond in JSON format:
 
   private extractNumericValues(text: string, chunkId: number, documentId: number): ExtractedValue[] {
     const values: ExtractedValue[] = [];
+    
+    // Skip JSON-like content entirely - it contains metadata numbers not document values
+    if (text.includes('"value":') || text.includes('"confidence":') || text.includes('{"')) {
+      return values;
+    }
 
     for (const [type, pattern] of Object.entries(this.numericPatterns)) {
+      // Skip plain numbers - too noisy, only extract typed values
+      if (type === 'number') continue;
+      
       const regex = new RegExp(pattern);
       let match: RegExpExecArray | null;
 
@@ -411,6 +425,10 @@ Respond in JSON format:
         if (!match.index) continue;
 
         const context = this.extractContext(text, match.index);
+        
+        // Skip if context is too generic
+        if (context === 'general') continue;
+        
         const numericValue = this.parseNumericValue(match[0], type as ExtractedValue['type']);
 
         if (numericValue !== null) {
@@ -484,8 +502,9 @@ Respond in JSON format:
     }
 
     if (typeof val1.value === 'number' && typeof val2.value === 'number') {
+      // Only flag as conflict if difference exceeds 10% - reduces false positives
       const percentDiff = Math.abs(val1.value - val2.value) / Math.max(val1.value, val2.value);
-      return percentDiff > 0.01;
+      return percentDiff > 0.10;
     }
 
     return val1.value !== val2.value;
