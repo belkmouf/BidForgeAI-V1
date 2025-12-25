@@ -1,12 +1,15 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
-import { CreditCard, Calendar, TrendingUp, AlertCircle, Check, Zap } from 'lucide-react';
+import { CreditCard, Calendar, TrendingUp, AlertCircle, Check, Zap, Loader2 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { useState } from 'react';
+import { toast } from 'sonner';
 
 interface SubscriptionPlan {
   id: number;
@@ -65,6 +68,10 @@ interface Usage {
 }
 
 export default function Billing() {
+  const queryClient = useQueryClient();
+  const [upgradeDialogOpen, setUpgradeDialogOpen] = useState(false);
+  const [selectedUpgradePlan, setSelectedUpgradePlan] = useState<SubscriptionPlan | null>(null);
+
   const { data: subscriptionData, isLoading: loadingSubscription } = useQuery({
     queryKey: ['/api/billing/subscription'],
     queryFn: async () => {
@@ -113,6 +120,50 @@ export default function Billing() {
   const trialInfo: TrialInfo | null = subscriptionData?.trialInfo;
   const usage: Usage | null = usageData?.usage;
   const plans: SubscriptionPlan[] = plansData?.plans || [];
+
+  const upgradeMutation = useMutation({
+    mutationFn: async (planId: number) => {
+      const res = await fetch('/api/billing/subscription', {
+        method: 'PATCH',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
+        },
+        body: JSON.stringify({ planId, billingCycle: 'monthly' }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || 'Failed to upgrade subscription');
+      }
+      return res.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/billing/subscription'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/billing/usage'] });
+      setUpgradeDialogOpen(false);
+      setSelectedUpgradePlan(null);
+      if (data.requiresPayment) {
+        toast.success('Plan change requested! Payment setup coming soon.');
+      } else {
+        toast.success('Plan changed successfully!');
+      }
+    },
+    onError: (error: Error) => {
+      toast.error(error.message);
+    },
+  });
+
+  const handleUpgradeClick = (p: SubscriptionPlan) => {
+    setSelectedUpgradePlan(p);
+    setUpgradeDialogOpen(true);
+  };
+
+  const confirmUpgrade = () => {
+    if (selectedUpgradePlan) {
+      upgradeMutation.mutate(selectedUpgradePlan.id);
+    }
+  };
 
   const isLoading = loadingSubscription || loadingUsage;
 
@@ -332,10 +383,11 @@ export default function Billing() {
                   <Button 
                     className="w-full mt-4" 
                     variant={plan?.id === p.id ? 'outline' : 'default'}
-                    disabled={plan?.id === p.id}
+                    disabled={plan?.id === p.id || upgradeMutation.isPending}
+                    onClick={() => handleUpgradeClick(p)}
                     data-testid={`button-select-plan-${p.name}`}
                   >
-                    {plan?.id === p.id ? 'Current Plan' : 'Upgrade'}
+                    {plan?.id === p.id ? 'Current Plan' : plan?.tier && p.tier < plan.tier ? 'Downgrade' : 'Upgrade'}
                   </Button>
                 </CardContent>
               </Card>
@@ -343,6 +395,44 @@ export default function Billing() {
           </div>
         </CardContent>
       </Card>
+
+      <Dialog open={upgradeDialogOpen} onOpenChange={setUpgradeDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {plan?.tier && selectedUpgradePlan && selectedUpgradePlan.tier < plan.tier 
+                ? 'Downgrade Plan' 
+                : 'Upgrade Plan'}
+            </DialogTitle>
+            <DialogDescription>
+              {selectedUpgradePlan && (
+                <>
+                  You are about to switch to <strong>{selectedUpgradePlan.displayName}</strong> at{' '}
+                  <strong>${selectedUpgradePlan.monthlyPrice}/month</strong>.
+                  {selectedUpgradePlan.tier > 0 && (
+                    <span className="block mt-2 text-amber-600">
+                      Note: Payment integration is coming soon. Your plan will be set to pending until payment is configured.
+                    </span>
+                  )}
+                </>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setUpgradeDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={confirmUpgrade} 
+              disabled={upgradeMutation.isPending}
+              data-testid="button-confirm-upgrade"
+            >
+              {upgradeMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Confirm
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

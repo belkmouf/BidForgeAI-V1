@@ -161,13 +161,14 @@ export async function register(
   password: string,
   name?: string,
   companyName?: string,
-  ragreadyCollectionId?: string
+  ragreadyCollectionId?: string,
+  planId?: number
 ): Promise<{ success: boolean; error?: string }> {
   try {
     const response = await fetch('/api/auth/register', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password, name, companyName, ragreadyCollectionId }),
+      body: JSON.stringify({ email, password, name, companyName, ragreadyCollectionId, planId }),
       credentials: 'include', // Include cookies for refresh token
     });
 
