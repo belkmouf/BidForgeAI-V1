@@ -172,6 +172,9 @@ function Router() {
       <Route path="/settings/billing">
         {() => <ProtectedRoute component={Billing} />}
       </Route>
+      <Route path="/billing">
+        {() => <ProtectedRoute component={Billing} />}
+      </Route>
       <Route path="/templates">
         {() => <ProtectedRoute component={Templates} />}
       </Route>
