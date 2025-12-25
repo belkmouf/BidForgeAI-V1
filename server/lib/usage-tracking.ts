@@ -109,6 +109,10 @@ export class UsageTrackingService {
           metadata.analysisType || 'sketch'
         );
       
+      case 'rfp_analysis':
+        // RFP analysis uses deep analysis pricing by default
+        return costCalculator.calculateAnalysisCost('deep');
+      
       default:
         return 0;
     }
@@ -121,6 +125,7 @@ export class UsageTrackingService {
   ) {
     const creditTypeMap: Record<string, string> = {
       'deep_analysis': 'deep_analysis',
+      'rfp_analysis': 'deep_analysis',
       'bid_generated': 'bid_generation',
       'document_processed': 'document_page',
       'blueprint_analyzed': 'blueprint_analysis',
