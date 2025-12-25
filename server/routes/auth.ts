@@ -16,6 +16,7 @@ import {
 } from '../lib/auth';
 import { authenticateToken, AuthRequest } from '../middleware/auth';
 import { logContext } from '../lib/logger.js';
+import { trialService } from '../lib/trial-service.js';
 
 const router = Router();
 
@@ -96,6 +97,13 @@ router.post('/register', async (req, res) => {
         termsAcceptedAt: new Date(), // User agreed to terms during signup
       })
       .returning();
+    
+    // Auto-create trial subscription for new company
+    try {
+      await trialService.createTrial(newCompany.id);
+    } catch (trialError) {
+      console.error('Failed to create trial subscription:', trialError);
+    }
 
     const tokenPayload = {
       userId: newUser.id,

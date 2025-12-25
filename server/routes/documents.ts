@@ -5,6 +5,7 @@ import { storage } from '../storage';
 import { ingestionService } from '../lib/ingestion';
 import { pythonSketchClient } from '../lib/pythonSketchClient';
 import { authenticateToken, AuthRequest } from '../middleware/auth';
+import { limitChecker } from '../lib/limit-checker';
 
 const router = Router();
 
@@ -34,6 +35,18 @@ router.post("/projects/:id/upload", authenticateToken, upload.any(), async (req:
     const project = await storage.getProject(projectId, companyId);
     if (!project) {
       return res.status(404).json({ error: "Project not found" });
+    }
+    
+    if (companyId) {
+      const limitCheck = await limitChecker.checkDocumentLimit(companyId);
+      if (!limitCheck.allowed) {
+        return res.status(403).json({ 
+          error: limitCheck.reason,
+          code: 'DOCUMENT_LIMIT_EXCEEDED',
+          limit: limitCheck.limit,
+          current: limitCheck.current
+        });
+      }
     }
 
     // Update workflow status to 'summarizing' as we start processing

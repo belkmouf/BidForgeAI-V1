@@ -20,7 +20,8 @@ import {
   Sparkles,
   FileSearch,
   Database,
-  ExternalLink
+  ExternalLink,
+  CreditCard
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuthStore, apiRequest } from "@/lib/auth";
@@ -104,6 +105,7 @@ export function AppSidebar() {
     { href: "/analytics", icon: BarChart3, label: "Analytics" },
     { href: "/templates", icon: FileText, label: "Templates" },
     { href: "/whatsapp", icon: MessageSquare, label: "WhatsApp" },
+    { href: "/billing", icon: CreditCard, label: "Billing" },
     { href: "/admin", icon: Shield, label: "Admin" },
     { href: "/settings", icon: Settings, label: "Settings" },
   ];

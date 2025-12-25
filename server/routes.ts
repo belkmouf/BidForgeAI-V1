@@ -49,6 +49,7 @@ import documentSummaryRoutes from "./routes/document-summary";
 import projectsRoutes from "./routes/projects";
 import documentsRoutes from "./routes/documents";
 import bidsRoutes from "./routes/bids";
+import billingRoutes from "./routes/billing";
 import { fetchWebsiteInfo, batchFetchWebsiteInfo, getWebsiteInfoCache, saveWebsiteInfo, fetchAndSaveWebsiteInfo } from "./routes/website-info.js";
 import { apiVersioning, API_VERSIONS, trackVersionUsage, VersionedRequest } from "./middleware/versioning";
 import { authenticateToken, optionalAuth, AuthRequest } from "./middleware/auth";
@@ -401,6 +402,9 @@ export async function registerRoutes(
   
   // ==================== TEAM COLLABORATION ====================
   app.use('/api/team', teamRoutes);
+  
+  // ==================== BILLING & SUBSCRIPTIONS ====================
+  app.use('/api/billing', billingRoutes);
   
   // ==================== AUDIT LOGS ====================
   app.use('/api/audit', auditRoutes);

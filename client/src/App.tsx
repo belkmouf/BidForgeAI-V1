@@ -29,6 +29,7 @@ import PublicBidView from "@/pages/PublicBidView";
 import DocumentSummary from "@/pages/DocumentSummary";
 import SummaryReview from "@/pages/SummaryReview";
 import ProjectChecklist from "@/pages/ProjectChecklist";
+import Billing from "@/pages/Billing";
 
 function ProtectedRoute({ component: Component, requireOnboarding = true }: { component: React.ComponentType; requireOnboarding?: boolean }) {
   const { isAuthenticated, isLoading, user } = useAuthStore();
@@ -182,6 +183,9 @@ function Router() {
       </Route>
       <Route path="/admin">
         {() => <ProtectedRoute component={Admin} />}
+      </Route>
+      <Route path="/billing">
+        {() => <ProtectedRoute component={Billing} />}
       </Route>
       <Route component={NotFound} />
     </Switch>

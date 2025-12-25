@@ -3,6 +3,7 @@ import { storage } from '../storage';
 import { insertProjectSchema } from '@shared/schema';
 import { authenticateToken, AuthRequest } from '../middleware/auth';
 import { requireRole, requireAdmin } from '../middleware/rbac';
+import { limitChecker } from '../lib/limit-checker';
 import { z } from 'zod';
 
 const router = Router();
@@ -14,9 +15,27 @@ const updateStatusSchema = z.object({
 // Create a new project (requires authentication, company-scoped)
 router.post("/", authenticateToken, async (req: AuthRequest, res) => {
   try {
-    const data = insertProjectSchema.parse(req.body);
     const companyId = req.user?.companyId ?? null;
+    
+    if (companyId) {
+      const limitCheck = await limitChecker.checkProjectLimit(companyId);
+      if (!limitCheck.allowed) {
+        return res.status(403).json({ 
+          error: limitCheck.reason,
+          code: 'PROJECT_LIMIT_EXCEEDED',
+          limit: limitCheck.limit,
+          current: limitCheck.current
+        });
+      }
+    }
+    
+    const data = insertProjectSchema.parse(req.body);
     const project = await storage.createProject(data, companyId);
+    
+    if (companyId) {
+      await limitChecker.incrementUsage(companyId, 'projects', 1);
+    }
+    
     res.json(project);
   } catch (error: any) {
     res.status(400).json({ error: error.message });

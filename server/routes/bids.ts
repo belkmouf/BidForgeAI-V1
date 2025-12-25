@@ -16,6 +16,7 @@ import {
 import { calculateLMMCost } from '../lib/pricing';
 import { sanitizeModelHtml } from '../lib/ai-output';
 import { bidGenerationService } from '../lib/bid-generation-service';
+import { limitChecker } from '../lib/limit-checker';
 
 const router = Router();
 
@@ -50,6 +51,27 @@ router.post("/projects/:id/generate", authenticateToken, async (req: AuthRequest
     const { instructions, tone, model, models } = generateBidSchema.parse(req.body);
     const projectId = req.params.id;
     const companyId = req.user?.companyId ?? null;
+
+    if (companyId) {
+      const bidCount = models && models.length > 1 ? models.length : 1;
+      const limitCheck = await limitChecker.checkBidLimit(companyId);
+      if (!limitCheck.allowed) {
+        return res.status(403).json({ 
+          error: limitCheck.reason,
+          code: 'BID_LIMIT_EXCEEDED',
+          limit: limitCheck.limit,
+          current: limitCheck.current
+        });
+      }
+      if (bidCount > limitCheck.remaining) {
+        return res.status(403).json({ 
+          error: `Cannot generate ${bidCount} bids. Only ${limitCheck.remaining} remaining.`,
+          code: 'BID_LIMIT_EXCEEDED',
+          limit: limitCheck.limit,
+          current: limitCheck.current
+        });
+      }
+    }
 
     // Sanitize AI inputs to prevent prompt injection
     let sanitizedInstructions: string;
@@ -86,6 +108,11 @@ router.post("/projects/:id/generate", authenticateToken, async (req: AuthRequest
           useCache: true,
         }
       );
+      
+      if (companyId) {
+        await limitChecker.incrementUsage(companyId, 'bids', models.length);
+      }
+      
       res.json(result);
     } else {
       // Single model generation
@@ -103,6 +130,10 @@ router.post("/projects/:id/generate", authenticateToken, async (req: AuthRequest
           useCache: true,
         }
       );
+      
+      if (companyId) {
+        await limitChecker.incrementUsage(companyId, 'bids', 1);
+      }
       
       // Get the saved bid if it was saved
       const savedBid = result.bidId ? await storage.getBid(result.bidId, companyId) : null;
