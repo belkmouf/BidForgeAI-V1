@@ -213,6 +213,16 @@ Our "Sovereign Shield" architecture guarantees that your data is isolated in a p
               Features
             </a>
             <a 
+              href="#pricing" 
+              className={`text-sm font-medium tracking-wide transition-colors ${
+                scrolled ? 'text-foreground' : 'text-white/90'
+              }`}
+              onMouseEnter={(e) => e.currentTarget.style.color = primaryColor}
+              onMouseLeave={(e) => e.currentTarget.style.color = ''}
+            >
+              Pricing
+            </a>
+            <a 
               href="#testimonial" 
               className={`text-sm font-medium tracking-wide transition-colors ${
                 scrolled ? 'text-foreground' : 'text-white/90'
@@ -250,6 +260,7 @@ Our "Sovereign Shield" architecture guarantees that your data is isolated in a p
         {mobileMenuOpen && (
           <div className="md:hidden absolute top-full left-0 w-full bg-white shadow-xl py-6 px-6 space-y-4">
             <a href="#features" className="block text-foreground font-medium py-2">Features</a>
+            <a href="#pricing" className="block text-foreground font-medium py-2">Pricing</a>
             <a href="#testimonial" className="block text-foreground font-medium py-2">Testimonials</a>
             <Link 
               href="/dashboard" 
@@ -428,6 +439,162 @@ Our "Sovereign Shield" architecture guarantees that your data is isolated in a p
           ))}
         </div>
       </section>
+      
+      <section id="pricing" className="py-24 md:py-32 bg-[#f8f9fa]">
+        <div className="max-w-7xl mx-auto px-6 lg:px-8">
+          <div className="text-center mb-16">
+            <span 
+              className="uppercase tracking-[0.2em] text-sm font-medium mb-4 block"
+              style={{ color: primaryColor }}
+            >
+              Simple Pricing
+            </span>
+            <h2 className="font-display text-4xl md:text-5xl lg:text-6xl font-bold text-foreground mb-6">
+              Choose Your Plan
+            </h2>
+            <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto">
+              Start with a free trial. Upgrade as you grow. No hidden fees.
+            </p>
+          </div>
+          
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="bg-white p-8 border border-border shadow-sm hover:shadow-lg transition-shadow">
+              <div className="mb-6">
+                <h3 className="font-display text-xl font-bold text-foreground mb-2">Free Trial</h3>
+                <div className="text-4xl font-bold" style={{ color: primaryColor }}>
+                  $0
+                  <span className="text-base font-normal text-muted-foreground">/7 days</span>
+                </div>
+              </div>
+              <ul className="space-y-3 mb-8 text-sm text-muted-foreground">
+                <li className="flex items-center gap-2">
+                  <span style={{ color: primaryColor }}>✓</span> 1 Project
+                </li>
+                <li className="flex items-center gap-2">
+                  <span style={{ color: primaryColor }}>✓</span> 1 Document
+                </li>
+                <li className="flex items-center gap-2">
+                  <span style={{ color: primaryColor }}>✓</span> 2 Bid Generations
+                </li>
+              </ul>
+              <Link 
+                href="/register"
+                className="block w-full py-3 text-center font-medium border-2 transition-colors"
+                style={{ borderColor: primaryColor, color: primaryColor }}
+                data-testid="button-trial-signup"
+              >
+                Start Free Trial
+              </Link>
+            </div>
+            
+            <div className="bg-white p-8 border border-border shadow-sm hover:shadow-lg transition-shadow">
+              <div className="mb-6">
+                <h3 className="font-display text-xl font-bold text-foreground mb-2">The Sifter</h3>
+                <div className="text-4xl font-bold" style={{ color: primaryColor }}>
+                  $99
+                  <span className="text-base font-normal text-muted-foreground">/month</span>
+                </div>
+              </div>
+              <ul className="space-y-3 mb-8 text-sm text-muted-foreground">
+                <li className="flex items-center gap-2">
+                  <span style={{ color: primaryColor }}>✓</span> 5 Projects
+                </li>
+                <li className="flex items-center gap-2">
+                  <span style={{ color: primaryColor }}>✓</span> 50 Documents
+                </li>
+                <li className="flex items-center gap-2">
+                  <span style={{ color: primaryColor }}>✓</span> 15 Bid Generations
+                </li>
+                <li className="flex items-center gap-2">
+                  <span style={{ color: primaryColor }}>✓</span> Extra projects: $25/ea
+                </li>
+              </ul>
+              <Link 
+                href="/register"
+                className="block w-full py-3 text-center font-medium text-white transition-colors"
+                style={{ backgroundColor: primaryColor }}
+                data-testid="button-sifter-signup"
+              >
+                Get Started
+              </Link>
+            </div>
+            
+            <div className="bg-white p-8 border-2 shadow-lg hover:shadow-xl transition-shadow relative" style={{ borderColor: primaryColor }}>
+              <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 text-xs font-bold text-white" style={{ backgroundColor: primaryColor }}>
+                MOST POPULAR
+              </div>
+              <div className="mb-6">
+                <h3 className="font-display text-xl font-bold text-foreground mb-2">The Estimator</h3>
+                <div className="text-4xl font-bold" style={{ color: primaryColor }}>
+                  $299
+                  <span className="text-base font-normal text-muted-foreground">/month</span>
+                </div>
+              </div>
+              <ul className="space-y-3 mb-8 text-sm text-muted-foreground">
+                <li className="flex items-center gap-2">
+                  <span style={{ color: primaryColor }}>✓</span> 20 Projects
+                </li>
+                <li className="flex items-center gap-2">
+                  <span style={{ color: primaryColor }}>✓</span> 200 Documents
+                </li>
+                <li className="flex items-center gap-2">
+                  <span style={{ color: primaryColor }}>✓</span> 60 Bid Generations
+                </li>
+                <li className="flex items-center gap-2">
+                  <span style={{ color: primaryColor }}>✓</span> Extra projects: $25/ea
+                </li>
+                <li className="flex items-center gap-2">
+                  <span style={{ color: primaryColor }}>✓</span> Priority Support
+                </li>
+              </ul>
+              <Link 
+                href="/register"
+                className="block w-full py-3 text-center font-medium text-white transition-colors"
+                style={{ backgroundColor: primaryColor }}
+                data-testid="button-estimator-signup"
+              >
+                Get Started
+              </Link>
+            </div>
+            
+            <div className="bg-white p-8 border border-border shadow-sm hover:shadow-lg transition-shadow">
+              <div className="mb-6">
+                <h3 className="font-display text-xl font-bold text-foreground mb-2">Enterprise</h3>
+                <div className="text-4xl font-bold" style={{ color: primaryColor }}>
+                  $1,500
+                  <span className="text-base font-normal text-muted-foreground">/month</span>
+                </div>
+              </div>
+              <ul className="space-y-3 mb-8 text-sm text-muted-foreground">
+                <li className="flex items-center gap-2">
+                  <span style={{ color: primaryColor }}>✓</span> 200 Projects
+                </li>
+                <li className="flex items-center gap-2">
+                  <span style={{ color: primaryColor }}>✓</span> 2,000 Documents
+                </li>
+                <li className="flex items-center gap-2">
+                  <span style={{ color: primaryColor }}>✓</span> Unlimited Bids
+                </li>
+                <li className="flex items-center gap-2">
+                  <span style={{ color: primaryColor }}>✓</span> Dedicated Support
+                </li>
+                <li className="flex items-center gap-2">
+                  <span style={{ color: primaryColor }}>✓</span> Custom Integrations
+                </li>
+              </ul>
+              <Link 
+                href="/register"
+                className="block w-full py-3 text-center font-medium border-2 transition-colors"
+                style={{ borderColor: primaryColor, color: primaryColor }}
+                data-testid="button-enterprise-signup"
+              >
+                Contact Sales
+              </Link>
+            </div>
+          </div>
+        </div>
+      </section>
+      
       <section id="testimonial" className="py-24 md:py-32 bg-[#1A1A1A] text-white relative overflow-hidden">
         <div 
           className="absolute inset-0 opacity-5"
