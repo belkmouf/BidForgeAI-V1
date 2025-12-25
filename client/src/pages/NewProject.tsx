@@ -99,7 +99,7 @@ export default function NewProject() {
                   <Textarea
                     id="description"
                     data-testid="input-project-description"
-                    placeholder="Describe the project scope, requirements, and any important details..."
+                    placeholder='e.g., We are asked to bid on the "Green Oasis" Phase II in Dubai, a mixed-use complex comprising three mid-rise commercial buildings, a central plaza, and underground parking, designed to meet LEED Gold sustainability standards.'
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
                     maxLength={5000}
