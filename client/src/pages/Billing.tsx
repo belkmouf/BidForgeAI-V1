@@ -409,11 +409,15 @@ export default function Billing() {
                 <>
                   You are about to switch to <strong>{selectedUpgradePlan.displayName}</strong> at{' '}
                   <strong>${selectedUpgradePlan.monthlyPrice}/month</strong>.
-                  {selectedUpgradePlan.tier > 0 && (
+                  {plan?.tier && selectedUpgradePlan.tier < plan.tier ? (
+                    <span className="block mt-2 text-amber-600">
+                      Note: Downgrading may limit your usage. If your current usage exceeds the new plan limits, the downgrade may be blocked.
+                    </span>
+                  ) : selectedUpgradePlan.tier > 0 ? (
                     <span className="block mt-2 text-amber-600">
                       Note: Payment integration is coming soon. Your plan will be set to pending until payment is configured.
                     </span>
-                  )}
+                  ) : null}
                 </>
               )}
             </DialogDescription>

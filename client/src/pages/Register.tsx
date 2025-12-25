@@ -199,9 +199,10 @@ export default function Register() {
             <Button
               onClick={() => {
                 if (!selectedPlanId) {
-                  const trialPlan = plans.find(p => p.tier === 0);
-                  if (trialPlan) setSelectedPlanId(trialPlan.id);
+                  setError("Please select a plan to continue");
+                  return;
                 }
+                setError("");
                 setStep(2);
               }}
               disabled={plans.length === 0}
@@ -211,6 +212,11 @@ export default function Register() {
               <ArrowRight className="w-4 h-4 ml-2" />
             </Button>
           </div>
+          {error && (
+            <Alert variant="destructive" className="mt-4 max-w-md mx-auto">
+              <AlertDescription data-testid="error-message-step1">{error}</AlertDescription>
+            </Alert>
+          )}
         </div>
       ) : (
         <Card className="w-full max-w-md bg-white border-primary/30 shadow-xl">
@@ -224,14 +230,30 @@ export default function Register() {
             </div>
             <CardTitle className="text-2xl font-syne text-slate-800">Create Account</CardTitle>
             <CardDescription className="text-slate-500">
-              {plans.find(p => p.id === selectedPlanId)?.displayName || 'Free Trial'} selected
-              <button 
-                onClick={() => setStep(1)} 
-                className="text-primary hover:underline ml-2"
-                data-testid="button-change-plan"
-              >
-                Change
-              </button>
+              {(() => {
+                const selectedPlan = plans.find(p => p.id === selectedPlanId);
+                const isPaid = selectedPlan && selectedPlan.tier > 0;
+                return (
+                  <>
+                    <span className={isPaid ? 'text-amber-600 font-medium' : ''}>
+                      {selectedPlan?.displayName || 'Free Trial'}
+                      {isPaid && ` - $${selectedPlan?.monthlyPrice}/mo`}
+                    </span>
+                    <button 
+                      onClick={() => setStep(1)} 
+                      className="text-primary hover:underline ml-2"
+                      data-testid="button-change-plan"
+                    >
+                      Change
+                    </button>
+                    {isPaid && (
+                      <span className="block text-xs text-amber-600 mt-1">
+                        Payment will be required after account creation
+                      </span>
+                    )}
+                  </>
+                );
+              })()}
             </CardDescription>
           </CardHeader>
           <form onSubmit={handleSubmit}>
