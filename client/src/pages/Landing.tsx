@@ -110,7 +110,6 @@ const stats = [
 ];
 
 export default function Landing() {
-  const [scrolled, setScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [branding, setBranding] = useState<CompanyBranding | null>(null);
   const [aboutOpen, setAboutOpen] = useState(false);
@@ -136,11 +135,6 @@ export default function Landing() {
     fetchBranding();
   }, [isAuthenticated]);
 
-  useEffect(() => {
-    const handleScroll = () => setScrolled(window.scrollY > 50);
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
 
 
   const displayName = branding?.companyName || user?.companyName || 'BidForge AI';
@@ -163,11 +157,19 @@ Our "Sovereign Shield" architecture guarantees that your data is isolated in a p
       >
         <div className="max-w-7xl mx-auto px-6 lg:px-8 flex justify-between items-center">
           <Link href="/" className="flex items-center gap-2 group" data-testid="link-home">
-            <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white font-bold text-sm" style={{ backgroundColor: '#3B82F6' }}>
-              B
-            </div>
+            {displayLogo ? (
+              <img 
+                src={displayLogo} 
+                alt={`${displayName} Logo`} 
+                className="h-8 w-8 object-contain rounded-lg"
+              />
+            ) : (
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white font-bold text-sm" style={{ backgroundColor: '#3B82F6' }}>
+                B
+              </div>
+            )}
             <span className="font-display text-xl font-bold text-foreground">
-              BidForgeAI
+              {displayName}
             </span>
           </Link>
           
