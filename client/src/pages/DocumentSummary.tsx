@@ -1,6 +1,6 @@
 import { useParams, useLocation, Link } from 'wouter';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import {
   getDocumentSummary,
   generateProjectSummary,
@@ -32,6 +32,21 @@ function formatFileSize(bytes: number): string {
   const sizes = ['Bytes', 'KB', 'MB', 'GB'];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
   return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i];
+}
+
+function formatElapsedTime(startTime: number): string {
+  const elapsed = Math.floor((Date.now() - startTime) / 1000);
+  if (elapsed < 60) return `${elapsed}s`;
+  const mins = Math.floor(elapsed / 60);
+  const secs = elapsed % 60;
+  return `${mins}m ${secs}s`;
+}
+
+interface ProcessingDocument {
+  filename: string;
+  startTime: number;
+  progress: number;
+  stage: string;
 }
 
 function formatDate(dateString: string): string {
@@ -475,6 +490,26 @@ export default function DocumentSummary() {
   const [editingDocId, setEditingDocId] = useState<number | null>(null);
   const [editedContent, setEditedContent] = useState<string>('');
   const [regeneratingDocId, setRegeneratingDocId] = useState<number | null>(null);
+  const [processingDocs, setProcessingDocs] = useState<Map<string, ProcessingDocument>>(new Map());
+  const [, forceUpdate] = useState(0);
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Timer to update elapsed time display
+  useEffect(() => {
+    if (processingDocs.size > 0) {
+      timerRef.current = setInterval(() => {
+        forceUpdate(n => n + 1);
+      }, 1000);
+    } else if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+    return () => {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+      }
+    };
+  }, [processingDocs.size]);
 
   const { data: project } = useQuery({
     queryKey: ['project', id],
@@ -495,13 +530,37 @@ export default function DocumentSummary() {
     },
   });
 
+  const updateProcessingDoc = useCallback((filename: string, progress: number, stage: string) => {
+    setProcessingDocs(prev => {
+      const newMap = new Map(prev);
+      const existing = newMap.get(filename);
+      if (existing) {
+        newMap.set(filename, { ...existing, progress, stage });
+      } else {
+        newMap.set(filename, { filename, startTime: Date.now(), progress, stage });
+      }
+      return newMap;
+    });
+  }, []);
+
+  const removeProcessingDoc = useCallback((filename: string) => {
+    setProcessingDocs(prev => {
+      const newMap = new Map(prev);
+      newMap.delete(filename);
+      return newMap;
+    });
+  }, []);
+
   const handleFileUpload = async (file: File, onProgress: (progress: ProcessingProgress) => void) => {
     if (!id) return;
     
+    // Track this document's processing state
+    updateProcessingDoc(file.name, 10, 'Uploading');
     onProgress({ stage: 'uploading', filename: file.name, percentage: 10, message: 'Uploading...' });
     
     try {
       await uploadDocument(id, file);
+      updateProcessingDoc(file.name, 40, 'Processing');
       onProgress({ stage: 'parsing', filename: file.name, percentage: 40, message: 'Processing document...' });
       
       // Poll for completion
@@ -509,10 +568,12 @@ export default function DocumentSummary() {
       while (attempts < 30) {
         await new Promise(resolve => setTimeout(resolve, 2000));
         await refetch();
+        const progressPct = 50 + Math.min(attempts * 5, 45);
+        updateProcessingDoc(file.name, progressPct, 'Extracting');
         onProgress({ 
           stage: 'embedding', 
           filename: file.name, 
-          percentage: 50 + Math.min(attempts * 5, 45), 
+          percentage: progressPct, 
           message: 'Extracting content...' 
         });
         attempts++;
@@ -520,12 +581,15 @@ export default function DocumentSummary() {
         const latestData = queryClient.getQueryData(['document-summary', id]) as DocumentSummaryResponse | undefined;
         const uploadedDoc = latestData?.documents?.find(d => d.filename === file.name);
         if (uploadedDoc?.isProcessed) {
+          removeProcessingDoc(file.name);
           onProgress({ stage: 'complete', filename: file.name, percentage: 100, message: 'Complete!' });
           return;
         }
       }
+      removeProcessingDoc(file.name);
       onProgress({ stage: 'complete', filename: file.name, percentage: 100, message: 'Processing in background' });
     } catch (err) {
+      removeProcessingDoc(file.name);
       onProgress({ stage: 'error', filename: file.name, percentage: 0, message: 'Upload failed' });
       throw err;
     }
@@ -681,46 +745,71 @@ export default function DocumentSummary() {
               </div>
             ) : (
               <div className="divide-y">
-                {data.documents.map((doc) => (
-                  <div 
-                    key={doc.id} 
-                    className="flex items-center justify-between py-3"
-                    data-testid={`file-row-${doc.id}`}
-                  >
-                    <div className="flex items-center gap-3 min-w-0 flex-1">
-                      {getFileIcon(doc.filename)}
-                      <span className="truncate text-sm">{doc.filename}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {doc.isProcessed ? (
-                        <span className="flex items-center gap-1 text-sm text-green-600">
-                          <CheckCircle className="w-4 h-4" />
-                          Done
-                        </span>
-                      ) : (
-                        <span className="flex items-center gap-1 text-sm text-yellow-600">
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                          Processing
-                        </span>
+                {data.documents.map((doc) => {
+                  const processingInfo = processingDocs.get(doc.filename);
+                  const isActivelyProcessing = !doc.isProcessed && processingInfo;
+                  
+                  return (
+                    <div 
+                      key={doc.id} 
+                      className="py-3"
+                      data-testid={`file-row-${doc.id}`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3 min-w-0 flex-1">
+                          {getFileIcon(doc.filename)}
+                          <span className="truncate text-sm">{doc.filename}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {doc.isProcessed ? (
+                            <span className="flex items-center gap-1 text-sm text-green-600">
+                              <CheckCircle className="w-4 h-4" />
+                              Done
+                            </span>
+                          ) : isActivelyProcessing ? (
+                            <span className="flex items-center gap-1 text-sm text-blue-600">
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                              {processingInfo.stage}
+                            </span>
+                          ) : (
+                            <span className="flex items-center gap-1 text-sm text-yellow-600">
+                              <Clock className="w-4 h-4" />
+                              Pending
+                            </span>
+                          )}
+                          <button 
+                            className="p-1.5 hover:bg-muted rounded-md text-muted-foreground hover:text-foreground transition-colors"
+                            title="Download"
+                            data-testid={`download-${doc.id}`}
+                          >
+                            <Download className="w-4 h-4" />
+                          </button>
+                          <button 
+                            className="p-1.5 hover:bg-red-50 rounded-md text-muted-foreground hover:text-red-600 transition-colors"
+                            onClick={() => handleDeleteDocument(doc.id)}
+                            title="Delete"
+                            data-testid={`delete-${doc.id}`}
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                      {isActivelyProcessing && (
+                        <div className="mt-2 pl-8">
+                          <div className="flex items-center gap-3">
+                            <Progress value={processingInfo.progress} className="flex-1 h-2" />
+                            <span className="text-xs text-muted-foreground min-w-[50px] text-right">
+                              {formatElapsedTime(processingInfo.startTime)}
+                            </span>
+                          </div>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {processingInfo.progress}% complete
+                          </p>
+                        </div>
                       )}
-                      <button 
-                        className="p-1.5 hover:bg-muted rounded-md text-muted-foreground hover:text-foreground transition-colors"
-                        title="Download"
-                        data-testid={`download-${doc.id}`}
-                      >
-                        <Download className="w-4 h-4" />
-                      </button>
-                      <button 
-                        className="p-1.5 hover:bg-red-50 rounded-md text-muted-foreground hover:text-red-600 transition-colors"
-                        onClick={() => handleDeleteDocument(doc.id)}
-                        title="Delete"
-                        data-testid={`delete-${doc.id}`}
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </CardContent>
